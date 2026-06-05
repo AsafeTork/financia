@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão Financeira</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.8.0/Recharts.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  * { font-family: 'Outfit', system-ui, sans-serif; box-sizing: border-box; }
+  body { margin: 0; background: #f8fafc; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo } = React;
+const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } = Recharts;
+
+// ── Storage (localStorage para produção) ──────────────────────────────────────
+const persist = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {} };
+const hydrate = (key, fallback) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (_) { return fallback; } };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const INIT_BRAND = { name: "Gestão Pro", color: "#16a34a", logo: "💼" };
+const R$ = (v) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const today = () => new Date().toISOString().slice(0, 10);
+const prevDays = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+const fmtDate = (s) => new Date(s + "T12:00").toLocaleDateString("pt-BR");
+const monthLabel = (s) => { const [y, m] = s.split("-"); return new Date(+y, +m - 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }); };
+let _uid = 1;
+const uid = () => String(Date.now()) + String(++_uid);
+
+const Inp = ({ label, className = "", ...p }) => (
+  <div className={`flex flex-col gap-1.5 ${className}`}>
+    {label && <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</label>}
+    <input className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-400 transition w-full" {...p} />
+  </div>
+);
+const Sel = ({ label, className = "", children, ...p }) => (
+  <div className={`flex flex-col gap-1.5 ${className}`}>
+    {label && <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</label>}
+    <select className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-400 transition" {...p}>{children}</select>
+  </div>
+);
+const Card = ({ children, className = "" }) => <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 ${className}`}>{children}</div>;
+const EmptyState = ({ icon, title, sub }) => (
+  <div className="py-14 flex flex-col items-center gap-3 text-center px-6">
+    <div className="text-4xl">{icon}</div>
+    <p className="text-sm font-semibold text-gray-700">{title}</p>
+    <p className="text-xs text-gray-400 max-w-xs">{sub}</p>
+  </div>
+);
+
+const ProductSearch = ({ products, value, onSelect, onChange, placeholder }) => {
+  const [open, setOpen] = useState(false);
+  const filtered = value.length > 0 ? products.filter(p => p.name.toLowerCase().includes(value.toLowerCase()) || (p.id||"").toLowerCase().includes(value.toLowerCase())) : products;
+  const show = open && products.length > 0 && filtered.length > 0;
+  return (
+    <div className="relative flex-1">
+      <input value={value} onChange={(e) => { onChange(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 120)}
+        placeholder={placeholder || (products.length > 0 ? "Buscar produto ou serviço…" : "Descrição")}
+        className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-400 transition w-full" />
+      {show && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 z-30 overflow-hidden max-h-48 overflow-y-auto" style={{boxShadow:"0 8px 24px rgba(0,0,0,0.1)"}}>
+          {filtered.map(p => (
+            <button key={p.id} onMouseDown={() => { onSelect(p); setOpen(false); }} className="flex items-center justify-between w-full px-3 py-2.5 hover:bg-gray-50 transition text-left border-b border-gray-50 last:border-0">
+              <div className="flex items-center gap-2 min-w-0">
+                {p.category && <span className="text-xs bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-md flex-shrink-0">{p.category}</span>}
+                <span className="text-sm text-gray-800 truncate">{p.name}</span>
+                {p.stock !== undefined && <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${p.stock<=0?"bg-red-50 text-red-500":p.stock<=5?"bg-amber-50 text-amber-600":"bg-gray-100 text-gray-500"}`}>{p.stock}un</span>}
+              </div>
+              <span className="text-xs font-semibold text-gray-400 ml-2 flex-shrink-0">{R$(p.price)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const CartItemRow = ({ item, idx, products, onChange, onSelectProduct, onRemove }) => {
+  const lineTotal = (Number(item.qty)||0) * (Number(item.unitPrice)||0);
+  return (
+    <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <ProductSearch products={products} value={item.desc} onSelect={(p) => onSelectProduct(idx, p.name, p.price)} onChange={(v) => onChange(idx, "desc", v)} />
+        {onRemove && <button onClick={onRemove} className="text-gray-300 hover:text-red-400 transition p-1 flex-shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>}
+      </div>
+      <div className="flex items-end gap-2">
+        <Inp label="Qtd" type="number" min="1" value={item.qty} onChange={(e) => onChange(idx, "qty", e.target.value)} className="w-16 flex-shrink-0" />
+        <Inp label="Preço unit." type="number" step="0.01" min="0" value={item.unitPrice} onChange={(e) => onChange(idx, "unitPrice", e.target.value)} className="flex-1" />
+        <div className="flex flex-col gap-1.5 w-24 flex-shrink-0">
+          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</label>
+          <div className="border border-gray-100 rounded-xl px-3 py-2.5 text-sm bg-white text-gray-700 font-semibold">{lineTotal > 0 ? R$(lineTotal) : "—"}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SaleForm = ({ products, brand, onSave, onClose }) => {
+  const [items, setItems] = useState([{ desc: "", qty: "1", unitPrice: "" }]);
+  const [date, setDate] = useState(today());
+  const [method, setMethod] = useState("PIX");
+  const total = items.reduce((s, i) => s + (Number(i.qty)||0) * (Number(i.unitPrice)||0), 0);
+  const changeItem = (idx, field, value) => setItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  const selectProduct = (idx, name, price) => setItems(prev => prev.map((item, i) => i === idx ? { ...item, desc: name, unitPrice: String(price) } : item));
+  const addItem = () => setItems(prev => [...prev, { desc: "", qty: "1", unitPrice: "" }]);
+  const removeItem = (idx) => setItems(prev => prev.filter((_, i) => i !== idx));
+  const handleSave = () => {
+    const valid = items.filter(i => i.desc && i.unitPrice);
+    if (!valid.length || !total) return;
+    onSave({ id: uid(), type: "income", desc: valid.length === 1 ? valid[0].desc : `${valid.length} itens`, items: valid.map(i => ({ desc: i.desc, qty: Number(i.qty)||1, unitPrice: Number(i.unitPrice) })), amount: total, date, method });
+    onClose();
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" style={{background:"rgba(0,0,0,0.5)"}}>
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg flex flex-col" style={{maxHeight:"90vh",boxShadow:"0 25px 60px rgba(0,0,0,0.2)"}}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+          <span className="font-semibold text-gray-900">Nova Venda</span>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-6 py-4 flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
+            {items.map((item, idx) => <CartItemRow key={idx} item={item} idx={idx} products={products} onChange={changeItem} onSelectProduct={selectProduct} onRemove={items.length > 1 ? () => removeItem(idx) : null} />)}
+            <button onClick={addItem} className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition w-fit">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+              Adicionar item
+            </button>
+          </div>
+          <div className="flex items-center justify-between py-3 border-t border-b border-gray-100">
+            <span className="text-sm font-semibold text-gray-600">Total da venda</span>
+            <span className="text-2xl font-bold text-gray-900">{R$(total)}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Inp label="Data" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Sel label="Pagamento" value={method} onChange={(e) => setMethod(e.target.value)}>
+              {["PIX","Dinheiro","Cartão de Débito","Cartão de Crédito","Boleto","Transferência"].map(m => <option key={m}>{m}</option>)}
+            </Sel>
+          </div>
+        </div>
+        <div className="flex gap-2 px-6 pb-6 pt-3 flex-shrink-0">
+          <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-3 text-sm font-medium hover:bg-gray-50 transition">Cancelar</button>
+          <button onClick={handleSave} className="flex-1 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 transition" style={{background:brand.color}}>Confirmar · {R$(total)}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Modal = ({ title, onClose, onSave, color, children }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:"rgba(0,0,0,0.5)"}}>
+    <div className="bg-white rounded-2xl w-full max-w-sm flex flex-col" style={{boxShadow:"0 25px 60px rgba(0,0,0,0.18)"}}>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <span className="font-semibold text-gray-900">{title}</span>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
+      </div>
+      <div className="px-6 py-4 flex flex-col gap-3">{children}</div>
+      <div className="flex gap-2 px-6 pb-5">
+        <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition">Cancelar</button>
+        <button onClick={onSave} className="flex-1 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90 transition" style={{background:color}}>Salvar</button>
+      </div>
+    </div>
+  </div>
+);
+
+const NAV = [
+  {key:"dashboard",label:"Dashboard",d:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"},
+  {key:"income",label:"Vendas",d:"M12 4v16m8-8l-8-8-8 8"},
+  {key:"expense",label:"Despesas",d:"M12 20V4m-8 8l8 8 8-8"},
+  {key:"inventory",label:"Estoque",d:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"},
+  {key:"report",label:"Relatórios",d:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
+  {key:"settings",label:"Configurações",d:"M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"},
+];
+
+const Sidebar = ({ view, onNav, brand, open, onClose }) => (
+  <>
+    {open && <div className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden" onClick={onClose} />}
+    <aside className={`fixed top-0 left-0 h-full w-64 z-40 flex flex-col transition-transform duration-300 ${open?"translate-x-0":"-translate-x-full"} lg:translate-x-0`} style={{background:"#0f172a"}}>
+      <div className="px-5 py-5 flex items-center gap-3" style={{borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{background:brand.color}}>{brand.logo}</div>
+        <span className="font-bold text-white truncate">{brand.name}</span>
+      </div>
+      <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
+        {NAV.map(({key,label,d}) => (
+          <button key={key} onClick={() => { onNav(key); onClose(); }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition w-full text-left relative"
+            style={view===key?{background:"rgba(255,255,255,0.08)",color:"white"}:{color:"rgba(255,255,255,0.4)"}}>
+            {view===key && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style={{background:brand.color}} />}
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d={d}/></svg>
+            {label}
+          </button>
+        ))}
+      </nav>
+      <div className="px-5 py-4" style={{borderTop:"1px solid rgba(255,255,255,0.06)"}}>
+        <p className="text-xs" style={{color:"rgba(255,255,255,0.2)"}}>v2.1 · Gestão Financeira</p>
+      </div>
+    </aside>
+  </>
+);
+
+const KpiCard = ({ label, value, sub, color }) => (
+  <Card className="p-5 overflow-hidden relative">
+    <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl" style={{background:color}} />
+    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
+    <p className="text-xl font-bold mt-2 text-gray-900 truncate">{value}</p>
+    {sub && <p className="text-xs text-gray-400 mt-0.5 truncate">{sub}</p>}
+  </Card>
+);
+
+const Dashboard = ({ tx, products, brand }) => {
+  const curMonth = today().slice(0, 7);
+  const monthTx = tx.filter(t => t.date.startsWith(curMonth));
+  const totalIn = monthTx.filter(t => t.type==="income").reduce((s,t) => s+t.amount, 0);
+  const totalOut = monthTx.filter(t => t.type==="expense").reduce((s,t) => s+t.amount, 0);
+  const todayTx = tx.filter(t => t.date===today());
+  const todayIn = todayTx.filter(t => t.type==="income").reduce((s,t) => s+t.amount, 0);
+  const todayOut = todayTx.filter(t => t.type==="expense").reduce((s,t) => s+t.amount, 0);
+  const chartData = useMemo(() => Array.from({length:7},(_,i) => {
+    const d = prevDays(6-i);
+    const dayTx = tx.filter(t => t.date===d);
+    return {day:new Date(d+"T12:00").toLocaleDateString("pt-BR",{weekday:"short"}),Entradas:dayTx.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0),Saídas:dayTx.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0)};
+  }), [tx]);
+  const lowStock = products.filter(p => p.stock!==undefined && p.stock<=5);
+  const recent = [...tx].sort((a,b) => b.date.localeCompare(a.date)).slice(0,5);
+  return (
+    <div className="flex flex-col gap-6">
+      <div><h2 className="text-2xl font-bold text-gray-900">Dashboard</h2><p className="text-sm text-gray-400 mt-0.5">{new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
+      {lowStock.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 flex flex-col gap-2">
+          <p className="text-sm font-semibold text-amber-800">⚠️ Estoque baixo</p>
+          {lowStock.map(p => (
+            <div key={p.id} className="flex items-center justify-between">
+              <span className="text-sm text-amber-700">{p.name}</span>
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${p.stock<=0?"bg-red-100 text-red-600":"bg-amber-100 text-amber-700"}`}>{p.stock<=0?"Esgotado":`${p.stock} un.`}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        <KpiCard label="Entradas (mês)" value={R$(totalIn)} color="#16a34a" />
+        <KpiCard label="Saídas (mês)" value={R$(totalOut)} color="#ef4444" />
+        <KpiCard label="Lucro líquido" value={R$(totalIn-totalOut)} color={brand.color} sub="Este mês" />
+        <KpiCard label="Saldo hoje" value={R$(todayIn-todayOut)} color="#3b82f6" sub={`+${R$(todayIn)} / -${R$(todayOut)}`} />
+      </div>
+      <Card className="p-5">
+        <p className="text-sm font-semibold text-gray-800 mb-4">Últimos 7 dias</p>
+        {tx.length===0 ? <div className="flex items-center justify-center h-28 text-sm text-gray-300">Nenhuma movimentação ainda</div> : (
+          <ResponsiveContainer width="100%" height={150}>
+            <BarChart data={chartData} barGap={4} barCategoryGap="38%">
+              <XAxis dataKey="day" tick={{fontSize:11,fill:"#9ca3af"}} axisLine={false} tickLine={false} />
+              <YAxis hide />
+              <Tooltip formatter={(v) => R$(v)} contentStyle={{fontSize:12,borderRadius:12,border:"1px solid #e5e7eb"}} />
+              <Bar dataKey="Entradas" fill="#16a34a" radius={[4,4,0,0]} />
+              <Bar dataKey="Saídas" fill="#fca5a5" radius={[4,4,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </Card>
+      <Card>
+        <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+          <p className="text-sm font-semibold text-gray-800">Movimentações recentes</p>
+          {recent.length>0 && <span className="text-xs text-gray-400">{recent.length}</span>}
+        </div>
+        {recent.length===0 ? <EmptyState icon="📋" title="Nenhuma movimentação" sub="Registre vendas e despesas para ver o histórico aqui." /> : (
+          <div className="divide-y divide-gray-50">
+            {recent.map(t => (
+              <div key={t.id} className="flex items-center justify-between px-5 py-3.5">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold ${t.type==="income"?"bg-green-50 text-green-600":"bg-red-50 text-red-500"}`}>{t.type==="income"?"↑":"↓"}</div>
+                  <div><p className="text-sm font-medium text-gray-800">{t.desc}</p><p className="text-xs text-gray-400">{fmtDate(t.date)} · {t.method||t.cat}</p></div>
+                </div>
+                <span className={`text-sm font-semibold ${t.type==="income"?"text-green-600":"text-red-500"}`}>{t.type==="income"?"+":"-"}{R$(t.amount)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+
+const IncomeView = ({ tx, products, onAdd, onDelete, onDeductStock, brand }) => {
+  const [modal, setModal] = useState(false);
+  const filtered = tx.filter(t => t.type==="income").sort((a,b) => b.date.localeCompare(a.date));
+  const total = filtered.reduce((s,t) => s+t.amount, 0);
+  const handleSave = (sale) => { onAdd(sale); if(sale.items) sale.items.forEach(item => { const p = products.find(p => p.name===item.desc); if(p&&p.stock!==undefined) onDeductStock(p.id, item.qty); }); setModal(false); };
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between">
+        <div><h2 className="text-2xl font-bold text-gray-900">Vendas</h2><p className="text-sm text-gray-400 mt-0.5">Total: <span className="font-semibold text-green-600">{R$(total)}</span></p></div>
+        <button onClick={() => setModal(true)} className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition" style={{background:brand.color}}>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+          Nova Venda
+        </button>
+      </div>
+      <Card>
+        {filtered.length===0 ? <EmptyState icon="💰" title="Nenhuma venda registrada" sub="Registre vendas com múltiplos itens e cálculo automático." /> : (
+          <div className="divide-y divide-gray-50">
+            {filtered.map(t => (
+              <div key={t.id} className="flex items-center justify-between px-5 py-3.5 group">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-sm font-bold flex-shrink-0">↑</div>
+                  <div className="min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{t.desc}</p><p className="text-xs text-gray-400">{fmtDate(t.date)} · {t.method}{t.items&&t.items.length>1?` · ${t.items.length} itens`:""}</p></div>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className="text-sm font-semibold text-green-600">+{R$(t.amount)}</span>
+                  <button onClick={() => onDelete(t.id)} className="opacity-0 group-hover:opacity-100 text-gray-200 hover:text-red-400 transition p-1"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+      {modal && <SaleForm products={products} brand={brand} onSave={handleSave} onClose={() => setModal(false)} />}
+    </div>
+  );
+};
+
+const ExpenseView = ({ tx, onAdd, onDelete, brand }) => {
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({desc:"",amount:"",date:today(),cat:"Fixo"});
+  const filtered = tx.filter(t => t.type==="expense").sort((a,b) => b.date.localeCompare(a.date));
+  const total = filtered.reduce((s,t) => s+t.amount, 0);
+  const handleSave = () => { if(!form.desc||!form.amount) return; onAdd({id:uid(),type:"expense",desc:form.desc,amount:Number(form.amount),date:form.date,cat:form.cat}); setModal(false); setForm({desc:"",amount:"",date:today(),cat:"Fixo"}); };
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between">
+        <div><h2 className="text-2xl font-bold text-gray-900">Despesas</h2><p className="text-sm text-gray-400 mt-0.5">Total: <span className="font-semibold text-red-500">{R$(total)}</span></p></div>
+        <button onClick={() => setModal(true)} className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition" style={{background:brand.color}}>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+          Nova Despesa
+        </button>
+      </div>
+      <Card>
+        {filtered.length===0 ? <EmptyState icon="📤" title="Nenhuma despesa registrada" sub="Registre suas despesas para acompanhar o fluxo de caixa." /> : (
+          <div className="divide-y divide-gray-50">
+            {filtered.map(t => (
+              <div key={t.id} className="flex items-center justify-between px-5 py-3.5 group">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center text-sm font-bold">↓</div>
+                  <div><p className="text-sm font-medium text-gray-800">{t.desc}</p><p className="text-xs text-gray-400">{fmtDate(t.date)} · {t.cat}</p></div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-red-500">-{R$(t.amount)}</span>
+                  <button onClick={() => onDelete(t.id)} className="opacity-0 group-hover:opacity-100 text-gray-200 hover:text-red-400 transition p-1"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+      {modal && (
+        <Modal title="Nova Despesa" onClose={() => setModal(false)} onSave={handleSave} color={brand.color}>
+          <Inp label="Descrição" value={form.desc} onChange={e => setForm(f => ({...f,desc:e.target.value}))} placeholder="O que foi pago" />
+          <Inp label="Valor (R$)" type="number" step="0.01" min="0" value={form.amount} onChange={e => setForm(f => ({...f,amount:e.target.value}))} placeholder="0,00" />
+          <Inp label="Data" type="date" value={form.date} onChange={e => setForm(f => ({...f,date:e.target.value}))} />
+          <Sel label="Categoria" value={form.cat} onChange={e => setForm(f => ({...f,cat:e.target.value}))}>
+            {["Fixo","Variável","Estoque","Marketing","Pessoal","Serviços","Outro"].map(c => <option key={c}>{c}</option>)}
+          </Sel>
+        </Modal>
+      )}
+    </div>
+  );
+};
+
+const ProductRow = ({ p, onDelete, onOpenStock }) => (
+  <div className="px-5 py-3.5 group">
+    <div className="flex items-center justify-between">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2"><p className="text-sm font-medium text-gray-800">{p.name}</p>{p.category && <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{p.category}</span>}</div>
+        <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+          <span className="text-xs text-gray-400">Venda: {R$(p.price)}</span>
+          {p.cost && <span className="text-xs text-gray-400">Custo: {R$(p.cost)}</span>}
+          {p.cost && <span className="text-xs text-green-600 font-medium">Margem: {(((p.price-p.cost)/p.price)*100).toFixed(0)}%</span>}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+        {p.stock !== undefined && (
+          <button onClick={() => onOpenStock(p.id)} className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition hover:opacity-80 ${p.stock<=0?"bg-red-50 text-red-600":p.stock<=5?"bg-amber-50 text-amber-700":"bg-green-50 text-green-700"}`}>
+            {p.stock<=0?"Esgotado":`${p.stock} un`}
+          </button>
+        )}
+        <button onClick={() => onDelete(p.id)} className="opacity-0 group-hover:opacity-100 text-gray-200 hover:text-red-400 transition p-1"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+      </div>
+    </div>
+  </div>
+);
+
+const InventoryView = ({ products, losses, onAddProduct, onDeleteProduct, onAddLoss, onDeleteLoss, onAdjustStock, brand }) => {
+  const [tab, setTab] = useState("products");
+  const [search, setSearch] = useState("");
+  const [collapsed, setCollapsed] = useState(new Set());
+  const [productModal, setProductModal] = useState(false);
+  const [lossModal, setLossModal] = useState(false);
+  const [stockModal, setStockModal] = useState(null);
+  const [pForm, setPForm] = useState({id:"",name:"",category:"",price:"",cost:"",stock:""});
+  const [lForm, setLForm] = useState({desc:"",qty:"1",reason:"",date:today()});
+  const [sQty, setSQty] = useState("1");
+
+  const saveProduct = () => { if(!pForm.name||!pForm.price) return; onAddProduct({id:pForm.id.trim()||`P${String(Date.now()).slice(-4)}`,name:pForm.name,category:pForm.category,price:Number(pForm.price),cost:pForm.cost?Number(pForm.cost):undefined,stock:pForm.stock!==""?Number(pForm.stock):undefined}); setProductModal(false); setPForm({id:"",name:"",category:"",price:"",cost:"",stock:""}); };
+  const saveLoss = () => { if(!lForm.desc||!lForm.qty) return; onAddLoss({id:uid(),desc:lForm.desc,qty:Number(lForm.qty),reason:lForm.reason,date:lForm.date}); const p=products.find(p=>p.name===lForm.desc); if(p&&p.stock!==undefined) onAdjustStock(p.id,-Number(lForm.qty)); setLossModal(false); setLForm({desc:"",qty:"1",reason:"",date:today()}); };
+  const saveStock = () => { if(!sQty||!stockModal) return; onAdjustStock(stockModal,Number(sQty)); setStockModal(null); setSQty("1"); };
+  const stockProduct = stockModal ? products.find(p => p.id===stockModal) : null;
+  const toggleCat = (cat) => setCollapsed(prev => { const next=new Set(prev); next.has(cat)?next.delete(cat):next.add(cat); return next; });
+  const displayProducts = search.trim() ? products.filter(p => [p.name,p.category,p.id].filter(Boolean).some(v => v.toLowerCase().includes(search.toLowerCase()))) : products;
+  const grouped = Object.entries(displayProducts.reduce((acc,p) => { const k=p.category||"Sem categoria"; (acc[k]=acc[k]||[]).push(p); return acc; }, {})).sort(([a],[b]) => a==="Sem categoria"?1:b==="Sem categoria"?-1:a.localeCompare(b));
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between">
+        <div><h2 className="text-2xl font-bold text-gray-900">Estoque</h2><p className="text-sm text-gray-400 mt-0.5">{products.length} item{products.length!==1?"s":""} cadastrado{products.length!==1?"s":""}</p></div>
+        <div className="flex gap-2">
+          {tab==="products" && <button onClick={() => setProductModal(true)} className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition" style={{background:brand.color}}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Adicionar</button>}
+          {tab==="losses" && <button onClick={() => setLossModal(true)} className="flex items-center gap-2 bg-red-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Perda</button>}
+        </div>
+      </div>
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        {[{key:"products",label:"Produtos e Serviços"},{key:"losses",label:"Perdas"}].map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${tab===t.key?"bg-white text-gray-900 shadow-sm":"text-gray-500"}`}>{t.label}</button>
+        ))}
+      </div>
+      {tab==="products" && (
+        <Card>
+          <div className="px-5 py-3 border-b border-gray-50">
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar produto, serviço ou categoria…" className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:border-gray-300 transition" />
+              {search && <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>}
+            </div>
+          </div>
+          {displayProducts.length===0 ? (
+            search ? <EmptyState icon="🔍" title="Nenhum resultado" sub={`Nada encontrado para "${search}"`} /> : <EmptyState icon="📦" title="Nenhum item cadastrado" sub="Adicione produtos ou serviços com categoria, custo e estoque." />
+          ) : (
+            grouped.map(([cat, items]) => (
+              <div key={cat}>
+                <button onClick={() => toggleCat(cat)} className="w-full flex items-center justify-between px-5 py-2.5 bg-gray-50 hover:bg-gray-100 transition border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${collapsed.has(cat)?"-rotate-90":""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{cat}</span>
+                  </div>
+                  <span className="text-xs text-gray-400">{items.length} {items.length===1?"item":"itens"}</span>
+                </button>
+                {!collapsed.has(cat) && <div className="divide-y divide-gray-50">{items.map(p => <ProductRow key={p.id} p={p} onDelete={onDeleteProduct} onOpenStock={(id) => { setStockModal(id); setSQty("1"); }} />)}</div>}
+              </div>
+            ))
+          )}
+        </Card>
+      )}
+      {tab==="losses" && (
+        <Card>
+          {losses.length===0 ? <EmptyState icon="⚠️" title="Nenhuma perda" sub="Registre produtos ou serviços perdidos, cancelados ou danificados." /> : (
+            <div className="divide-y divide-gray-50">
+              {[...losses].sort((a,b)=>b.date.localeCompare(a.date)).map(l => (
+                <div key={l.id} className="flex items-center justify-between px-5 py-3.5 group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm">⚠</div>
+                    <div><p className="text-sm font-medium text-gray-800">{l.qty}× {l.desc}</p><p className="text-xs text-gray-400">{fmtDate(l.date)}{l.reason?` · ${l.reason}`:""}</p></div>
+                  </div>
+                  <button onClick={() => onDeleteLoss(l.id)} className="opacity-0 group-hover:opacity-100 text-gray-200 hover:text-red-400 transition p-1"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+      {productModal && (
+        <Modal title="Novo Produto ou Serviço" onClose={() => setProductModal(false)} onSave={saveProduct} color={brand.color}>
+          <Inp label="Nome *" value={pForm.name} onChange={e => setPForm(f => ({...f,name:e.target.value}))} placeholder="Ex: Corte de cabelo, Camisa M…" />
+          <Inp label="Categoria" value={pForm.category} onChange={e => setPForm(f => ({...f,category:e.target.value}))} placeholder="Ex: Serviços, Roupas, Alimentos…" />
+          <div className="grid grid-cols-2 gap-3">
+            <Inp label="Preço de venda *" type="number" step="0.01" min="0" value={pForm.price} onChange={e => setPForm(f => ({...f,price:e.target.value}))} placeholder="0,00" />
+            <Inp label="Custo (opcional)" type="number" step="0.01" min="0" value={pForm.cost} onChange={e => setPForm(f => ({...f,cost:e.target.value}))} placeholder="0,00" />
+          </div>
+          <Inp label="Estoque (em branco para serviços)" type="number" min="0" value={pForm.stock} onChange={e => setPForm(f => ({...f,stock:e.target.value}))} placeholder="Qtd em estoque" />
+          <Inp label="ID (opcional)" value={pForm.id} onChange={e => setPForm(f => ({...f,id:e.target.value}))} placeholder="Ex: P001" />
+        </Modal>
+      )}
+      {lossModal && (
+        <Modal title="Registrar Perda" onClose={() => setLossModal(false)} onSave={saveLoss} color="#dc2626">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Produto / Serviço</label>
+            <ProductSearch products={products} value={lForm.desc} onSelect={p => setLForm(f => ({...f,desc:p.name}))} onChange={v => setLForm(f => ({...f,desc:v}))} placeholder="Buscar ou digitar" />
+          </div>
+          <Inp label="Quantidade" type="number" min="1" value={lForm.qty} onChange={e => setLForm(f => ({...f,qty:e.target.value}))} />
+          <Inp label="Motivo (opcional)" value={lForm.reason} onChange={e => setLForm(f => ({...f,reason:e.target.value}))} placeholder="Ex: Vencimento, Cancelamento…" />
+          <Inp label="Data" type="date" value={lForm.date} onChange={e => setLForm(f => ({...f,date:e.target.value}))} />
+        </Modal>
+      )}
+      {stockModal && stockProduct && (
+        <Modal title={`Repor estoque · ${stockProduct.name}`} onClose={() => setStockModal(null)} onSave={saveStock} color={brand.color}>
+          <p className="text-sm text-gray-500">Estoque atual: <strong>{stockProduct.stock} un.</strong></p>
+          <Inp label="Quantidade a adicionar" type="number" min="1" value={sQty} onChange={e => setSQty(e.target.value)} placeholder="Ex: 10" />
+        </Modal>
+      )}
+    </div>
+  );
+};
+
+const ReportView = ({ tx }) => {
+  const months = useMemo(() => [...new Set(tx.map(t => t.date.slice(0,7)))].sort((a,b) => b.localeCompare(a)), [tx]);
+  const [month, setMonth] = useState(today().slice(0,7));
+  const filtered = tx.filter(t => t.date.startsWith(month));
+  const income = filtered.filter(t => t.type==="income").reduce((s,t) => s+t.amount, 0);
+  const expense = filtered.filter(t => t.type==="expense").reduce((s,t) => s+t.amount, 0);
+  return (
+    <div className="flex flex-col gap-6">
+      <div><h2 className="text-2xl font-bold text-gray-900">Relatório</h2><p className="text-sm text-gray-400 mt-0.5">Fechamento mensal</p></div>
+      {months.length===0 ? <Card><EmptyState icon="📊" title="Nenhum dado" sub="Registre vendas e despesas para gerar relatórios." /></Card> : (
+        <>
+          <Sel label="Período" value={month} onChange={e => setMonth(e.target.value)}>
+            {months.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+          </Sel>
+          <div className="grid grid-cols-3 gap-3">
+            {[{label:"Entradas",val:income,color:"#16a34a"},{label:"Saídas",val:expense,color:"#ef4444"},{label:"Lucro",val:income-expense,color:income-expense>=0?"#16a34a":"#ef4444"}].map(({label,val,color}) => (
+              <Card key={label} className="p-4 text-center overflow-hidden relative">
+                <div className="absolute top-0 left-0 right-0 h-0.5" style={{background:color}} />
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
+                <p className="text-sm font-bold mt-2" style={{color}}>{R$(val)}</p>
+              </Card>
+            ))}
+          </div>
+          <Card>
+            <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+              <p className="text-sm font-semibold text-gray-800">Detalhamento</p>
+              <span className="text-xs text-gray-400">{filtered.length} registros</span>
+            </div>
+            {filtered.length===0 ? <EmptyState icon="🗓️" title="Nenhuma movimentação" sub="Sem registros neste mês." /> : (
+              <div className="divide-y divide-gray-50">
+                {[...filtered].sort((a,b)=>b.date.localeCompare(a.date)).map(t => (
+                  <div key={t.id} className="flex items-center justify-between px-5 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${t.type==="income"?"bg-green-50 text-green-600":"bg-red-50 text-red-500"}`}>{t.type==="income"?"↑":"↓"}</div>
+                      <div><p className="text-sm font-medium text-gray-800">{t.desc}</p><p className="text-xs text-gray-400">{fmtDate(t.date)} · {t.method||t.cat}</p></div>
+                    </div>
+                    <span className={`text-sm font-semibold ${t.type==="income"?"text-green-600":"text-red-500"}`}>{t.type==="income"?"+":"-"}{R$(t.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </>
+      )}
+    </div>
+  );
+};
+
+const SettingsView = ({ brand, onSave, onReset }) => {
+  const [form, setForm] = useState({...brand});
+  const [confirmReset, setConfirmReset] = useState(false);
+  const COLORS = ["#16a34a","#2563eb","#7c3aed","#dc2626","#ea580c","#0891b2","#be185d","#374151","#b45309"];
+  return (
+    <div className="flex flex-col gap-6">
+      <div><h2 className="text-2xl font-bold text-gray-900">Configurações</h2><p className="text-sm text-gray-400 mt-0.5">Personalize para cada cliente</p></div>
+      <Card className="p-6 flex flex-col gap-5">
+        <Inp label="Nome da empresa" value={form.name} onChange={e => setForm(f => ({...f,name:e.target.value}))} placeholder="Nome da empresa" />
+        <Inp label="Emoji / ícone" value={form.logo} onChange={e => setForm(f => ({...f,logo:e.target.value}))} placeholder="💼" />
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cor principal</label>
+          <div className="flex gap-2 flex-wrap">
+            {COLORS.map(c => (
+              <button key={c} onClick={() => setForm(f => ({...f,color:c}))} className="w-8 h-8 rounded-full transition-transform hover:scale-110 flex items-center justify-center" style={{background:c}}>
+                {form.color===c && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
+              </button>
+            ))}
+          </div>
+          <Inp label="Hex personalizado" value={form.color} onChange={e => setForm(f => ({...f,color:e.target.value}))} placeholder="#16a34a" />
+        </div>
+        <div className="rounded-xl p-4 bg-gray-50 border border-gray-100">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Pré-visualização</p>
+          <div className="flex items-center gap-3 p-3 rounded-xl w-fit" style={{background:"#0f172a"}}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base" style={{background:form.color}}>{form.logo}</div>
+            <span className="font-bold text-white text-sm">{form.name||"Nome da empresa"}</span>
+          </div>
+        </div>
+        <button onClick={() => onSave(form)} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 transition" style={{background:form.color}}>Salvar e aplicar</button>
+      </Card>
+      <Card className="p-6">
+        <p className="text-sm font-semibold text-gray-800 mb-1">Configurar novo cliente</p>
+        <p className="text-xs text-gray-400 mb-4">Apaga todos os dados para começar do zero com um novo cliente.</p>
+        {!confirmReset ? (
+          <button onClick={() => setConfirmReset(true)} className="w-full border border-red-200 text-red-500 rounded-xl py-2.5 text-sm font-medium hover:bg-red-50 transition">Limpar todos os dados</button>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-red-500 font-medium text-center">Confirmar? Ação irreversível.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmReset(false)} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition">Cancelar</button>
+              <button onClick={() => { onReset(); setConfirmReset(false); }} className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90 transition">Confirmar</button>
+            </div>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+
+function App() {
+  const [view, setView] = useState("dashboard");
+  const [brand, setBrand] = useState(() => hydrate("brand", INIT_BRAND));
+  const [tx, setTx] = useState(() => hydrate("transactions", []));
+  const [products, setProducts] = useState(() => hydrate("products", []));
+  const [losses, setLosses] = useState(() => hydrate("losses", []));
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => persist("brand", brand), [brand]);
+  useEffect(() => persist("transactions", tx), [tx]);
+  useEffect(() => persist("products", products), [products]);
+  useEffect(() => persist("losses", losses), [losses]);
+
+  const addTx = (t) => setTx(prev => [t, ...prev]);
+  const deleteTx = (id) => setTx(prev => prev.filter(t => t.id!==id));
+  const addProduct = (p) => setProducts(prev => [...prev, p]);
+  const deleteProduct = (id) => setProducts(prev => prev.filter(p => p.id!==id));
+  const adjustStock = (id, delta) => setProducts(prev => prev.map(p => p.id===id ? {...p,stock:Math.max(0,(p.stock||0)+delta)} : p));
+  const addLoss = (l) => setLosses(prev => [l, ...prev]);
+  const deleteLoss = (id) => setLosses(prev => prev.filter(l => l.id!==id));
+
+  const handleReset = () => {
+    ["brand","transactions","products","losses"].forEach(k => localStorage.removeItem(k));
+    setBrand(INIT_BRAND); setTx([]); setProducts([]); setLosses([]); setView("dashboard");
+  };
+
+  const views = {
+    dashboard: <Dashboard tx={tx} products={products} brand={brand} />,
+    income: <IncomeView tx={tx} products={products} onAdd={addTx} onDelete={deleteTx} onDeductStock={(id,qty) => adjustStock(id,-qty)} brand={brand} />,
+    expense: <ExpenseView tx={tx} onAdd={addTx} onDelete={deleteTx} brand={brand} />,
+    inventory: <InventoryView products={products} losses={losses} onAddProduct={addProduct} onDeleteProduct={deleteProduct} onAddLoss={addLoss} onDeleteLoss={deleteLoss} onAdjustStock={adjustStock} brand={brand} />,
+    report: <ReportView tx={tx} />,
+    settings: <SettingsView brand={brand} onSave={setBrand} onReset={handleReset} />,
+  };
+
+  return (
+    <div className="min-h-screen flex" style={{background:"#f8fafc"}}>
+      <Sidebar view={view} onNav={setView} brand={brand} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+        <header className="sticky top-0 z-20 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 lg:hidden">
+          <button onClick={() => setSidebarOpen(true)} className="text-gray-400 p-1 rounded-lg hover:bg-gray-100 transition">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style={{background:brand.color}}>{brand.logo}</div>
+            <span className="font-bold text-gray-900 text-sm">{brand.name}</span>
+          </div>
+        </header>
+        <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto">{views[view]}</main>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
