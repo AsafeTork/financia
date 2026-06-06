@@ -838,7 +838,83 @@ const ReportView=({tx,showToast})=>{
 };
 
 // ── Settings View ─────────────────────────────────────────────────────────────
+const generatePassword=()=>{
+  const c='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+  return Array.from({length:12},()=>c[Math.floor(Math.random()*c.length)]).join('');
+};
+
+const AdminClients=({showToast})=>{
+  const[form,setForm]=useState({email:'',password:''});
+  const[creating,setCreating]=useState(false);
+  const[created,setCreated]=useState(null);
+  const[copied,setCopied]=useState(false);
+
+  const genPw=()=>setForm(f=>({...f,password:generatePassword()}));
+
+  const create=async()=>{
+    if(!form.email||!form.password)return;
+    if(form.password.length<8){showToast('Senha deve ter ao menos 8 caracteres.','error');return;}
+    setCreating(true);
+    const{data,error}=await sb.auth.signUp({email:form.email,password:form.password});
+    if(error){
+      if(error.message.includes('already'))showToast('Este e-mail já está cadastrado.','error');
+      else showToast('Erro ao criar cliente: '+error.message,'error');
+    }else{
+      setCreated({email:form.email,password:form.password});
+      setForm({email:'',password:''});
+      showToast('Cliente criado com sucesso!');
+    }
+    setCreating(false);
+  };
+
+  const copyCredentials=async()=>{
+    const text=`🔗 Sistema de Gestão Financeira\n\nLink: https://gestao-financeira-7heu.onrender.com\n📧 E-mail: ${created.email}\n🔑 Senha: ${created.password}\n\nAcesse pelo link acima e configure o nome e a cor da sua empresa em Configurações.`;
+    await navigator.clipboard.writeText(text);
+    setCopied(true);setTimeout(()=>setCopied(false),2500);
+    showToast('Copiado! Cole no WhatsApp.');
+  };
+
+  return(
+    <div className="flex flex-col gap-4">
+      <div>
+        <p className="text-sm font-semibold text-gray-800 mb-1">Criar novo cliente</p>
+        <p className="text-xs text-gray-400 mb-3">Preencha e-mail e senha. O cliente acessa o sistema com essas credenciais.</p>
+      </div>
+      <Inp label="E-mail do cliente" type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="cliente@email.com"/>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Senha</label>
+        <div className="flex gap-2">
+          <input type="text" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="Mínimo 8 caracteres"
+            className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition flex-1"/>
+          <button onClick={genPw} title="Gerar senha" className="px-3 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition flex-shrink-0">Gerar</button>
+        </div>
+      </div>
+      <button onClick={create} disabled={creating||!form.email||!form.password} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40" style={{background:'#16a34a'}}>
+        {creating?<Spin white/>:'Criar cliente'}
+      </button>
+      {created&&(
+        <div className="rounded-xl bg-green-50 border border-green-100 p-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2"><span className="text-green-600 text-lg">✓</span><p className="text-sm font-semibold text-green-800">Cliente criado!</p></div>
+          <div className="bg-white rounded-xl p-3 font-mono text-xs flex flex-col gap-1">
+            <p><span className="text-gray-400">E-mail:</span> <span className="text-gray-900 font-semibold">{created.email}</span></p>
+            <p><span className="text-gray-400">Senha: </span><span className="text-gray-900 font-semibold">{created.password}</span></p>
+          </div>
+          <button onClick={copyCredentials} className="w-full flex items-center justify-center gap-2 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            {copied?'Copiado! Cole no WhatsApp':'Copiar para WhatsApp'}
+          </button>
+          <button onClick={()=>setCreated(null)} className="text-xs text-gray-400 hover:text-gray-600 text-center">Criar outro cliente</button>
+        </div>
+      )}
+      <div className="rounded-xl bg-amber-50 border border-amber-100 p-3">
+        <p className="text-xs text-amber-700 font-medium">⚠️ Para criar usuários sem e-mail de confirmação, desative "Enable email confirmations" em: Supabase → Authentication → Settings → Email</p>
+      </div>
+    </div>
+  );
+};
+
 const SettingsView=({brand,session,onSave,onLogout,showToast,showConfirm})=>{
+  const isAdmin=session?.user?.email==='admin@gestao.com';
   const[tab,setTab]=useState('brand');
   const[form,setForm]=useState({...brand});
   const[saving,setSaving]=useState(false);
@@ -884,9 +960,9 @@ const SettingsView=({brand,session,onSave,onLogout,showToast,showConfirm})=>{
   return(
     <div className="flex flex-col gap-6">
       <div><h2 className="text-2xl font-bold text-gray-900">Configurações</h2><p className="text-sm text-gray-400 mt-0.5">Gerencie aparência, segurança e conta</p></div>
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-        {[{key:'brand',label:'Branding'},{key:'security',label:'Segurança'},{key:'account',label:'Conta'}].map(t=>(
-          <button key={t.key} onClick={()=>setTab(t.key)} className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${tab===t.key?'bg-white text-gray-900 shadow-sm':'text-gray-500'}`}>{t.label}</button>
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 flex-wrap">
+        {[{key:'brand',label:'Branding'},{key:'security',label:'Segurança'},{key:'account',label:'Conta'},...(isAdmin?[{key:'clients',label:'👤 Clientes'}]:[])].map(t=>(
+          <button key={t.key} onClick={()=>setTab(t.key)} className={`flex-1 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap ${tab===t.key?'bg-white text-gray-900 shadow-sm':'text-gray-500'}`}>{t.label}</button>
         ))}
       </div>
 
@@ -984,11 +1060,12 @@ const SettingsView=({brand,session,onSave,onLogout,showToast,showConfirm})=>{
           <button onClick={()=>showConfirm('Sair da conta?',async()=>sb.auth.signOut())} className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition">Sair da conta</button>
         </Card>
       )}
+      {tab==='clients'&&isAdmin&&(
+        <Card className="p-6"><AdminClients showToast={showToast}/></Card>
+      )}
     </div>
   );
-};
-
-// ── Login ─────────────────────────────────────────────────────────────────────
+}; ─────────────────────────────────────────────────────────────────────
 const LoginScreen=()=>{
   const[email,setEmail]=useState('');
   const[pass,setPass]=useState('');
