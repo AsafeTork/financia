@@ -10,26 +10,31 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<style>*{font-family:'Outfit',system-ui,sans-serif;box-sizing:border-box}body{margin:0;background:#f8fafc}</style>
+<style>
+*{font-family:'Outfit',system-ui,sans-serif;box-sizing:border-box}
+body{margin:0;background:#f8fafc}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.toast{animation:slideUp .25s ease}
+.fade{animation:fadeIn .2s ease}
+</style>
 </head>
 <body><div id="root"></div>
 <script type="text/babel" data-presets="react">
-const {useState,useEffect,useMemo}=React;
+const {useState,useEffect,useMemo,useCallback}=React;
 const {createClient}=window.supabase;
-
-const SUPABASE_URL='https://kxeqhorxhlgwcgywovqr.supabase.co';
-const SUPABASE_KEY='sb_publishable_EVJrndaIaxwLN9vUdSByUg__itH2rLy';
-const sb=createClient(SUPABASE_URL,SUPABASE_KEY);
+const sb=createClient('https://kxeqhorxhlgwcgywovqr.supabase.co','sb_publishable_EVJrndaIaxwLN9vUdSByUg__itH2rLy');
 
 const INIT_BRAND={name:'Gestão Pro',color:'#16a34a',logo:'💼'};
-const R$=(v)=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const R$=v=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const today=()=>new Date().toISOString().slice(0,10);
-const prevDays=(n)=>{const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10);};
-const fmtDate=(s)=>new Date(s+'T12:00').toLocaleDateString('pt-BR');
-const monthLabel=(s)=>{const[y,m]=s.split('-');return new Date(+y,+m-1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});};
+const prevDays=n=>{const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10);};
+const fmtDate=s=>new Date(s+'T12:00').toLocaleDateString('pt-BR');
+const monthLabel=s=>{const[y,m]=s.split('-');return new Date(+y,+m-1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});};
 let _uid=1;
 const uid=()=>String(Date.now())+String(++_uid);
 
+// ── Primitives ──────────────────────────────────────────────────────────────
 const Inp=({label,className='',...p})=>(
   <div className={`flex flex-col gap-1.5 ${className}`}>
     {label&&<label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</label>}
@@ -43,85 +48,71 @@ const Sel=({label,className='',children,...p})=>(
   </div>
 );
 const Card=({children,className=''})=><div className={`bg-white rounded-2xl shadow-sm border border-gray-100 ${className}`}>{children}</div>;
-const EmptyState=({icon,title,sub})=>(
+const Spin=({white})=><div className={`w-5 h-5 border-2 rounded-full animate-spin flex-shrink-0 ${white?'border-white border-t-transparent':'border-gray-300 border-t-gray-600'}`}/>;
+
+const EmptyState=({icon,title,sub,action,onAction})=>(
   <div className="py-14 flex flex-col items-center gap-3 text-center px-6">
     <div className="text-4xl">{icon}</div>
     <p className="text-sm font-semibold text-gray-700">{title}</p>
     <p className="text-xs text-gray-400 max-w-xs">{sub}</p>
+    {action&&<button onClick={onAction} className="mt-2 text-xs font-semibold px-4 py-2 rounded-xl text-white" style={{background:'#16a34a'}}>{action}</button>}
   </div>
 );
-const Spin=()=><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"/>;
 
-// ── SVG Bar Chart (sem dependências externas) ─────────────────────────────
-const BarChart=({data})=>{
-  const maxVal=Math.max(...data.flatMap(d=>[d.i,d.o]),1);
-  const W=44,H=130,bw=10,pad=4;
-  return(
-    <svg width="100%" height={H} viewBox={`0 0 ${data.length*W} ${H}`} preserveAspectRatio="xMidYMid meet">
-      {data.map((d,i)=>{
-        const x=i*W+pad;
-        const ih=Math.round((d.i/maxVal)*(H-24));
-        const oh=Math.round((d.o/maxVal)*(H-24));
-        return(
-          <g key={i}>
-            <rect x={x} y={H-24-ih} width={bw} height={ih||1} fill="#16a34a" rx={2}/>
-            <rect x={x+bw+2} y={H-24-oh} width={bw} height={oh||1} fill="#fca5a5" rx={2}/>
-            <text x={x+bw+1} y={H-6} textAnchor="middle" fontSize={9} fill="#9ca3af">{d.day}</text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-};
+// ── Toast ───────────────────────────────────────────────────────────────────
+const ToastBar=({toast})=>toast?(
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 toast">
+    <div className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-lg text-sm font-medium text-white ${toast.type==='error'?'bg-red-500':'bg-gray-900'}`}>
+      <span>{toast.type==='error'?'✗':'✓'}</span>
+      {toast.msg}
+    </div>
+  </div>
+):null;
 
-// ── Login ─────────────────────────────────────────────────────────────────
-const LoginScreen=()=>{
-  const[email,setEmail]=useState('');
-  const[pass,setPass]=useState('');
-  const[err,setErr]=useState('');
-  const[loading,setLoading]=useState(false);
-  const login=async()=>{
-    if(!email||!pass)return;
-    setLoading(true);setErr('');
-    const{error}=await sb.auth.signInWithPassword({email,password:pass});
-    if(error)setErr('Email ou senha incorretos.');
-    setLoading(false);
-  };
-  return(
-    <div className="min-h-screen flex items-center justify-center p-4" style={{background:'#0f172a'}}>
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">💼</div>
-          <h1 className="text-2xl font-bold text-white">Gestão Financeira</h1>
-          <p className="text-slate-400 text-sm mt-1">Entre na sua conta</p>
-        </div>
-        <Card className="p-6 flex flex-col gap-4">
-          <Inp label="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com"/>
-          <Inp label="Senha" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==='Enter'&&login()}/>
-          {err&&<p className="text-sm text-red-500 text-center">{err}</p>}
-          <button onClick={login} disabled={loading} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2" style={{background:'#16a34a'}}>
-            {loading?<Spin/>:'Entrar'}
-          </button>
-        </Card>
+// ── Action Buttons (edit + delete, always visible) ───────────────────────────
+const EditBtn=({onClick})=>(
+  <button onClick={onClick} className="p-1.5 rounded-lg text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition flex-shrink-0">
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+  </button>
+);
+const DelBtn=({onClick})=>(
+  <button onClick={onClick} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition flex-shrink-0">
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+  </button>
+);
+
+// ── Modal ───────────────────────────────────────────────────────────────────
+const Modal=({title,onClose,onSave,color='#16a34a',saving,children,saveLabel='Salvar'})=>(
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 fade" style={{background:'rgba(0,0,0,0.5)'}}>
+    <div className="bg-white rounded-2xl w-full max-w-sm flex flex-col" style={{boxShadow:'0 25px 60px rgba(0,0,0,0.2)',maxHeight:'90vh'}}>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+        <span className="font-semibold text-gray-900">{title}</span>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
+      </div>
+      <div className="px-6 py-4 flex flex-col gap-3 overflow-y-auto">{children}</div>
+      <div className="flex gap-2 px-6 pb-5 flex-shrink-0">
+        <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Cancelar</button>
+        <button onClick={onSave} disabled={saving} className="flex-1 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{background:color}}>
+          {saving?<Spin white/>:saveLabel}
+        </button>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
-// ── ProductSearch ─────────────────────────────────────────────────────────
+// ── Product Search ───────────────────────────────────────────────────────────
 const ProductSearch=({products,value,onSelect,onChange,placeholder})=>{
   const[open,setOpen]=useState(false);
   const filtered=value.length>0?products.filter(p=>p.name.toLowerCase().includes(value.toLowerCase())):products;
-  const show=open&&products.length>0&&filtered.length>0;
   return(
     <div className="relative flex-1">
       <input value={value} onChange={e=>{onChange(e.target.value);setOpen(true);}} onFocus={()=>setOpen(true)} onBlur={()=>setTimeout(()=>setOpen(false),120)}
         placeholder={placeholder||(products.length>0?'Buscar produto ou serviço…':'Descrição')}
         className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-400 transition w-full"/>
-      {show&&(
+      {open&&products.length>0&&filtered.length>0&&(
         <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 z-30 overflow-hidden max-h-48 overflow-y-auto" style={{boxShadow:'0 8px 24px rgba(0,0,0,0.1)'}}>
           {filtered.map(p=>(
-            <button key={p.id} onMouseDown={()=>{onSelect(p);setOpen(false);}} className="flex items-center justify-between w-full px-3 py-2.5 hover:bg-gray-50 transition text-left border-b border-gray-50 last:border-0">
+            <button key={p.id} onMouseDown={()=>{onSelect(p);setOpen(false);}} className="flex items-center justify-between w-full px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0">
               <div className="flex items-center gap-2 min-w-0">
                 {p.category&&<span className="text-xs bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-md flex-shrink-0">{p.category}</span>}
                 <span className="text-sm text-gray-800 truncate">{p.name}</span>
@@ -136,7 +127,7 @@ const ProductSearch=({products,value,onSelect,onChange,placeholder})=>{
   );
 };
 
-// ── Cart Item ─────────────────────────────────────────────────────────────
+// ── Cart Row ─────────────────────────────────────────────────────────────────
 const CartRow=({item,idx,products,onChange,onSelect,onRemove})=>{
   const lt=(Number(item.qty)||0)*(Number(item.up)||0);
   return(
@@ -157,7 +148,7 @@ const CartRow=({item,idx,products,onChange,onSelect,onRemove})=>{
   );
 };
 
-// ── Sale Form ─────────────────────────────────────────────────────────────
+// ── Sale Form ─────────────────────────────────────────────────────────────────
 const SaleForm=({products,brand,onSave,onClose})=>{
   const[items,setItems]=useState([{desc:'',qty:'1',up:''}]);
   const[date,setDate]=useState(today());
@@ -174,7 +165,7 @@ const SaleForm=({products,brand,onSave,onClose})=>{
     onClose();
   };
   return(
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" style={{background:'rgba(0,0,0,0.5)'}}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 fade" style={{background:'rgba(0,0,0,0.5)'}}>
       <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg flex flex-col" style={{maxHeight:'90vh',boxShadow:'0 25px 60px rgba(0,0,0,0.2)'}}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <span className="font-semibold text-gray-900">Nova Venda</span>
@@ -184,8 +175,7 @@ const SaleForm=({products,brand,onSave,onClose})=>{
           <div className="flex flex-col gap-3">
             {items.map((it,idx)=><CartRow key={idx} item={it} idx={idx} products={products} onChange={ch} onSelect={sel} onRemove={items.length>1?()=>setItems(p=>p.filter((_,i)=>i!==idx)):null}/>)}
             <button onClick={()=>setItems(p=>[...p,{desc:'',qty:'1',up:''}])} className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 w-fit">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-              Adicionar item
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Adicionar item
             </button>
           </div>
           <div className="flex items-center justify-between py-3 border-t border-b border-gray-100">
@@ -202,7 +192,7 @@ const SaleForm=({products,brand,onSave,onClose})=>{
         <div className="flex gap-2 px-6 pb-6 pt-3 flex-shrink-0">
           <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-3 text-sm font-medium hover:bg-gray-50">Cancelar</button>
           <button onClick={save} disabled={saving} className="flex-1 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{background:brand.color}}>
-            {saving?<Spin/>:`Confirmar · ${R$(total)}`}
+            {saving?<Spin white/>:`Confirmar · ${R$(total)}`}
           </button>
         </div>
       </div>
@@ -210,26 +200,7 @@ const SaleForm=({products,brand,onSave,onClose})=>{
   );
 };
 
-// ── Modal ─────────────────────────────────────────────────────────────────
-const Modal=({title,onClose,onSave,color,saving,children})=>(
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background:'rgba(0,0,0,0.5)'}}>
-    <div className="bg-white rounded-2xl w-full max-w-sm flex flex-col" style={{boxShadow:'0 25px 60px rgba(0,0,0,0.18)'}}>
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-        <span className="font-semibold text-gray-900">{title}</span>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
-      </div>
-      <div className="px-6 py-4 flex flex-col gap-3">{children}</div>
-      <div className="flex gap-2 px-6 pb-5">
-        <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Cancelar</button>
-        <button onClick={onSave} disabled={saving} className="flex-1 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{background:color}}>
-          {saving?<Spin/>:'Salvar'}
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
-// ── Sidebar ───────────────────────────────────────────────────────────────
+// ── Sidebar ───────────────────────────────────────────────────────────────────
 const NAV=[
   {key:'dashboard',label:'Dashboard',d:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'},
   {key:'income',label:'Vendas',d:'M12 4v16m8-8l-8-8-8 8'},
@@ -257,11 +228,33 @@ const Sidebar=({view,onNav,brand,open,onClose})=>(
         ))}
       </nav>
       <div className="px-5 py-4" style={{borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-        <p className="text-xs" style={{color:'rgba(255,255,255,0.2)'}}>v3.0 · Gestão Financeira</p>
+        <p className="text-xs" style={{color:'rgba(255,255,255,0.2)'}}>v4.0 · Gestão Financeira</p>
       </div>
     </aside>
   </>
 );
+
+// ── SVG Bar Chart ─────────────────────────────────────────────────────────────
+const BarChart=({data})=>{
+  const max=Math.max(...data.flatMap(d=>[d.i,d.o]),1);
+  const W=44,H=130,bw=10,pad=4;
+  return(
+    <svg width="100%" height={H} viewBox={`0 0 ${data.length*W} ${H}`} preserveAspectRatio="xMidYMid meet">
+      {data.map((d,i)=>{
+        const x=i*W+pad;
+        const ih=Math.round((d.i/max)*(H-24));
+        const oh=Math.round((d.o/max)*(H-24));
+        return(
+          <g key={i}>
+            <rect x={x} y={H-24-ih} width={bw} height={ih||1} fill="#16a34a" rx={2}/>
+            <rect x={x+bw+2} y={H-24-oh} width={bw} height={oh||1} fill="#fca5a5" rx={2}/>
+            <text x={x+bw+1} y={H-6} textAnchor="middle" fontSize={9} fill="#9ca3af">{d.day}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
 
 const KpiCard=({label,value,sub,color})=>(
   <Card className="p-5 overflow-hidden relative">
@@ -272,8 +265,8 @@ const KpiCard=({label,value,sub,color})=>(
   </Card>
 );
 
-// ── Dashboard ─────────────────────────────────────────────────────────────
-const Dashboard=({tx,products,brand})=>{
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+const Dashboard=({tx,products,brand,onNav})=>{
   const cm=today().slice(0,7);
   const mtx=tx.filter(t=>t.date.startsWith(cm));
   const ti=mtx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
@@ -282,8 +275,7 @@ const Dashboard=({tx,products,brand})=>{
   const di=dtx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
   const dout=dtx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const chartData=useMemo(()=>Array.from({length:7},(_,i)=>{
-    const d=prevDays(6-i);
-    const dt=tx.filter(t=>t.date===d);
+    const d=prevDays(6-i);const dt=tx.filter(t=>t.date===d);
     return{day:new Date(d+'T12:00').toLocaleDateString('pt-BR',{weekday:'short'}),i:dt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),o:dt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)};
   }),[tx]);
   const lowStock=products.filter(p=>p.stock!=null&&p.stock<=5);
@@ -293,7 +285,7 @@ const Dashboard=({tx,products,brand})=>{
       <div><h2 className="text-2xl font-bold text-gray-900">Dashboard</h2><p className="text-sm text-gray-400 mt-0.5">{new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p></div>
       {lowStock.length>0&&(
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 flex flex-col gap-2">
-          <p className="text-sm font-semibold text-amber-800">⚠️ Estoque baixo</p>
+          <p className="text-sm font-semibold text-amber-800">⚠️ Estoque baixo — reponha em breve</p>
           {lowStock.map(p=><div key={p.id} className="flex items-center justify-between"><span className="text-sm text-amber-700">{p.name}</span><span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${p.stock<=0?'bg-red-100 text-red-600':'bg-amber-100 text-amber-700'}`}>{p.stock<=0?'Esgotado':`${p.stock} un.`}</span></div>)}
         </div>
       )}
@@ -305,25 +297,25 @@ const Dashboard=({tx,products,brand})=>{
       </div>
       <Card className="p-5">
         <div className="flex items-center gap-4 mb-3">
-          <p className="text-sm font-semibold text-gray-800">Últimos 7 dias</p>
-          <div className="flex items-center gap-3 text-xs text-gray-400">
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:'#16a34a'}}/>Entradas</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:'#fca5a5'}}/>Saídas</span>
+          <p className="text-sm font-semibold text-gray-800">Fluxo dos últimos 7 dias</p>
+          <div className="flex gap-3 text-xs text-gray-400">
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-green-600"/>Entradas</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-red-200"/>Saídas</span>
           </div>
         </div>
-        {tx.length===0?<div className="flex items-center justify-center h-28 text-sm text-gray-300">Nenhuma movimentação ainda</div>:<BarChart data={chartData}/>}
+        {tx.length===0?<div className="flex flex-col items-center py-8 gap-2"><p className="text-sm text-gray-300">Nenhuma movimentação ainda</p><button onClick={()=>onNav('income')} className="text-xs font-semibold text-green-600 hover:underline">Registrar primeira venda →</button></div>:<BarChart data={chartData}/>}
       </Card>
       <Card>
         <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
           <p className="text-sm font-semibold text-gray-800">Movimentações recentes</p>
-          {recent.length>0&&<span className="text-xs text-gray-400">{recent.length}</span>}
+          {recent.length>0&&<button onClick={()=>onNav('report')} className="text-xs text-gray-400 hover:text-gray-600">Ver relatório →</button>}
         </div>
-        {recent.length===0?<EmptyState icon="📋" title="Nenhuma movimentação" sub="Registre vendas e despesas para ver o histórico."/>:(
+        {recent.length===0?<EmptyState icon="📋" title="Nenhuma movimentação" sub="Comece registrando uma venda ou despesa." action="Registrar venda" onAction={()=>onNav('income')}/>:(
           <div className="divide-y divide-gray-50">
             {recent.map(t=>(
               <div key={t.id} className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold ${t.type==='income'?'bg-green-50 text-green-600':'bg-red-50 text-red-500'}`}>{t.type==='income'?'↑':'↓'}</div>
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${t.type==='income'?'bg-green-50 text-green-600':'bg-red-50 text-red-500'}`}>{t.type==='income'?'↑':'↓'}</div>
                   <div><p className="text-sm font-medium text-gray-800">{t.desc}</p><p className="text-xs text-gray-400">{fmtDate(t.date)} · {t.method||t.category}</p></div>
                 </div>
                 <span className={`text-sm font-semibold ${t.type==='income'?'text-green-600':'text-red-500'}`}>{t.type==='income'?'+':'-'}{R$(t.amount)}</span>
@@ -336,90 +328,61 @@ const Dashboard=({tx,products,brand})=>{
   );
 };
 
-// ── Income View ───────────────────────────────────────────────────────────
-const IncomeView=({tx,products,onAdd,onDelete,onDeductStock,brand})=>{
+// ── Income View ───────────────────────────────────────────────────────────────
+const IncomeView=({tx,products,onAdd,onEdit,onDelete,onDeductStock,brand,showToast})=>{
   const[modal,setModal]=useState(false);
+  const[editItem,setEditItem]=useState(null);
+  const[saving,setSaving]=useState(false);
   const filtered=tx.filter(t=>t.type==='income').sort((a,b)=>b.date.localeCompare(a.date));
   const total=filtered.reduce((s,t)=>s+t.amount,0);
+
+  const openEdit=t=>setEditItem({id:t.id,desc:t.desc,amount:String(t.amount),date:t.date,method:t.method||'PIX'});
+  const saveEdit=async()=>{
+    if(!editItem.desc||!editItem.amount)return;
+    setSaving(true);
+    await onEdit(editItem.id,{desc:editItem.desc,amount:Number(editItem.amount),date:editItem.date,method:editItem.method});
+    showToast('Venda atualizada');setSaving(false);setEditItem(null);
+  };
+
   return(
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between">
-        <div><h2 className="text-2xl font-bold text-gray-900">Vendas</h2><p className="text-sm text-gray-400 mt-0.5">Total: <span className="font-semibold text-green-600">{R$(total)}</span></p></div>
+        <div><h2 className="text-2xl font-bold text-gray-900">Vendas</h2><p className="text-sm text-gray-400 mt-0.5">{filtered.length} registro{filtered.length!==1?'s':''} · Total: <span className="font-semibold text-green-600">{R$(total)}</span></p></div>
         <button onClick={()=>setModal(true)} className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90" style={{background:brand.color}}>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
           Nova Venda
         </button>
       </div>
       <Card>
-        {filtered.length===0?<EmptyState icon="💰" title="Nenhuma venda" sub="Registre vendas com múltiplos itens e cálculo automático."/>:(
+        {filtered.length===0?<EmptyState icon="💰" title="Nenhuma venda registrada" sub="Toque em 'Nova Venda' para registrar com múltiplos itens e cálculo automático."/>:(
           <div className="divide-y divide-gray-50">
             {filtered.map(t=>(
-              <div key={t.id} className="flex items-center justify-between px-5 py-3.5 group">
-                <div className="flex items-center gap-3 min-w-0">
+              <div key={t.id} className="flex items-center justify-between px-4 py-3.5 gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="w-8 h-8 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-sm font-bold flex-shrink-0">↑</div>
-                  <div className="min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{t.desc}</p><p className="text-xs text-gray-400">{fmtDate(t.date)} · {t.method}{t.items&&t.items.length>1?` · ${t.items.length} itens`:''}</p></div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{t.desc}</p>
+                    <p className="text-xs text-gray-400">{fmtDate(t.date)} · {t.method}{t.items&&t.items.length>1?` · ${t.items.length} itens`:''}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-sm font-semibold text-green-600">+{R$(t.amount)}</span>
-                  <button onClick={()=>onDelete(t.id)} className="opacity-0 group-hover:opacity-100 text-gray-200 hover:text-red-400 p-1"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-      {modal&&<SaleForm products={products} brand={brand} onSave={async sale=>{await onAdd(sale);if(sale.items)sale.items.forEach(it=>{const p=products.find(p=>p.name===it.desc);if(p&&p.stock!=null)onDeductStock(p.id,it.qty);});}} onClose={()=>setModal(false)}/>}
-    </div>
-  );
-};
-
-// ── Expense View ──────────────────────────────────────────────────────────
-const ExpenseView=({tx,onAdd,onDelete,brand})=>{
-  const[modal,setModal]=useState(false);
-  const[form,setForm]=useState({desc:'',amount:'',date:today(),cat:'Fixo'});
-  const[saving,setSaving]=useState(false);
-  const filtered=tx.filter(t=>t.type==='expense').sort((a,b)=>b.date.localeCompare(a.date));
-  const total=filtered.reduce((s,t)=>s+t.amount,0);
-  const save=async()=>{
-    if(!form.desc||!form.amount)return;
-    setSaving(true);
-    await onAdd({id:uid(),type:'expense',desc:form.desc,amount:Number(form.amount),date:form.date,cat:form.cat});
-    setModal(false);setSaving(false);setForm({desc:'',amount:'',date:today(),cat:'Fixo'});
-  };
-  return(
-    <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between">
-        <div><h2 className="text-2xl font-bold text-gray-900">Despesas</h2><p className="text-sm text-gray-400 mt-0.5">Total: <span className="font-semibold text-red-500">{R$(total)}</span></p></div>
-        <button onClick={()=>setModal(true)} className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90" style={{background:brand.color}}>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-          Nova Despesa
-        </button>
-      </div>
-      <Card>
-        {filtered.length===0?<EmptyState icon="📤" title="Nenhuma despesa" sub="Registre suas despesas para acompanhar o fluxo de caixa."/>:(
-          <div className="divide-y divide-gray-50">
-            {filtered.map(t=>(
-              <div key={t.id} className="flex items-center justify-between px-5 py-3.5 group">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center text-sm font-bold">↓</div>
-                  <div><p className="text-sm font-medium text-gray-800">{t.desc}</p><p className="text-xs text-gray-400">{fmtDate(t.date)} · {t.category}</p></div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-red-500">-{R$(t.amount)}</span>
-                  <button onClick={()=>onDelete(t.id)} className="opacity-0 group-hover:opacity-100 text-gray-200 hover:text-red-400 p-1"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className="text-sm font-semibold text-green-600 mr-1">+{R$(t.amount)}</span>
+                  <EditBtn onClick={()=>openEdit(t)}/>
+                  <DelBtn onClick={async()=>{await onDelete(t.id);showToast('Venda removida');}}/>
                 </div>
               </div>
             ))}
           </div>
         )}
       </Card>
-      {modal&&(
-        <Modal title="Nova Despesa" onClose={()=>setModal(false)} onSave={save} color={brand.color} saving={saving}>
-          <Inp label="Descrição" value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} placeholder="O que foi pago"/>
-          <Inp label="Valor (R$)" type="number" step="0.01" min="0" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} placeholder="0,00"/>
-          <Inp label="Data" type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/>
-          <Sel label="Categoria" value={form.cat} onChange={e=>setForm(f=>({...f,cat:e.target.value}))}>
-            {['Fixo','Variável','Estoque','Marketing','Pessoal','Serviços','Outro'].map(c=><option key={c}>{c}</option>)}
+      {modal&&<SaleForm products={products} brand={brand} onSave={async sale=>{await onAdd(sale);if(sale.items)sale.items.forEach(it=>{const p=products.find(p=>p.name===it.desc);if(p&&p.stock!=null)onDeductStock(p.id,it.qty);});showToast('Venda registrada!');}} onClose={()=>setModal(false)}/>}
+      {editItem&&(
+        <Modal title="Editar Venda" onClose={()=>setEditItem(null)} onSave={saveEdit} saving={saving} saveLabel="Salvar alterações">
+          <Inp label="Descrição" value={editItem.desc} onChange={e=>setEditItem(f=>({...f,desc:e.target.value}))} placeholder="Descrição da venda"/>
+          <Inp label="Valor total (R$)" type="number" step="0.01" min="0" value={editItem.amount} onChange={e=>setEditItem(f=>({...f,amount:e.target.value}))} placeholder="0,00"/>
+          <Inp label="Data" type="date" value={editItem.date} onChange={e=>setEditItem(f=>({...f,date:e.target.value}))}/>
+          <Sel label="Forma de pagamento" value={editItem.method} onChange={e=>setEditItem(f=>({...f,method:e.target.value}))}>
+            {['PIX','Dinheiro','Cartão de Débito','Cartão de Crédito','Boleto','Transferência'].map(m=><option key={m}>{m}</option>)}
           </Sel>
         </Modal>
       )}
@@ -427,13 +390,91 @@ const ExpenseView=({tx,onAdd,onDelete,brand})=>{
   );
 };
 
-// ── Inventory View ────────────────────────────────────────────────────────
-const InventoryView=({products,losses,onAddProduct,onDeleteProduct,onAddLoss,onDeleteLoss,onAdjustStock,brand})=>{
+// ── Expense View ──────────────────────────────────────────────────────────────
+const ExpenseView=({tx,onAdd,onEdit,onDelete,brand,showToast})=>{
+  const[modal,setModal]=useState(false);
+  const[editItem,setEditItem]=useState(null);
+  const[form,setForm]=useState({desc:'',amount:'',date:today(),cat:'Fixo'});
+  const[saving,setSaving]=useState(false);
+  const filtered=tx.filter(t=>t.type==='expense').sort((a,b)=>b.date.localeCompare(a.date));
+  const total=filtered.reduce((s,t)=>s+t.amount,0);
+
+  const openEdit=t=>setEditItem({id:t.id,desc:t.desc,amount:String(t.amount),date:t.date,cat:t.category||'Fixo'});
+  const saveEdit=async()=>{
+    if(!editItem.desc||!editItem.amount)return;
+    setSaving(true);
+    await onEdit(editItem.id,{desc:editItem.desc,amount:Number(editItem.amount),date:editItem.date,cat:editItem.cat});
+    showToast('Despesa atualizada');setSaving(false);setEditItem(null);
+  };
+  const saveNew=async()=>{
+    if(!form.desc||!form.amount)return;
+    setSaving(true);
+    await onAdd({id:uid(),type:'expense',desc:form.desc,amount:Number(form.amount),date:form.date,cat:form.cat});
+    showToast('Despesa registrada!');setModal(false);setSaving(false);setForm({desc:'',amount:'',date:today(),cat:'Fixo'});
+  };
+
+  const cats=['Fixo','Variável','Estoque','Marketing','Pessoal','Serviços','Outro'];
+  return(
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between">
+        <div><h2 className="text-2xl font-bold text-gray-900">Despesas</h2><p className="text-sm text-gray-400 mt-0.5">{filtered.length} registro{filtered.length!==1?'s':''} · Total: <span className="font-semibold text-red-500">{R$(total)}</span></p></div>
+        <button onClick={()=>setModal(true)} className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90" style={{background:brand.color}}>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+          Nova Despesa
+        </button>
+      </div>
+      <Card>
+        {filtered.length===0?<EmptyState icon="📤" title="Nenhuma despesa" sub="Registre aluguel, energia, estoque e outras saídas."/>:(
+          <div className="divide-y divide-gray-50">
+            {filtered.map(t=>(
+              <div key={t.id} className="flex items-center justify-between px-4 py-3.5 gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center text-sm font-bold flex-shrink-0">↓</div>
+                  <div className="min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{t.desc}</p><p className="text-xs text-gray-400">{fmtDate(t.date)} · {t.category}</p></div>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className="text-sm font-semibold text-red-500 mr-1">-{R$(t.amount)}</span>
+                  <EditBtn onClick={()=>openEdit(t)}/>
+                  <DelBtn onClick={async()=>{await onDelete(t.id);showToast('Despesa removida');}}/>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+      {modal&&(
+        <Modal title="Nova Despesa" onClose={()=>setModal(false)} onSave={saveNew} saving={saving}>
+          <Inp label="Descrição" value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} placeholder="Ex: Aluguel, Energia, Fornecedor…"/>
+          <Inp label="Valor (R$)" type="number" step="0.01" min="0" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} placeholder="0,00"/>
+          <Inp label="Data" type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/>
+          <Sel label="Categoria" value={form.cat} onChange={e=>setForm(f=>({...f,cat:e.target.value}))}>
+            {cats.map(c=><option key={c}>{c}</option>)}
+          </Sel>
+        </Modal>
+      )}
+      {editItem&&(
+        <Modal title="Editar Despesa" onClose={()=>setEditItem(null)} onSave={saveEdit} saving={saving} saveLabel="Salvar alterações">
+          <Inp label="Descrição" value={editItem.desc} onChange={e=>setEditItem(f=>({...f,desc:e.target.value}))}/>
+          <Inp label="Valor (R$)" type="number" step="0.01" min="0" value={editItem.amount} onChange={e=>setEditItem(f=>({...f,amount:e.target.value}))}/>
+          <Inp label="Data" type="date" value={editItem.date} onChange={e=>setEditItem(f=>({...f,date:e.target.value}))}/>
+          <Sel label="Categoria" value={editItem.cat} onChange={e=>setEditItem(f=>({...f,cat:e.target.value}))}>
+            {cats.map(c=><option key={c}>{c}</option>)}
+          </Sel>
+        </Modal>
+      )}
+    </div>
+  );
+};
+
+// ── Inventory View ────────────────────────────────────────────────────────────
+const InventoryView=({products,losses,onAddProduct,onEditProduct,onDeleteProduct,onAddLoss,onEditLoss,onDeleteLoss,onAdjustStock,brand,showToast})=>{
   const[tab,setTab]=useState('products');
   const[search,setSearch]=useState('');
   const[collapsed,setCollapsed]=useState(new Set());
   const[pm,setPm]=useState(false);
+  const[editProd,setEditProd]=useState(null);
   const[lm,setLm]=useState(false);
+  const[editLoss,setEditLoss]=useState(null);
   const[sm,setSm]=useState(null);
   const[pf,setPf]=useState({name:'',category:'',price:'',cost:'',stock:''});
   const[lf,setLf]=useState({desc:'',qty:'1',reason:'',date:today()});
@@ -444,7 +485,13 @@ const InventoryView=({products,losses,onAddProduct,onDeleteProduct,onAddLoss,onD
     if(!pf.name||!pf.price)return;
     setSaving(true);
     await onAddProduct({id:`P${String(Date.now()).slice(-6)}`,name:pf.name,category:pf.category||null,price:Number(pf.price),cost:pf.cost?Number(pf.cost):null,stock:pf.stock!==''?Number(pf.stock):null});
-    setSaving(false);setPm(false);setPf({name:'',category:'',price:'',cost:'',stock:''});
+    showToast('Produto adicionado!');setSaving(false);setPm(false);setPf({name:'',category:'',price:'',cost:'',stock:''});
+  };
+  const saveEditProd=async()=>{
+    if(!editProd.name||!editProd.price)return;
+    setSaving(true);
+    await onEditProduct(editProd.id,{name:editProd.name,category:editProd.category||null,price:Number(editProd.price),cost:editProd.cost?Number(editProd.cost):null,stock:editProd.stock!==''&&editProd.stock!=null?Number(editProd.stock):null});
+    showToast('Produto atualizado');setSaving(false);setEditProd(null);
   };
   const saveLoss=async()=>{
     if(!lf.desc||!lf.qty)return;
@@ -452,22 +499,32 @@ const InventoryView=({products,losses,onAddProduct,onDeleteProduct,onAddLoss,onD
     await onAddLoss({id:uid(),desc:lf.desc,qty:Number(lf.qty),reason:lf.reason,date:lf.date});
     const p=products.find(p=>p.name===lf.desc);
     if(p&&p.stock!=null)await onAdjustStock(p.id,-Number(lf.qty));
-    setSaving(false);setLm(false);setLf({desc:'',qty:'1',reason:'',date:today()});
+    showToast('Perda registrada');setSaving(false);setLm(false);setLf({desc:'',qty:'1',reason:'',date:today()});
+  };
+  const saveEditLoss=async()=>{
+    if(!editLoss.desc||!editLoss.qty)return;
+    setSaving(true);
+    await onEditLoss(editLoss.id,{desc:editLoss.desc,qty:Number(editLoss.qty),reason:editLoss.reason,date:editLoss.date});
+    showToast('Perda atualizada');setSaving(false);setEditLoss(null);
   };
   const saveStock=async()=>{
     if(!sq||!sm)return;
     setSaving(true);
     await onAdjustStock(sm,Number(sq));
-    setSaving(false);setSm(null);setSq('1');
+    showToast('Estoque atualizado!');setSaving(false);setSm(null);setSq('1');
   };
+
   const toggleCat=cat=>setCollapsed(p=>{const n=new Set(p);n.has(cat)?n.delete(cat):n.add(cat);return n;});
   const disp=search.trim()?products.filter(p=>[p.name,p.category,p.id].filter(Boolean).some(v=>v.toLowerCase().includes(search.toLowerCase()))):products;
   const grouped=Object.entries(disp.reduce((a,p)=>{const k=p.category||'Sem categoria';(a[k]=a[k]||[]).push(p);return a;},{})).sort(([a],[b])=>a==='Sem categoria'?1:b==='Sem categoria'?-1:a.localeCompare(b));
   const sp=sm?products.find(p=>p.id===sm):null;
+
+  const openEditProd=p=>setEditProd({id:p.id,name:p.name,category:p.category||'',price:String(p.price),cost:p.cost!=null?String(p.cost):'',stock:p.stock!=null?String(p.stock):''});
+
   return(
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between">
-        <div><h2 className="text-2xl font-bold text-gray-900">Estoque</h2><p className="text-sm text-gray-400 mt-0.5">{products.length} item{products.length!==1?'s':''}</p></div>
+        <div><h2 className="text-2xl font-bold text-gray-900">Estoque</h2><p className="text-sm text-gray-400 mt-0.5">{products.length} item{products.length!==1?'s':''} cadastrado{products.length!==1?'s':''}</p></div>
         <div className="flex gap-2">
           {tab==='products'&&<button onClick={()=>setPm(true)} className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90" style={{background:brand.color}}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Adicionar</button>}
           {tab==='losses'&&<button onClick={()=>setLm(true)} className="flex items-center gap-2 bg-red-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Perda</button>}
@@ -478,15 +535,16 @@ const InventoryView=({products,losses,onAddProduct,onDeleteProduct,onAddLoss,onD
           <button key={t.key} onClick={()=>setTab(t.key)} className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${tab===t.key?'bg-white text-gray-900 shadow-sm':'text-gray-500'}`}>{t.label}</button>
         ))}
       </div>
+
       {tab==='products'&&(
         <Card>
           <div className="px-5 py-3 border-b border-gray-50">
             <div className="relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar produto, serviço ou categoria…" className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:border-gray-300"/>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome ou categoria…" className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:border-gray-300"/>
             </div>
           </div>
-          {disp.length===0?<EmptyState icon="📦" title="Nenhum item" sub="Adicione produtos ou serviços com categoria, custo e estoque."/>:(
+          {disp.length===0?<EmptyState icon="📦" title="Nenhum item" sub="Adicione produtos com categoria, custo, preço e estoque."/>:(
             grouped.map(([cat,items])=>(
               <div key={cat}>
                 <button onClick={()=>toggleCat(cat)} className="w-full flex items-center justify-between px-5 py-2.5 bg-gray-50 hover:bg-gray-100 transition border-b border-gray-100">
@@ -499,19 +557,18 @@ const InventoryView=({products,losses,onAddProduct,onDeleteProduct,onAddLoss,onD
                 {!collapsed.has(cat)&&(
                   <div className="divide-y divide-gray-50">
                     {items.map(p=>(
-                      <div key={p.id} className="px-5 py-3.5 group">
-                        <div className="flex items-center justify-between">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-800">{p.name}</p>
-                            <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                              <span className="text-xs text-gray-400">Venda: {R$(p.price)}</span>
-                              {p.cost&&<><span className="text-xs text-gray-400">Custo: {R$(p.cost)}</span><span className="text-xs text-green-600 font-medium">Margem: {(((p.price-p.cost)/p.price)*100).toFixed(0)}%</span></>}
-                            </div>
+                      <div key={p.id} className="px-4 py-3.5 flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-800">{p.name}</p>
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                            <span className="text-xs text-gray-400">Venda: {R$(p.price)}</span>
+                            {p.cost!=null&&<><span className="text-xs text-gray-400">Custo: {R$(p.cost)}</span><span className="text-xs text-green-600 font-medium">Margem: {(((p.price-p.cost)/p.price)*100).toFixed(0)}%</span></>}
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                            {p.stock!=null&&<button onClick={()=>{setSm(p.id);setSq('1');}} className={`text-xs font-semibold px-2.5 py-1 rounded-lg hover:opacity-80 ${p.stock<=0?'bg-red-50 text-red-600':p.stock<=5?'bg-amber-50 text-amber-700':'bg-green-50 text-green-700'}`}>{p.stock<=0?'Esgotado':`${p.stock} un`}</button>}
-                            <button onClick={()=>onDeleteProduct(p.id)} className="opacity-0 group-hover:opacity-100 text-gray-200 hover:text-red-400 p-1"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {p.stock!=null&&<button onClick={()=>{setSm(p.id);setSq('1');}} className={`text-xs font-semibold px-2.5 py-1 rounded-lg mr-1 ${p.stock<=0?'bg-red-50 text-red-600':p.stock<=5?'bg-amber-50 text-amber-700':'bg-green-50 text-green-700'}`}>{p.stock<=0?'Esgotado':`${p.stock} un`}</button>}
+                          <EditBtn onClick={()=>openEditProd(p)}/>
+                          <DelBtn onClick={async()=>{await onDeleteProduct(p.id);showToast('Produto removido');}}/>
                         </div>
                       </div>
                     ))}
@@ -522,32 +579,48 @@ const InventoryView=({products,losses,onAddProduct,onDeleteProduct,onAddLoss,onD
           )}
         </Card>
       )}
+
       {tab==='losses'&&(
         <Card>
-          {losses.length===0?<EmptyState icon="⚠️" title="Nenhuma perda" sub="Registre produtos perdidos, cancelados ou danificados."/>:(
+          {losses.length===0?<EmptyState icon="⚠️" title="Nenhuma perda" sub="Registre produtos vencidos, cancelados ou danificados aqui."/>:(
             <div className="divide-y divide-gray-50">
               {[...losses].sort((a,b)=>b.date.localeCompare(a.date)).map(l=>(
-                <div key={l.id} className="flex items-center justify-between px-5 py-3.5 group">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm">⚠</div>
-                    <div><p className="text-sm font-medium text-gray-800">{l.qty}× {l.desc}</p><p className="text-xs text-gray-400">{fmtDate(l.date)}{l.reason?` · ${l.reason}`:''}</p></div>
+                <div key={l.id} className="flex items-center justify-between px-4 py-3.5 gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm flex-shrink-0">⚠</div>
+                    <div className="min-w-0"><p className="text-sm font-medium text-gray-800">{l.qty}× {l.desc}</p><p className="text-xs text-gray-400">{fmtDate(l.date)}{l.reason?` · ${l.reason}`:''}</p></div>
                   </div>
-                  <button onClick={()=>onDeleteLoss(l.id)} className="opacity-0 group-hover:opacity-100 text-gray-200 hover:text-red-400 p-1"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <EditBtn onClick={()=>setEditLoss({id:l.id,desc:l.desc,qty:String(l.qty),reason:l.reason||'',date:l.date})}/>
+                    <DelBtn onClick={async()=>{await onDeleteLoss(l.id);showToast('Perda removida');}}/>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </Card>
       )}
+
       {pm&&(
-        <Modal title="Novo Produto ou Serviço" onClose={()=>setPm(false)} onSave={saveProd} color={brand.color} saving={saving}>
-          <Inp label="Nome *" value={pf.name} onChange={e=>setPf(f=>({...f,name:e.target.value}))} placeholder="Ex: Corte de cabelo, Camisa M…"/>
+        <Modal title="Novo Produto ou Serviço" onClose={()=>setPm(false)} onSave={saveProd} saving={saving}>
+          <Inp label="Nome *" value={pf.name} onChange={e=>setPf(f=>({...f,name:e.target.value}))} placeholder="Ex: Corte de cabelo, Camiseta P…"/>
           <Inp label="Categoria" value={pf.category} onChange={e=>setPf(f=>({...f,category:e.target.value}))} placeholder="Ex: Serviços, Roupas, Alimentos…"/>
           <div className="grid grid-cols-2 gap-3">
             <Inp label="Preço de venda *" type="number" step="0.01" min="0" value={pf.price} onChange={e=>setPf(f=>({...f,price:e.target.value}))} placeholder="0,00"/>
-            <Inp label="Custo (opcional)" type="number" step="0.01" min="0" value={pf.cost} onChange={e=>setPf(f=>({...f,cost:e.target.value}))} placeholder="0,00"/>
+            <Inp label="Custo" type="number" step="0.01" min="0" value={pf.cost} onChange={e=>setPf(f=>({...f,cost:e.target.value}))} placeholder="0,00 (opcional)"/>
           </div>
-          <Inp label="Estoque inicial (em branco para serviços)" type="number" min="0" value={pf.stock} onChange={e=>setPf(f=>({...f,stock:e.target.value}))} placeholder="Qtd"/>
+          <Inp label="Estoque inicial (deixe em branco para serviços)" type="number" min="0" value={pf.stock} onChange={e=>setPf(f=>({...f,stock:e.target.value}))} placeholder="Ex: 50"/>
+        </Modal>
+      )}
+      {editProd&&(
+        <Modal title="Editar Produto" onClose={()=>setEditProd(null)} onSave={saveEditProd} saving={saving} saveLabel="Salvar alterações">
+          <Inp label="Nome *" value={editProd.name} onChange={e=>setEditProd(f=>({...f,name:e.target.value}))}/>
+          <Inp label="Categoria" value={editProd.category} onChange={e=>setEditProd(f=>({...f,category:e.target.value}))} placeholder="Ex: Serviços, Roupas…"/>
+          <div className="grid grid-cols-2 gap-3">
+            <Inp label="Preço de venda *" type="number" step="0.01" min="0" value={editProd.price} onChange={e=>setEditProd(f=>({...f,price:e.target.value}))}/>
+            <Inp label="Custo" type="number" step="0.01" min="0" value={editProd.cost} onChange={e=>setEditProd(f=>({...f,cost:e.target.value}))} placeholder="Opcional"/>
+          </div>
+          <Inp label="Estoque atual" type="number" min="0" value={editProd.stock} onChange={e=>setEditProd(f=>({...f,stock:e.target.value}))} placeholder="Em branco para serviços"/>
         </Modal>
       )}
       {lm&&(
@@ -556,28 +629,44 @@ const InventoryView=({products,losses,onAddProduct,onDeleteProduct,onAddLoss,onD
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Produto / Serviço</label>
             <ProductSearch products={products} value={lf.desc} onSelect={p=>setLf(f=>({...f,desc:p.name}))} onChange={v=>setLf(f=>({...f,desc:v}))} placeholder="Buscar ou digitar"/>
           </div>
-          <Inp label="Quantidade" type="number" min="1" value={lf.qty} onChange={e=>setLf(f=>({...f,qty:e.target.value}))}/>
-          <Inp label="Motivo (opcional)" value={lf.reason} onChange={e=>setLf(f=>({...f,reason:e.target.value}))} placeholder="Ex: Vencimento, Avaria…"/>
+          <Inp label="Quantidade perdida" type="number" min="1" value={lf.qty} onChange={e=>setLf(f=>({...f,qty:e.target.value}))}/>
+          <Inp label="Motivo" value={lf.reason} onChange={e=>setLf(f=>({...f,reason:e.target.value}))} placeholder="Ex: Vencimento, Avaria, Cancelamento…"/>
           <Inp label="Data" type="date" value={lf.date} onChange={e=>setLf(f=>({...f,date:e.target.value}))}/>
         </Modal>
       )}
+      {editLoss&&(
+        <Modal title="Editar Perda" onClose={()=>setEditLoss(null)} onSave={saveEditLoss} color="#dc2626" saving={saving} saveLabel="Salvar alterações">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Produto / Serviço</label>
+            <ProductSearch products={products} value={editLoss.desc} onSelect={p=>setEditLoss(f=>({...f,desc:p.name}))} onChange={v=>setEditLoss(f=>({...f,desc:v}))} placeholder="Buscar ou digitar"/>
+          </div>
+          <Inp label="Quantidade" type="number" min="1" value={editLoss.qty} onChange={e=>setEditLoss(f=>({...f,qty:e.target.value}))}/>
+          <Inp label="Motivo" value={editLoss.reason} onChange={e=>setEditLoss(f=>({...f,reason:e.target.value}))} placeholder="Ex: Vencimento, Avaria…"/>
+          <Inp label="Data" type="date" value={editLoss.date} onChange={e=>setEditLoss(f=>({...f,date:e.target.value}))}/>
+        </Modal>
+      )}
       {sm&&sp&&(
-        <Modal title={`Repor estoque · ${sp.name}`} onClose={()=>setSm(null)} onSave={saveStock} color={brand.color} saving={saving}>
-          <p className="text-sm text-gray-500">Estoque atual: <strong>{sp.stock} un.</strong></p>
+        <Modal title={`Repor estoque · ${sp.name}`} onClose={()=>setSm(null)} onSave={saveStock} saving={saving} saveLabel={`Adicionar ao estoque`}>
+          <div className="rounded-xl bg-gray-50 px-4 py-3 flex items-center justify-between">
+            <span className="text-sm text-gray-600">Estoque atual</span>
+            <span className="text-lg font-bold text-gray-900">{sp.stock} un.</span>
+          </div>
           <Inp label="Quantidade a adicionar" type="number" min="1" value={sq} onChange={e=>setSq(e.target.value)} placeholder="Ex: 10"/>
+          {sq&&Number(sq)>0&&<p className="text-xs text-gray-400 text-center">Novo estoque: <strong>{(sp.stock||0)+Number(sq)} un.</strong></p>}
         </Modal>
       )}
     </div>
   );
 };
 
-// ── Report View ───────────────────────────────────────────────────────────
+// ── Report View ───────────────────────────────────────────────────────────────
 const ReportView=({tx})=>{
   const months=useMemo(()=>[...new Set(tx.map(t=>t.date.slice(0,7)))].sort((a,b)=>b.localeCompare(a)),[tx]);
   const[month,setMonth]=useState(today().slice(0,7));
   const filtered=tx.filter(t=>t.date.startsWith(month));
   const income=filtered.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
   const expense=filtered.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const bycat=filtered.filter(t=>t.type==='expense').reduce((a,t)=>{const k=t.category||'Outro';a[k]=(a[k]||0)+t.amount;return a;},{});
   return(
     <div className="flex flex-col gap-6">
       <div><h2 className="text-2xl font-bold text-gray-900">Relatório</h2><p className="text-sm text-gray-400 mt-0.5">Fechamento mensal</p></div>
@@ -595,9 +684,25 @@ const ReportView=({tx})=>{
               </Card>
             ))}
           </div>
+          {Object.keys(bycat).length>0&&(
+            <Card className="p-5">
+              <p className="text-sm font-semibold text-gray-800 mb-3">Despesas por categoria</p>
+              <div className="flex flex-col gap-2">
+                {Object.entries(bycat).sort(([,a],[,b])=>b-a).map(([cat,val])=>(
+                  <div key={cat} className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500 w-20 flex-shrink-0 truncate">{cat}</span>
+                    <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                      <div className="h-full bg-red-400 rounded-full" style={{width:`${(val/expense*100).toFixed(0)}%`}}/>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-600 w-20 text-right">{R$(val)}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
           <Card>
             <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-              <p className="text-sm font-semibold text-gray-800">Detalhamento</p>
+              <p className="text-sm font-semibold text-gray-800">Todas as movimentações</p>
               <span className="text-xs text-gray-400">{filtered.length} registros</span>
             </div>
             {filtered.length===0?<EmptyState icon="🗓️" title="Sem registros neste mês." sub=""/>:(
@@ -620,15 +725,15 @@ const ReportView=({tx})=>{
   );
 };
 
-// ── Settings View ─────────────────────────────────────────────────────────
-const SettingsView=({brand,onSave,onLogout})=>{
+// ── Settings View ─────────────────────────────────────────────────────────────
+const SettingsView=({brand,onSave,onLogout,showToast})=>{
   const[form,setForm]=useState({...brand});
   const[saving,setSaving]=useState(false);
   const COLORS=['#16a34a','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2','#be185d','#374151','#b45309'];
-  const save=async()=>{setSaving(true);await onSave(form);setSaving(false);};
+  const save=async()=>{setSaving(true);await onSave(form);showToast('Configurações salvas!');setSaving(false);};
   return(
     <div className="flex flex-col gap-6">
-      <div><h2 className="text-2xl font-bold text-gray-900">Configurações</h2><p className="text-sm text-gray-400 mt-0.5">Personalize para cada cliente</p></div>
+      <div><h2 className="text-2xl font-bold text-gray-900">Configurações</h2><p className="text-sm text-gray-400 mt-0.5">Nome, cor e ícone da empresa</p></div>
       <Card className="p-6 flex flex-col gap-5">
         <Inp label="Nome da empresa" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Nome da empresa"/>
         <Inp label="Emoji / ícone" value={form.logo} onChange={e=>setForm(f=>({...f,logo:e.target.value}))} placeholder="💼"/>
@@ -636,12 +741,12 @@ const SettingsView=({brand,onSave,onLogout})=>{
           <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cor principal</label>
           <div className="flex gap-2 flex-wrap">
             {COLORS.map(c=>(
-              <button key={c} onClick={()=>setForm(f=>({...f,color:c}))} className="w-8 h-8 rounded-full hover:scale-110 flex items-center justify-center" style={{background:c}}>
+              <button key={c} onClick={()=>setForm(f=>({...f,color:c}))} className="w-9 h-9 rounded-full hover:scale-110 transition-transform flex items-center justify-center" style={{background:c}}>
                 {form.color===c&&<svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
               </button>
             ))}
           </div>
-          <Inp label="Hex personalizado" value={form.color} onChange={e=>setForm(f=>({...f,color:e.target.value}))} placeholder="#16a34a"/>
+          <Inp label="Código hexadecimal personalizado" value={form.color} onChange={e=>setForm(f=>({...f,color:e.target.value}))} placeholder="#16a34a"/>
         </div>
         <div className="rounded-xl p-4 bg-gray-50 border border-gray-100">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Pré-visualização</p>
@@ -651,19 +756,56 @@ const SettingsView=({brand,onSave,onLogout})=>{
           </div>
         </div>
         <button onClick={save} disabled={saving} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{background:form.color}}>
-          {saving?<Spin/>:'Salvar e aplicar'}
+          {saving?<Spin white/>:'Salvar e aplicar'}
         </button>
       </Card>
       <Card className="p-6">
-        <p className="text-sm font-semibold text-gray-800 mb-1">Sair da conta</p>
-        <p className="text-xs text-gray-400 mb-4">Dados salvos no servidor. Acesse de qualquer dispositivo.</p>
-        <button onClick={onLogout} className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Sair</button>
+        <p className="text-sm font-semibold text-gray-800 mb-1">Conta</p>
+        <p className="text-xs text-gray-400 mb-4">Seus dados ficam salvos no servidor — acesse de qualquer dispositivo a qualquer hora.</p>
+        <button onClick={onLogout} className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition">Sair da conta</button>
       </Card>
     </div>
   );
 };
 
-// ── App ───────────────────────────────────────────────────────────────────
+// ── Login Screen ──────────────────────────────────────────────────────────────
+const LoginScreen=()=>{
+  const[email,setEmail]=useState('');
+  const[pass,setPass]=useState('');
+  const[err,setErr]=useState('');
+  const[loading,setLoading]=useState(false);
+  const login=async()=>{
+    if(!email||!pass)return;
+    setLoading(true);setErr('');
+    const{error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error)setErr('Email ou senha incorretos. Verifique e tente de novo.');
+    setLoading(false);
+  };
+  return(
+    <div className="min-h-screen flex items-center justify-center p-4" style={{background:'#0f172a'}}>
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="text-5xl mb-3">💼</div>
+          <h1 className="text-2xl font-bold text-white">Gestão Financeira</h1>
+          <p className="text-slate-400 text-sm mt-1">Entre com seu email e senha</p>
+        </div>
+        <Card className="p-6 flex flex-col gap-4">
+          <Inp label="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com"/>
+          <div>
+            <Inp label="Senha" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==='Enter'&&login()}/>
+            <p className="text-xs text-gray-400 mt-1.5">Esqueceu a senha? Entre em contato com o suporte.</p>
+          </div>
+          {err&&<div className="bg-red-50 border border-red-100 rounded-xl px-4 py-2.5"><p className="text-sm text-red-600">{err}</p></div>}
+          <button onClick={login} disabled={loading} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 mt-1" style={{background:'#16a34a'}}>
+            {loading?<Spin white/>:'Entrar'}
+          </button>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+// ── App ───────────────────────────────────────────────────────────────────────
 function App(){
   const[session,setSession]=useState(null);
   const[appLoading,setAppLoading]=useState(true);
@@ -674,8 +816,14 @@ function App(){
   const[products,setProducts]=useState([]);
   const[losses,setLosses]=useState([]);
   const[sidebarOpen,setSidebarOpen]=useState(false);
+  const[toast,setToast]=useState(null);
 
-  const loadData=async(uid)=>{
+  const showToast=useCallback((msg,type='success')=>{
+    setToast({msg,type});
+    setTimeout(()=>setToast(null),3000);
+  },[]);
+
+  const loadData=async uid=>{
     setDataLoading(true);
     const[pr,pdr,txr,lr]=await Promise.all([
       sb.from('company_profiles').select('*').eq('user_id',uid).maybeSingle(),
@@ -704,10 +852,16 @@ function App(){
     return()=>subscription.unsubscribe();
   },[]);
 
+  // ── CRUD ──────────────────────────────────────────────────────────────────
   const addTx=async t=>{
     const row={id:t.id,type:t.type,description:t.desc,amount:t.amount,date:t.date,method:t.method||null,category:t.cat||null,items:t.items||null,user_id:session.user.id};
     const{error}=await sb.from('transactions').insert(row);
     if(!error)setTx(p=>[{...t,...row,desc:row.description,cat:row.category},...p]);
+  };
+  const editTx=async(id,u)=>{
+    const row={description:u.desc,amount:u.amount,date:u.date,method:u.method||null,category:u.cat||null};
+    const{error}=await sb.from('transactions').update(row).eq('id',id);
+    if(!error)setTx(p=>p.map(t=>t.id===id?{...t,...row,desc:row.description,cat:row.category}:t));
   };
   const deleteTx=async id=>{await sb.from('transactions').delete().eq('id',id);setTx(p=>p.filter(t=>t.id!==id));};
 
@@ -716,10 +870,13 @@ function App(){
     const{error}=await sb.from('products').insert(row);
     if(!error)setProducts(prev=>[...prev,row]);
   };
+  const editProduct=async(id,u)=>{
+    const{error}=await sb.from('products').update(u).eq('id',id);
+    if(!error)setProducts(p=>p.map(p=>p.id===id?{...p,...u}:p));
+  };
   const deleteProduct=async id=>{await sb.from('products').delete().eq('id',id);setProducts(p=>p.filter(p=>p.id!==id));};
   const adjustStock=async(id,delta)=>{
-    const p=products.find(p=>p.id===id);
-    if(!p)return;
+    const p=products.find(p=>p.id===id);if(!p)return;
     const ns=Math.max(0,(p.stock||0)+delta);
     await sb.from('products').update({stock:ns}).eq('id',id);
     setProducts(p=>p.map(p=>p.id===id?{...p,stock:ns}:p));
@@ -729,6 +886,11 @@ function App(){
     const row={id:l.id,description:l.desc,qty:l.qty,reason:l.reason||null,date:l.date,user_id:session.user.id};
     const{error}=await sb.from('losses').insert(row);
     if(!error)setLosses(p=>[{...l,...row},...p]);
+  };
+  const editLoss=async(id,u)=>{
+    const row={description:u.desc,qty:u.qty,reason:u.reason||null,date:u.date};
+    const{error}=await sb.from('losses').update(row).eq('id',id);
+    if(!error)setLosses(p=>p.map(l=>l.id===id?{...l,...row,desc:row.description}:l));
   };
   const deleteLoss=async id=>{await sb.from('losses').delete().eq('id',id);setLosses(p=>p.filter(l=>l.id!==id));};
 
@@ -746,15 +908,15 @@ function App(){
 
   if(appLoading)return<LoadingScreen/>;
   if(!session)return<LoginScreen/>;
-  if(dataLoading)return<LoadingScreen text="Carregando dados…"/>;
+  if(dataLoading)return<LoadingScreen text="Carregando seus dados…"/>;
 
   const views={
-    dashboard:<Dashboard tx={tx} products={products} brand={brand}/>,
-    income:<IncomeView tx={tx} products={products} onAdd={addTx} onDelete={deleteTx} onDeductStock={(id,qty)=>adjustStock(id,-qty)} brand={brand}/>,
-    expense:<ExpenseView tx={tx} onAdd={addTx} onDelete={deleteTx} brand={brand}/>,
-    inventory:<InventoryView products={products} losses={losses} onAddProduct={addProduct} onDeleteProduct={deleteProduct} onAddLoss={addLoss} onDeleteLoss={deleteLoss} onAdjustStock={adjustStock} brand={brand}/>,
+    dashboard:<Dashboard tx={tx} products={products} brand={brand} onNav={setView}/>,
+    income:<IncomeView tx={tx} products={products} onAdd={addTx} onEdit={editTx} onDelete={deleteTx} onDeductStock={(id,qty)=>adjustStock(id,-qty)} brand={brand} showToast={showToast}/>,
+    expense:<ExpenseView tx={tx} onAdd={addTx} onEdit={editTx} onDelete={deleteTx} brand={brand} showToast={showToast}/>,
+    inventory:<InventoryView products={products} losses={losses} onAddProduct={addProduct} onEditProduct={editProduct} onDeleteProduct={deleteProduct} onAddLoss={addLoss} onEditLoss={editLoss} onDeleteLoss={deleteLoss} onAdjustStock={adjustStock} brand={brand} showToast={showToast}/>,
     report:<ReportView tx={tx}/>,
-    settings:<SettingsView brand={brand} onSave={saveBrand} onLogout={()=>sb.auth.signOut()}/>,
+    settings:<SettingsView brand={brand} onSave={saveBrand} onLogout={()=>sb.auth.signOut()} showToast={showToast}/>,
   };
 
   return(
@@ -772,6 +934,7 @@ function App(){
         </header>
         <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto">{views[view]}</main>
       </div>
+      <ToastBar toast={toast}/>
     </div>
   );
 }
