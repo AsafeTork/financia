@@ -22,85 +22,130 @@ body{margin:0;background:#f8fafc}
 <body>
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
-const {useState,useEffect,useMemo,useCallback,useRef} = React;
+const {useState,useEffect,useMemo,useCallback,useRef,memo} = React;
 const {createClient} = window.supabase;
+
+// ─── Configuração central ────────────────────────────────────────────────────
+// Chave pública (publishable) — segura para expor no frontend
+// A proteção real vem do RLS no Supabase, não desta chave
 const sb = createClient(
   'https://kxeqhorxhlgwcgywovqr.supabase.co',
   'sb_publishable_EVJrndaIaxwLN9vUdSByUg__itH2rLy'
 );
 
-const INIT_BRAND = {name:'Gestao Pro', color:'#16a34a', logo:'💼', logo_url:null};
-const fmt = v => Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-const today = () => new Date().toISOString().slice(0,10);
-const prevDays = n => { const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); };
-const fmtDate = s => new Date(s+'T12:00').toLocaleDateString('pt-BR');
-const monthLabel = s => { const [y,m]=s.split('-'); return new Date(+y,+m-1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}); };
-const safe = s => String(s||'').replace(/[<>]/g,'').trim();
-const genPwd = () => { const c='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#'; return Array.from({length:12},()=>c[Math.floor(Math.random()*c.length)]).join(''); };
-let _id=1;
-const uid = () => String(Date.now())+String(++_id);
+// ─── Limite máximo de registros por query ────────────────────────────────────
+// Evita carregar 10.000 linhas de uma vez e travar o browser
+const QUERY_LIMIT = 500;
 
-const Inp = ({label,hint,className='',...p}) => (
+// ─── Limite máximo de caracteres por campo de texto ─────────────────────────
+const MAX_TEXT = 200;
+
+const INIT_BRAND = {name:'Gestão Pro', color:'#16a34a', logo:'💼', logo_url:null};
+
+// ─── Formatadores ────────────────────────────────────────────────────────────
+const fmt    = v  => Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const today  = () => new Date().toISOString().slice(0,10);
+const prevDays = n => { const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); };
+const fmtDate  = s => new Date(s+'T12:00').toLocaleDateString('pt-BR');
+const monthLabel = s => { const [y,m]=s.split('-'); return new Date(+y,+m-1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}); };
+
+// ─── Sanitização de texto ────────────────────────────────────────────────────
+// Remove caracteres perigosos para XSS e limita tamanho
+// ANTES: só removia < >  DEPOIS: remove tudo que pode executar código
+const sanitizeText = (value) => {
+  if(value == null) return '';
+  return String(value)
+    .replace(/[<>'"]/g, '')           // remove tags e aspas usadas em ataques
+    .replace(/javascript:/gi, '')     // bloqueia links javascript:
+    .replace(/on\w+=/gi, '')          // bloqueia onclick= onerror= etc
+    .trim()
+    .slice(0, MAX_TEXT);              // limita tamanho máximo
+};
+
+let _idCounter = 1;
+const generateId = () => String(Date.now()) + String(++_idCounter);
+
+// ─── Gerador de senha segura ─────────────────────────────────────────────────
+const generatePassword = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
+  return Array.from({length:12}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+};
+
+// ─── Componentes base ────────────────────────────────────────────────────────
+// memo() evita re-renderização quando as props não mudaram
+const Inp = memo(({label,hint,className='',...props}) => (
   <div className={'flex flex-col gap-1.5 '+className}>
     {label && <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</label>}
-    <input className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition w-full" {...p}/>
+    <input className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition w-full" {...props}/>
     {hint && <p className="text-xs text-red-400">{hint}</p>}
   </div>
-);
-const Sel = ({label,className='',children,...p}) => (
+));
+
+const Sel = memo(({label,className='',children,...props}) => (
   <div className={'flex flex-col gap-1.5 '+className}>
     {label && <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</label>}
-    <select className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition" {...p}>{children}</select>
+    <select className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition" {...props}>{children}</select>
   </div>
-);
-const Textarea = ({label,className='',...p}) => (
+));
+
+const Textarea = memo(({label,className='',...props}) => (
   <div className={'flex flex-col gap-1.5 '+className}>
     {label && <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</label>}
-    <textarea className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition w-full resize-none" rows={6} {...p}/>
+    <textarea className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition w-full resize-none" rows={6} {...props}/>
   </div>
-);
-const Card = ({children,className=''}) => <div className={'bg-white rounded-2xl shadow-sm border border-gray-100 '+className}>{children}</div>;
-const Spin = ({white}) => <div className={'w-5 h-5 border-2 rounded-full animate-spin flex-shrink-0 '+(white?'border-white border-t-transparent':'border-gray-300 border-t-gray-700')}/>;
-const Empty = ({icon,title,sub,action,onAction}) => (
+));
+
+const Card  = memo(({children,className=''}) => <div className={'bg-white rounded-2xl shadow-sm border border-gray-100 '+className}>{children}</div>);
+const Spin  = ({white}) => <div className={'w-5 h-5 border-2 rounded-full animate-spin flex-shrink-0 '+(white?'border-white border-t-transparent':'border-gray-300 border-t-gray-700')}/>;
+const Empty = memo(({icon,title,sub,action,onAction}) => (
   <div className="py-14 flex flex-col items-center gap-3 text-center px-6">
     <div className="text-4xl">{icon}</div>
     <p className="text-sm font-semibold text-gray-700">{title}</p>
     <p className="text-xs text-gray-400 max-w-xs">{sub}</p>
     {action && <button onClick={onAction} className="mt-2 text-xs font-semibold px-4 py-2 rounded-xl text-white bg-green-600">{action}</button>}
   </div>
-);
+));
 
-const Toast = ({toast}) => toast ? (
+// ─── Toast (notificação temporária) ─────────────────────────────────────────
+const Toast = memo(({toast}) => toast ? (
   <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 anim-up pointer-events-none">
     <div className={'flex items-center gap-2.5 px-5 py-3 rounded-2xl shadow-xl text-sm font-medium text-white '+(toast.type==='error'?'bg-red-600':'bg-gray-900')}>
       <span>{toast.type==='error'?'X':'OK'}</span>{toast.msg}
     </div>
   </div>
-) : null;
+) : null);
 
-const Offline = () => {
-  const [off,setOff] = useState(!navigator.onLine);
+// ─── Banner de internet ──────────────────────────────────────────────────────
+const OfflineBanner = () => {
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   useEffect(() => {
-    const on=()=>setOff(false), off2=()=>setOff(true);
-    window.addEventListener('online',on); window.addEventListener('offline',off2);
-    return () => { window.removeEventListener('online',on); window.removeEventListener('offline',off2); };
-  },[]);
-  return off ? <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-white text-xs font-semibold text-center py-2">Sem internet - alteracoes nao serao salvas</div> : null;
+    const goOnline  = () => setIsOffline(false);
+    const goOffline = () => setIsOffline(true);
+    window.addEventListener('online',  goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => { window.removeEventListener('online',goOnline); window.removeEventListener('offline',goOffline); };
+  }, []);
+  return isOffline
+    ? <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-white text-xs font-semibold text-center py-2">Sem internet — alteracoes nao serao salvas</div>
+    : null;
 };
 
-const Confirm = ({msg,onOk,onCancel}) => (
+// ─── Caixa de confirmação antes de deletar ───────────────────────────────────
+// Evita exclusões acidentais
+const ConfirmDialog = memo(({message, onConfirm, onCancel}) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4 anim-fade" style={{background:'rgba(0,0,0,0.5)'}}>
     <div className="bg-white rounded-2xl w-full max-w-xs p-6 flex flex-col gap-4" style={{boxShadow:'0 25px 60px rgba(0,0,0,0.2)'}}>
-      <p className="text-sm text-gray-700 text-center leading-relaxed">{msg}</p>
+      <p className="text-sm text-gray-700 text-center leading-relaxed">{message}</p>
       <div className="flex gap-2">
-        <button onClick={onCancel} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Cancelar</button>
-        <button onClick={onOk} className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90">Confirmar</button>
+        <button onClick={onCancel}  className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Cancelar</button>
+        <button onClick={onConfirm} className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90">Confirmar</button>
       </div>
     </div>
   </div>
-);
+));
 
-const Modal = ({title,onClose,onSave,color='#16a34a',saving,children,saveLabel='Salvar',wide=false}) => (
+// ─── Modal genérico ──────────────────────────────────────────────────────────
+const Modal = memo(({title,onClose,onSave,color='#16a34a',saving,children,saveLabel='Salvar',wide=false}) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4 anim-fade" style={{background:'rgba(0,0,0,0.5)'}}>
     <div className={'bg-white rounded-2xl flex flex-col w-full '+(wide?'max-w-lg':'max-w-sm')} style={{boxShadow:'0 25px 60px rgba(0,0,0,0.2)',maxHeight:'90vh'}}>
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
@@ -118,130 +163,167 @@ const Modal = ({title,onClose,onSave,color='#16a34a',saving,children,saveLabel='
       </div>
     </div>
   </div>
-);
+));
 
-const EditBtn = ({onClick}) => (
+const EditBtn = memo(({onClick}) => (
   <button onClick={onClick} className="p-1.5 rounded-lg text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition flex-shrink-0">
     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
   </button>
-);
-const DelBtn = ({onClick}) => (
+));
+
+const DelBtn = memo(({onClick}) => (
   <button onClick={onClick} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition flex-shrink-0">
     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
   </button>
-);
+));
 
-const PSearch = ({products,value,onSelect,onChange,placeholder}) => {
-  const [open,setOpen] = useState(false);
-  const filtered = value.length>0 ? products.filter(p=>p.name.toLowerCase().includes(value.toLowerCase())) : products;
+// ─── Busca de produto com autocomplete ──────────────────────────────────────
+const ProductSearch = memo(({products, value, onSelect, onChange, placeholder}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const filtered = value.length > 0
+    ? products.filter(p => p.name.toLowerCase().includes(value.toLowerCase()))
+    : products;
   return (
     <div className="relative flex-1">
-      <input value={value} onChange={e=>{onChange(e.target.value);setOpen(true);}} onFocus={()=>setOpen(true)} onBlur={()=>setTimeout(()=>setOpen(false),120)}
-        placeholder={placeholder||(products.length>0?'Buscar produto...':'Descricao')}
+      <input value={value}
+        onChange={e => { onChange(e.target.value); setIsOpen(true); }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setTimeout(() => setIsOpen(false), 120)}
+        placeholder={placeholder || (products.length > 0 ? 'Buscar produto...' : 'Descricao')}
         className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition w-full"/>
-      {open && products.length>0 && filtered.length>0 && (
+      {isOpen && filtered.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 z-30 overflow-hidden max-h-48 overflow-y-auto" style={{boxShadow:'0 8px 24px rgba(0,0,0,0.1)'}}>
-          {filtered.map(p => (
-            <button key={p.id} onMouseDown={()=>{onSelect(p);setOpen(false);}} className="flex items-center justify-between w-full px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0">
+          {filtered.map(product => (
+            <button key={product.id} onMouseDown={() => { onSelect(product); setIsOpen(false); }}
+              className="flex items-center justify-between w-full px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0">
               <div className="flex items-center gap-2 min-w-0">
-                {p.category && <span className="text-xs bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-md flex-shrink-0">{p.category}</span>}
-                <span className="text-sm text-gray-800 truncate">{p.name}</span>
-                {p.stock!=null && <span className={'text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 '+(p.stock<=0?'bg-red-50 text-red-500':p.stock<=5?'bg-amber-50 text-amber-600':'bg-gray-100 text-gray-500')}>{p.stock}un</span>}
+                {product.category && <span className="text-xs bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-md flex-shrink-0">{product.category}</span>}
+                <span className="text-sm text-gray-800 truncate">{product.name}</span>
+                {product.stock != null && (
+                  <span className={'text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 '+(product.stock<=0?'bg-red-50 text-red-500':product.stock<=5?'bg-amber-50 text-amber-600':'bg-gray-100 text-gray-500')}>
+                    {product.stock}un
+                  </span>
+                )}
               </div>
-              <span className="text-xs font-semibold text-gray-400 ml-2">{fmt(p.price)}</span>
+              <span className="text-xs font-semibold text-gray-400 ml-2">{fmt(product.price)}</span>
             </button>
           ))}
         </div>
       )}
     </div>
   );
-};
+});
 
-const CartRow = ({item,idx,products,onChange,onSelect,onRemove}) => {
-  const lt = (Number(item.qty)||0)*(Number(item.up)||0);
+// ─── Item do carrinho de venda ───────────────────────────────────────────────
+const CartItem = memo(({item, index, products, onChange, onSelectProduct, onRemove}) => {
+  const lineTotal = (Number(item.qty)||0) * (Number(item.unitPrice)||0);
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <PSearch products={products} value={item.desc} onSelect={p=>onSelect(idx,p.name,p.price)} onChange={v=>onChange(idx,'desc',v)}/>
-        {onRemove && <button onClick={onRemove} className="text-gray-300 hover:text-red-400 p-1 flex-shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>}
+        <ProductSearch products={products} value={item.desc}
+          onSelect={p => onSelectProduct(index, p.name, p.price)}
+          onChange={v => onChange(index, 'desc', v)}/>
+        {onRemove && (
+          <button onClick={onRemove} className="text-gray-300 hover:text-red-400 p-1 flex-shrink-0">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        )}
       </div>
       <div className="flex items-end gap-2">
-        <Inp label="Qtd" type="number" min="1" value={item.qty} onChange={e=>onChange(idx,'qty',e.target.value)} className="w-16 flex-shrink-0"/>
-        <Inp label="Preco unit." type="number" step="0.01" min="0" value={item.up} onChange={e=>onChange(idx,'up',e.target.value)} className="flex-1"/>
+        <Inp label="Qtd" type="number" min="1" value={item.qty} onChange={e => onChange(index,'qty',e.target.value)} className="w-16 flex-shrink-0"/>
+        <Inp label="Preco unit." type="number" step="0.01" min="0" value={item.unitPrice} onChange={e => onChange(index,'unitPrice',e.target.value)} className="flex-1"/>
         <div className="flex flex-col gap-1.5 w-24 flex-shrink-0">
           <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</label>
-          <div className="border border-gray-100 rounded-xl px-3 py-2.5 text-sm bg-white text-gray-700 font-semibold">{lt>0?fmt(lt):'-'}</div>
+          <div className="border border-gray-100 rounded-xl px-3 py-2.5 text-sm bg-white text-gray-700 font-semibold">{lineTotal>0 ? fmt(lineTotal) : '-'}</div>
         </div>
       </div>
     </div>
   );
-};
+});
 
-const SaleForm = ({products,brand,onSave,onClose}) => {
-  const [items,setItems] = useState([{desc:'',qty:'1',up:''}]);
-  const [date,setDate] = useState(today());
-  const [method,setMethod] = useState('PIX');
-  const [saving,setSaving] = useState(false);
-  const total = items.reduce((s,i)=>s+(Number(i.qty)||0)*(Number(i.up)||0),0);
-  const ch = (idx,f,v) => setItems(p=>p.map((it,i)=>i===idx?{...it,[f]:v}:it));
-  const sel = (idx,name,price) => setItems(p=>p.map((it,i)=>i===idx?{...it,desc:name,up:String(price)}:it));
-  const save = async () => {
-    const valid = items.filter(i=>i.desc&&i.up);
-    if(!valid.length||!total) return;
+// ─── Formulário de nova venda ────────────────────────────────────────────────
+const SaleForm = memo(({products, brand, onSave, onClose}) => {
+  const [items,   setItems]  = useState([{desc:'', qty:'1', unitPrice:''}]);
+  const [date,    setDate]   = useState(today());
+  const [method,  setMethod] = useState('PIX');
+  const [saving,  setSaving] = useState(false);
+  const saleTotal = items.reduce((sum, item) => sum + (Number(item.qty)||0)*(Number(item.unitPrice)||0), 0);
+
+  const updateItem     = useCallback((idx,field,val) => setItems(prev => prev.map((it,i) => i===idx ? {...it,[field]:val} : it)), []);
+  const selectProduct  = useCallback((idx,name,price) => setItems(prev => prev.map((it,i) => i===idx ? {...it,desc:name,unitPrice:String(price)} : it)), []);
+  const addItem        = useCallback(() => setItems(prev => [...prev, {desc:'',qty:'1',unitPrice:''}]), []);
+  const removeItem     = useCallback(idx => setItems(prev => prev.filter((_,i) => i!==idx)), []);
+
+  const handleSave = async () => {
+    const validItems = items.filter(item => item.desc && item.unitPrice);
+    if(!validItems.length || !saleTotal) return;
     setSaving(true);
-    await onSave({id:uid(),type:'income',desc:safe(valid.length===1?valid[0].desc:valid.length+' itens'),items:valid.map(i=>({desc:safe(i.desc),qty:Number(i.qty)||1,unitPrice:Number(i.up)})),amount:total,date,method});
+    const desc = validItems.length===1 ? sanitizeText(validItems[0].desc) : validItems.length+' itens';
+    await onSave({
+      id: generateId(), type:'income', desc,
+      items: validItems.map(item => ({desc:sanitizeText(item.desc), qty:Number(item.qty)||1, unitPrice:Number(item.unitPrice)})),
+      amount: saleTotal, date, method
+    });
     onClose();
   };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 anim-fade" style={{background:'rgba(0,0,0,0.5)'}}>
       <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg flex flex-col" style={{maxHeight:'90vh',boxShadow:'0 25px 60px rgba(0,0,0,0.2)'}}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <span className="font-semibold text-gray-900">Nova Venda</span>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
         </div>
         <div className="overflow-y-auto flex-1 px-6 py-4 flex flex-col gap-4">
           <div className="flex flex-col gap-3">
-            {items.map((it,idx)=><CartRow key={idx} item={it} idx={idx} products={products} onChange={ch} onSelect={sel} onRemove={items.length>1?()=>setItems(p=>p.filter((_,i)=>i!==idx)):null}/>)}
-            <button onClick={()=>setItems(p=>[...p,{desc:'',qty:'1',up:''}])} className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 w-fit">
+            {items.map((item, idx) => (
+              <CartItem key={idx} item={item} index={idx} products={products}
+                onChange={updateItem} onSelectProduct={selectProduct}
+                onRemove={items.length > 1 ? () => removeItem(idx) : null}/>
+            ))}
+            <button onClick={addItem} className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 w-fit">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Adicionar item
             </button>
           </div>
           <div className="flex items-center justify-between py-3 border-t border-b border-gray-100">
             <span className="text-sm font-semibold text-gray-600">Total da venda</span>
-            <span className="text-2xl font-bold text-gray-900">{fmt(total)}</span>
+            <span className="text-2xl font-bold text-gray-900">{fmt(saleTotal)}</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Inp label="Data" type="date" value={date} onChange={e=>setDate(e.target.value)}/>
-            <Sel label="Pagamento" value={method} onChange={e=>setMethod(e.target.value)}>
-              {['PIX','Dinheiro','Cartao de Debito','Cartao de Credito','Boleto','Transferencia'].map(m=><option key={m}>{m}</option>)}
+            <Inp label="Data" type="date" value={date} onChange={e => setDate(e.target.value)}/>
+            <Sel label="Pagamento" value={method} onChange={e => setMethod(e.target.value)}>
+              {['PIX','Dinheiro','Cartao de Debito','Cartao de Credito','Boleto','Transferencia'].map(m => <option key={m}>{m}</option>)}
             </Sel>
           </div>
         </div>
         <div className="flex gap-2 px-6 pb-6 pt-3 flex-shrink-0">
           <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-3 text-sm font-medium hover:bg-gray-50">Cancelar</button>
-          <button onClick={save} disabled={saving} className="flex-1 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{background:brand.color}}>
-            {saving?<Spin white/>:('Confirmar . '+fmt(total))}
+          <button onClick={handleSave} disabled={saving} className="flex-1 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{background:brand.color}}>
+            {saving ? <Spin white/> : ('Confirmar - '+fmt(saleTotal))}
           </button>
         </div>
       </div>
     </div>
   );
-};
+});
 
-const NAV = [
-  {key:'dashboard',label:'Dashboard',d:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'},
-  {key:'income',label:'Vendas',d:'M12 4v16m8-8l-8-8-8 8'},
-  {key:'expense',label:'Despesas',d:'M12 20V4m-8 8l8 8 8-8'},
-  {key:'inventory',label:'Estoque',d:'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'},
-  {key:'email',label:'E-mails',d:'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'},
-  {key:'report',label:'Relatorios',d:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'},
-  {key:'settings',label:'Configuracoes',d:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z'},
+// ─── Navegação lateral ───────────────────────────────────────────────────────
+const NAV_ITEMS = [
+  {key:'dashboard', label:'Dashboard',    d:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'},
+  {key:'income',    label:'Vendas',       d:'M12 4v16m8-8l-8-8-8 8'},
+  {key:'expense',   label:'Despesas',     d:'M12 20V4m-8 8l8 8 8-8'},
+  {key:'inventory', label:'Estoque',      d:'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'},
+  {key:'email',     label:'E-mails',      d:'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'},
+  {key:'report',    label:'Relatorios',   d:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'},
+  {key:'settings',  label:'Configuracoes',d:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z'},
 ];
 
-const Sidebar = ({view,onNav,brand,open,onClose}) => (
+const Sidebar = memo(({currentView, onNavigate, brand, isOpen, onClose}) => (
   <>
-    {open && <div className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden" onClick={onClose}/>}
-    <aside className={'fixed top-0 left-0 h-full w-64 z-40 flex flex-col transition-transform duration-300 '+(open?'translate-x-0':'-translate-x-full')+' lg:translate-x-0'} style={{background:'#0f172a'}}>
+    {isOpen && <div className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden" onClick={onClose}/>}
+    <aside className={'fixed top-0 left-0 h-full w-64 z-40 flex flex-col transition-transform duration-300 '+(isOpen?'translate-x-0':'-translate-x-full')+' lg:translate-x-0'} style={{background:'#0f172a'}}>
       <div className="px-5 py-5 flex items-center gap-3" style={{borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
         {brand.logo_url
           ? <img src={brand.logo_url} alt="logo" className="w-9 h-9 rounded-xl object-cover flex-shrink-0"/>
@@ -250,323 +332,450 @@ const Sidebar = ({view,onNav,brand,open,onClose}) => (
         <span className="font-bold text-white truncate">{brand.name}</span>
       </div>
       <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
-        {NAV.map(({key,label,d}) => (
-          <button key={key} onClick={()=>{onNav(key);onClose();}} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition w-full text-left relative"
-            style={view===key?{background:'rgba(255,255,255,0.08)',color:'white'}:{color:'rgba(255,255,255,0.4)'}}>
-            {view===key && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style={{background:brand.color}}/>}
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d={d}/></svg>
+        {NAV_ITEMS.map(({key, label, d}) => (
+          <button key={key} onClick={() => { onNavigate(key); onClose(); }}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition w-full text-left relative"
+            style={currentView===key ? {background:'rgba(255,255,255,0.08)',color:'white'} : {color:'rgba(255,255,255,0.4)'}}>
+            {currentView===key && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style={{background:brand.color}}/>}
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d={d}/>
+            </svg>
             {label}
           </button>
         ))}
       </nav>
       <div className="px-5 py-4" style={{borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-        <p className="text-xs" style={{color:'rgba(255,255,255,0.2)'}}>v5.0</p>
+        <p className="text-xs" style={{color:'rgba(255,255,255,0.2)'}}>v5.1 - Revisado</p>
       </div>
     </aside>
   </>
-);
+));
 
-const KpiCard = ({label,value,sub,color}) => (
+// ─── KPI (card de número) ────────────────────────────────────────────────────
+const KpiCard = memo(({label, value, sub, color}) => (
   <Card className="p-5 overflow-hidden relative">
     <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl" style={{background:color}}/>
     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
     <p className="text-xl font-bold mt-2 text-gray-900 truncate">{value}</p>
     {sub && <p className="text-xs text-gray-400 mt-0.5 truncate">{sub}</p>}
   </Card>
-);
+));
 
-const BarChartSVG = ({data}) => {
-  const max = Math.max(...data.flatMap(d=>[d.i,d.o]),1);
-  const W=44,H=130,bw=10,pad=4;
+const BarChartSVG = memo(({data}) => {
+  const maxValue = Math.max(...data.flatMap(d => [d.income, d.expense]), 1);
+  const COL_W=44, HEIGHT=130, BAR_W=10, PADDING=4;
   return (
-    <svg width="100%" height={H} viewBox={'0 0 '+(data.length*W)+' '+H} preserveAspectRatio="xMidYMid meet">
-      {data.map((d,i)=>{
-        const x=i*W+pad, ih=Math.round((d.i/max)*(H-24)), oh=Math.round((d.o/max)*(H-24));
+    <svg width="100%" height={HEIGHT} viewBox={'0 0 '+(data.length*COL_W)+' '+HEIGHT} preserveAspectRatio="xMidYMid meet">
+      {data.map((day, i) => {
+        const x          = i*COL_W + PADDING;
+        const incomeH    = Math.round((day.income  / maxValue) * (HEIGHT-24));
+        const expenseH   = Math.round((day.expense / maxValue) * (HEIGHT-24));
         return (
           <g key={i}>
-            <rect x={x} y={H-24-ih} width={bw} height={ih||1} fill="#16a34a" rx={2}/>
-            <rect x={x+bw+2} y={H-24-oh} width={bw} height={oh||1} fill="#fca5a5" rx={2}/>
-            <text x={x+bw+1} y={H-6} textAnchor="middle" fontSize={9} fill="#9ca3af">{d.day}</text>
+            <rect x={x}        y={HEIGHT-24-incomeH}  width={BAR_W} height={incomeH||1}  fill="#16a34a" rx={2}/>
+            <rect x={x+BAR_W+2} y={HEIGHT-24-expenseH} width={BAR_W} height={expenseH||1} fill="#fca5a5" rx={2}/>
+            <text x={x+BAR_W+1} y={HEIGHT-6} textAnchor="middle" fontSize={9} fill="#9ca3af">{day.label}</text>
           </g>
         );
       })}
     </svg>
   );
-};
+});
 
-const Dashboard = ({tx,products,brand,onNav}) => {
-  const cm = today().slice(0,7);
-  const mtx = tx.filter(t=>t.date.startsWith(cm));
-  const ti = mtx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-  const to = mtx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-  const dtx = tx.filter(t=>t.date===today());
-  const di = dtx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-  const dout = dtx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-  const chartData = useMemo(()=>Array.from({length:7},(_,i)=>{
-    const d=prevDays(6-i), dt=tx.filter(t=>t.date===d);
-    return {day:new Date(d+'T12:00').toLocaleDateString('pt-BR',{weekday:'short'}),i:dt.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),o:dt.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)};
-  }),[tx]);
-  const lowStock = products.filter(p=>p.stock!=null&&p.stock<=5);
-  const recent = [...tx].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+// ─── Dashboard ───────────────────────────────────────────────────────────────
+// memo() + useMemo() internos = só recalcula quando os dados mudarem
+const Dashboard = memo(({transactions, products, brand, onNavigate}) => {
+  const currentMonth = today().slice(0,7);
+
+  const monthlyStats = useMemo(() => {
+    const monthTx  = transactions.filter(t => t.date.startsWith(currentMonth));
+    const income   = monthTx.filter(t => t.type==='income').reduce((s,t) => s+t.amount, 0);
+    const expenses = monthTx.filter(t => t.type==='expense').reduce((s,t) => s+t.amount, 0);
+    return {income, expenses, profit: income - expenses};
+  }, [transactions, currentMonth]);
+
+  const todayStats = useMemo(() => {
+    const todayTx  = transactions.filter(t => t.date===today());
+    const income   = todayTx.filter(t => t.type==='income').reduce((s,t) => s+t.amount, 0);
+    const expenses = todayTx.filter(t => t.type==='expense').reduce((s,t) => s+t.amount, 0);
+    return {income, expenses, balance: income - expenses};
+  }, [transactions]);
+
+  const chartData = useMemo(() => Array.from({length:7}, (_,i) => {
+    const date   = prevDays(6-i);
+    const dayTx  = transactions.filter(t => t.date===date);
+    return {
+      label:   new Date(date+'T12:00').toLocaleDateString('pt-BR',{weekday:'short'}),
+      income:  dayTx.filter(t => t.type==='income').reduce((s,t) => s+t.amount, 0),
+      expense: dayTx.filter(t => t.type==='expense').reduce((s,t) => s+t.amount, 0),
+    };
+  }), [transactions]);
+
+  const lowStockItems = useMemo(() => products.filter(p => p.stock!=null && p.stock<=5), [products]);
+  const recentTx      = useMemo(() => [...transactions].sort((a,b) => b.date.localeCompare(a.date)).slice(0,6), [transactions]);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
         <p className="text-sm text-gray-400 mt-0.5">{new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p>
       </div>
-      {lowStock.length>0 && (
+      {lowStockItems.length > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-amber-800">Estoque baixo</p>
-            <button onClick={()=>onNav('inventory')} className="text-xs text-amber-600 font-semibold hover:underline">Ver estoque</button>
+            <button onClick={() => onNavigate('inventory')} className="text-xs text-amber-600 font-semibold hover:underline">Ver estoque</button>
           </div>
-          {lowStock.map(p=>(
-            <div key={p.id} className="flex items-center justify-between">
-              <span className="text-sm text-amber-700">{p.name}</span>
-              <span className={'text-xs font-semibold px-2 py-0.5 rounded-full '+(p.stock<=0?'bg-red-100 text-red-600':'bg-amber-100 text-amber-700')}>{p.stock<=0?'Esgotado':p.stock+' un.'}</span>
+          {lowStockItems.map(product => (
+            <div key={product.id} className="flex items-center justify-between">
+              <span className="text-sm text-amber-700">{product.name}</span>
+              <span className={'text-xs font-semibold px-2 py-0.5 rounded-full '+(product.stock<=0?'bg-red-100 text-red-600':'bg-amber-100 text-amber-700')}>
+                {product.stock<=0 ? 'Esgotado' : product.stock+' un.'}
+              </span>
             </div>
           ))}
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <KpiCard label="Entradas (mes)" value={fmt(ti)} color="#16a34a"/>
-        <KpiCard label="Saidas (mes)" value={fmt(to)} color="#ef4444"/>
-        <KpiCard label="Lucro liquido" value={fmt(ti-to)} color={brand.color} sub="Este mes"/>
-        <KpiCard label="Saldo hoje" value={fmt(di-dout)} color="#3b82f6" sub={'+'+fmt(di)+' / -'+fmt(dout)}/>
+        <KpiCard label="Entradas (mes)"  value={fmt(monthlyStats.income)}   color="#16a34a"/>
+        <KpiCard label="Saidas (mes)"    value={fmt(monthlyStats.expenses)} color="#ef4444"/>
+        <KpiCard label="Lucro liquido"   value={fmt(monthlyStats.profit)}   color={brand.color} sub="Este mes"/>
+        <KpiCard label="Saldo hoje"      value={fmt(todayStats.balance)}    color="#3b82f6" sub={'+'+fmt(todayStats.income)+' / -'+fmt(todayStats.expenses)}/>
       </div>
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold text-gray-800">Últimos 7 dias</p>
+          <p className="text-sm font-semibold text-gray-800">Ultimos 7 dias</p>
           <div className="flex gap-3 text-xs text-gray-400">
             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-600 inline-block"/>Entradas</span>
             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-200 inline-block"/>Saidas</span>
           </div>
         </div>
-        {tx.length===0
-          ? <div className="flex flex-col items-center py-8 gap-2"><p className="text-sm text-gray-300">Nenhuma movimentacao ainda</p><button onClick={()=>onNav('income')} className="text-xs font-semibold text-green-600 hover:underline">Registrar primeira venda</button></div>
+        {transactions.length===0
+          ? <div className="flex flex-col items-center py-8 gap-2"><p className="text-sm text-gray-300">Nenhuma movimentacao ainda</p><button onClick={()=>onNavigate('income')} className="text-xs font-semibold text-green-600 hover:underline">Registrar primeira venda</button></div>
           : <BarChartSVG data={chartData}/>
         }
       </Card>
       <Card>
         <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
           <p className="text-sm font-semibold text-gray-800">Movimentacoes recentes</p>
-          {recent.length>0 && <button onClick={()=>onNav('report')} className="text-xs text-gray-400 hover:text-gray-600">Ver relatorio</button>}
+          {recentTx.length > 0 && <button onClick={() => onNavigate('report')} className="text-xs text-gray-400 hover:text-gray-600">Ver relatorio</button>}
         </div>
-        {recent.length===0
-          ? <div className="py-10 flex flex-col items-center gap-2"><span className="text-3xl">📋</span><p className="text-sm text-gray-500">Nenhuma movimentacao</p><div className="flex gap-3"><button onClick={()=>onNav('income')} className="text-xs font-semibold text-green-600 hover:underline">+ Venda</button><button onClick={()=>onNav('expense')} className="text-xs font-semibold text-red-500 hover:underline">+ Despesa</button></div></div>
-          : <div className="divide-y divide-gray-50">{recent.map(t=>(
-              <div key={t.id} className="flex items-center justify-between px-5 py-3.5">
+        {recentTx.length===0
+          ? <div className="py-10 flex flex-col items-center gap-2"><span className="text-3xl">📋</span><p className="text-sm text-gray-500">Nenhuma movimentacao</p><div className="flex gap-3"><button onClick={()=>onNavigate('income')} className="text-xs font-semibold text-green-600 hover:underline">+ Venda</button><button onClick={()=>onNavigate('expense')} className="text-xs font-semibold text-red-500 hover:underline">+ Despesa</button></div></div>
+          : <div className="divide-y divide-gray-50">{recentTx.map(tx => (
+              <div key={tx.id} className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={'w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 '+(t.type==='income'?'bg-green-50 text-green-600':'bg-red-50 text-red-500')}>{t.type==='income'?'UP':'DOWN'}</div>
-                  <div className="min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{t.desc}</p><p className="text-xs text-gray-400">{fmtDate(t.date)+' . '+(t.method||t.category||'')}</p></div>
+                  <div className={'w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 '+(tx.type==='income'?'bg-green-50 text-green-600':'bg-red-50 text-red-500')}>{tx.type==='income'?'+':'-'}</div>
+                  <div className="min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{tx.desc}</p><p className="text-xs text-gray-400">{fmtDate(tx.date)+' - '+(tx.method||tx.category||'')}</p></div>
                 </div>
-                <span className={'text-sm font-semibold flex-shrink-0 ml-3 '+(t.type==='income'?'text-green-600':'text-red-500')}>{(t.type==='income'?'+':'-')+fmt(t.amount)}</span>
+                <span className={'text-sm font-semibold flex-shrink-0 ml-3 '+(tx.type==='income'?'text-green-600':'text-red-500')}>{(tx.type==='income'?'+':'-')+fmt(tx.amount)}</span>
               </div>
             ))}</div>
         }
       </Card>
     </div>
   );
-};
+});
 
-const TxView = ({type,tx,products,onAdd,onEdit,onDelete,onDeductStock,brand,toast,confirm}) => {
+// ─── Tela de vendas e despesas ───────────────────────────────────────────────
+// Reutilizável para os dois tipos via prop "type"
+const TransactionView = memo(({type, transactions, products, onAdd, onEdit, onDelete, onDeductStock, brand, showToast, showConfirm}) => {
   const isIncome = type==='income';
-  const [modal,setModal] = useState(false);
-  const [editItem,setEditItem] = useState(null);
-  const [saving,setSaving] = useState(false);
-  const [search,setSearch] = useState('');
-  const [dateFrom,setDateFrom] = useState('');
-  const [dateTo,setDateTo] = useState('');
-  const cats = ['Fixo','Variavel','Estoque','Marketing','Pessoal','Servicos','Outro'];
-  const [form,setForm] = useState({desc:'',amount:'',date:today(),cat:'Fixo',method:'PIX'});
-  let filtered = tx.filter(t=>t.type===type);
-  if(search) filtered=filtered.filter(t=>t.desc.toLowerCase().includes(search.toLowerCase()));
-  if(dateFrom) filtered=filtered.filter(t=>t.date>=dateFrom);
-  if(dateTo) filtered=filtered.filter(t=>t.date<=dateTo);
-  filtered.sort((a,b)=>b.date.localeCompare(a.date));
-  const total = filtered.reduce((s,t)=>s+t.amount,0);
-  const openEdit = t => setEditItem({id:t.id,desc:t.desc,amount:String(t.amount),date:t.date,cat:t.category||'Fixo',method:t.method||'PIX'});
-  const saveEdit = async () => {
-    if(!editItem.desc||!editItem.amount) return;
+  const EXPENSE_CATEGORIES = ['Fixo','Variavel','Estoque','Marketing','Pessoal','Servicos','Outro'];
+  const PAYMENT_METHODS    = ['PIX','Dinheiro','Cartao de Debito','Cartao de Credito','Boleto','Transferencia'];
+
+  const [showNewModal,  setShowNewModal]  = useState(false);
+  const [editingItem,   setEditingItem]   = useState(null);
+  const [saving,        setSaving]        = useState(false);
+  const [searchText,    setSearchText]    = useState('');
+  const [filterFrom,    setFilterFrom]    = useState('');
+  const [filterTo,      setFilterTo]      = useState('');
+  const [newForm,       setNewForm]       = useState({desc:'', amount:'', date:today(), category:'Fixo', method:'PIX'});
+
+  // useMemo = só recalcula a lista filtrada quando filtros ou dados mudarem
+  const filteredList = useMemo(() => {
+    let list = transactions.filter(t => t.type===type);
+    if(searchText) list = list.filter(t => t.desc.toLowerCase().includes(searchText.toLowerCase()));
+    if(filterFrom) list = list.filter(t => t.date >= filterFrom);
+    if(filterTo)   list = list.filter(t => t.date <= filterTo);
+    return list.sort((a,b) => b.date.localeCompare(a.date));
+  }, [transactions, type, searchText, filterFrom, filterTo]);
+
+  const totalAmount = useMemo(() => filteredList.reduce((s,t) => s+t.amount, 0), [filteredList]);
+
+  // useCallback = a funcao nao e recriada a cada render, economiza memoria
+  const openEditModal  = useCallback(tx => setEditingItem({id:tx.id, desc:tx.desc, amount:String(tx.amount), date:tx.date, category:tx.category||'Fixo', method:tx.method||'PIX'}), []);
+  const clearFilters   = useCallback(() => { setSearchText(''); setFilterFrom(''); setFilterTo(''); }, []);
+
+  const handleSaveNew = async () => {
+    if(!newForm.desc || !newForm.amount) return;
     setSaving(true);
-    await onEdit(editItem.id,{desc:safe(editItem.desc),amount:Number(editItem.amount),date:editItem.date,method:isIncome?editItem.method:null,cat:isIncome?null:editItem.cat});
-    toast(isIncome?'Venda atualizada':'Despesa atualizada'); setSaving(false); setEditItem(null);
+    await onAdd({
+      id: generateId(), type,
+      desc:     sanitizeText(newForm.desc),
+      amount:   Number(newForm.amount),
+      date:     newForm.date,
+      method:   isIncome ? newForm.method   : null,
+      category: isIncome ? null : newForm.category,
+    });
+    showToast(isIncome ? 'Venda registrada!' : 'Despesa registrada!');
+    setShowNewModal(false);
+    setSaving(false);
+    setNewForm({desc:'', amount:'', date:today(), category:'Fixo', method:'PIX'});
   };
-  const saveNew = async () => {
-    if(!form.desc||!form.amount) return;
+
+  const handleSaveEdit = async () => {
+    if(!editingItem.desc || !editingItem.amount) return;
     setSaving(true);
-    await onAdd({id:uid(),type,desc:safe(form.desc),amount:Number(form.amount),date:form.date,method:isIncome?form.method:null,cat:isIncome?null:form.cat});
-    toast(isIncome?'Venda registrada!':'Despesa registrada!'); setModal(false); setSaving(false); setForm({desc:'',amount:'',date:today(),cat:'Fixo',method:'PIX'});
+    await onEdit(editingItem.id, {
+      desc:     sanitizeText(editingItem.desc),
+      amount:   Number(editingItem.amount),
+      date:     editingItem.date,
+      method:   isIncome ? editingItem.method   : null,
+      cat:      isIncome ? null : editingItem.category,
+    });
+    showToast(isIncome ? 'Venda atualizada' : 'Despesa atualizada');
+    setSaving(false);
+    setEditingItem(null);
   };
-  const exportCSV = () => {
-    const rows = filtered.map(t=>t.date+',"'+(t.desc||'')+'",'+(t.amount.toFixed(2))+','+(t.method||t.category||''));
-    const csv = 'Data,Descricao,Valor,Tipo\n'+rows.join('\n');
-    const a = document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download=(isIncome?'vendas':'despesas')+'-'+today()+'.csv'; a.click();
-    toast('CSV exportado!');
-  };
+
+  const handleExportCSV = useCallback(() => {
+    const header = 'Data,Descricao,Valor,Tipo,Metodo/Categoria';
+    const rows = filteredList.map(t =>
+      t.date+',"'+t.desc+'",'+t.amount.toFixed(2)+','+(t.type==='income'?'Entrada':'Saida')+','+(t.method||t.category||'')
+    );
+    const csv = '﻿' + header + '
+' + rows.join('
+');
+    const link = document.createElement('a');
+    link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    link.download = (isIncome?'vendas':'despesas')+'-'+today()+'.csv';
+    link.click();
+    showToast('CSV exportado!');
+  }, [filteredList, isIncome, showToast]);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{isIncome?'Vendas':'Despesas'}</h2>
-          <p className="text-sm text-gray-400 mt-0.5">{filtered.length+' registro'+(filtered.length!==1?'s':'')+' . '}<span className={'font-semibold '+(isIncome?'text-green-600':'text-red-500')}>{fmt(total)}</span></p>
+          <h2 className="text-2xl font-bold text-gray-900">{isIncome ? 'Vendas' : 'Despesas'}</h2>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {filteredList.length+' registro'+(filteredList.length!==1?'s':'')+' - '}
+            <span className={'font-semibold '+(isIncome?'text-green-600':'text-red-500')}>{fmt(totalAmount)}</span>
+          </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={exportCSV} title="Exportar CSV" className="p-2.5 border border-gray-200 text-gray-500 rounded-xl hover:bg-gray-50 transition">
+          <button onClick={handleExportCSV} title="Exportar CSV" className="p-2.5 border border-gray-200 text-gray-500 rounded-xl hover:bg-gray-50 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
           </button>
-          <button onClick={()=>setModal(true)} className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90" style={{background:brand.color}}>
+          <button onClick={() => setShowNewModal(true)} className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90" style={{background:brand.color}}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-            {isIncome?'Nova Venda':'Nova Despesa'}
+            {isIncome ? 'Nova Venda' : 'Nova Despesa'}
           </button>
         </div>
       </div>
+
       <Card className="p-4 flex flex-col gap-3">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Filtros</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar descricao..." className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 bg-white"/>
+            <input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder="Buscar descricao..."
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 bg-white"/>
           </div>
-          <Inp type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} placeholder="Data inicial"/>
-          <Inp type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} placeholder="Data final"/>
+          <Inp type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} placeholder="Data inicial"/>
+          <Inp type="date" value={filterTo}   onChange={e => setFilterTo(e.target.value)}   placeholder="Data final"/>
         </div>
-        {(search||dateFrom||dateTo) && <button onClick={()=>{setSearch('');setDateFrom('');setDateTo('');}} className="text-xs text-gray-400 hover:text-gray-600 w-fit">Limpar filtros</button>}
+        {(searchText||filterFrom||filterTo) && (
+          <button onClick={clearFilters} className="text-xs text-gray-400 hover:text-gray-600 w-fit">Limpar filtros</button>
+        )}
       </Card>
+
       <Card>
-        {filtered.length===0
-          ? <Empty icon={isIncome?'💰':'📤'} title={isIncome?'Nenhuma venda':'Nenhuma despesa'} sub={isIncome?'Registre vendas com multiplos itens e calculo automatico.':'Registre aluguel, energia, fornecedores e outras saidas.'}/>
-          : <div className="divide-y divide-gray-50">{filtered.map(t=>(
-              <div key={t.id} className="flex items-center justify-between px-4 py-3.5 gap-3">
+        {filteredList.length===0
+          ? <Empty icon={isIncome?'💰':'📤'} title={isIncome?'Nenhuma venda':'Nenhuma despesa'} sub={isIncome?'Registre vendas com multiplos itens.':'Registre aluguel, energia, fornecedores.'}/>
+          : <div className="divide-y divide-gray-50">{filteredList.map(tx => (
+              <div key={tx.id} className="flex items-center justify-between px-4 py-3.5 gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className={'w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 '+(isIncome?'bg-green-50 text-green-600':'bg-red-50 text-red-500')}>{isIncome?'UP':'DOWN'}</div>
-                  <div className="min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{t.desc}</p><p className="text-xs text-gray-400">{fmtDate(t.date)+' . '+(t.method||t.category||'')+(t.items&&t.items.length>1?' . '+t.items.length+' itens':'')}</p></div>
+                  <div className={'w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 '+(isIncome?'bg-green-50 text-green-600':'bg-red-50 text-red-500')}>{isIncome?'+':'-'}</div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{tx.desc}</p>
+                    <p className="text-xs text-gray-400">{fmtDate(tx.date)+' - '+(tx.method||tx.category||'')+(tx.items&&tx.items.length>1?' - '+tx.items.length+' itens':'')}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <span className={'text-sm font-semibold mr-1 '+(isIncome?'text-green-600':'text-red-500')}>{(isIncome?'+':'-')+fmt(t.amount)}</span>
-                  <EditBtn onClick={()=>openEdit(t)}/>
-                  <DelBtn onClick={()=>confirm('Excluir este registro?',async()=>{await onDelete(t.id);toast('Removido');})}/>
+                  <span className={'text-sm font-semibold mr-1 '+(isIncome?'text-green-600':'text-red-500')}>{(isIncome?'+':'-')+fmt(tx.amount)}</span>
+                  <EditBtn onClick={() => openEditModal(tx)}/>
+                  <DelBtn  onClick={() => showConfirm('Excluir este registro permanentemente?', async () => { await onDelete(tx.id); showToast('Removido'); })}/>
                 </div>
               </div>
             ))}</div>
         }
       </Card>
-      {modal && (isIncome
-        ? <SaleForm products={products} brand={brand} onSave={async sale=>{await onAdd(sale);if(sale.items)sale.items.forEach(it=>{const p=products.find(p=>p.name===it.desc);if(p&&p.stock!=null)onDeductStock(p.id,it.qty);});toast('Venda registrada!');}} onClose={()=>setModal(false)}/>
-        : <Modal title="Nova Despesa" onClose={()=>setModal(false)} onSave={saveNew} saving={saving}>
-            <Inp label="Descricao" value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} placeholder="Ex: Aluguel, Energia..."/>
-            <Inp label="Valor (R$)" type="number" step="0.01" min="0" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} placeholder="0,00"/>
-            <Inp label="Data" type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/>
-            <Sel label="Categoria" value={form.cat} onChange={e=>setForm(f=>({...f,cat:e.target.value}))}>{cats.map(c=><option key={c}>{c}</option>)}</Sel>
-          </Modal>
+
+      {showNewModal && (
+        isIncome
+          ? <SaleForm products={products} brand={brand}
+              onSave={async sale => {
+                await onAdd(sale);
+                if(sale.items) sale.items.forEach(item => {
+                  const product = products.find(p => p.name===item.desc);
+                  if(product && product.stock!=null) onDeductStock(product.id, item.qty);
+                });
+                showToast('Venda registrada!');
+              }}
+              onClose={() => setShowNewModal(false)}/>
+          : <Modal title="Nova Despesa" onClose={() => setShowNewModal(false)} onSave={handleSaveNew} saving={saving}>
+              <Inp label="Descricao" value={newForm.desc} onChange={e => setNewForm(f=>({...f,desc:e.target.value}))} placeholder="Ex: Aluguel, Energia..." maxLength={MAX_TEXT}/>
+              <Inp label="Valor (R$)" type="number" step="0.01" min="0" value={newForm.amount} onChange={e => setNewForm(f=>({...f,amount:e.target.value}))} placeholder="0,00"/>
+              <Inp label="Data" type="date" value={newForm.date} onChange={e => setNewForm(f=>({...f,date:e.target.value}))}/>
+              <Sel label="Categoria" value={newForm.category} onChange={e => setNewForm(f=>({...f,category:e.target.value}))}>{EXPENSE_CATEGORIES.map(c => <option key={c}>{c}</option>)}</Sel>
+            </Modal>
       )}
-      {editItem && (
-        <Modal title={isIncome?'Editar Venda':'Editar Despesa'} onClose={()=>setEditItem(null)} onSave={saveEdit} saving={saving} saveLabel="Salvar alteracoes">
-          <Inp label="Descricao" value={editItem.desc} onChange={e=>setEditItem(f=>({...f,desc:e.target.value}))}/>
-          <Inp label="Valor (R$)" type="number" step="0.01" min="0" value={editItem.amount} onChange={e=>setEditItem(f=>({...f,amount:e.target.value}))}/>
-          <Inp label="Data" type="date" value={editItem.date} onChange={e=>setEditItem(f=>({...f,date:e.target.value}))}/>
+
+      {editingItem && (
+        <Modal title={isIncome?'Editar Venda':'Editar Despesa'} onClose={() => setEditingItem(null)} onSave={handleSaveEdit} saving={saving} saveLabel="Salvar alteracoes">
+          <Inp label="Descricao" value={editingItem.desc} onChange={e => setEditingItem(f=>({...f,desc:e.target.value}))} maxLength={MAX_TEXT}/>
+          <Inp label="Valor (R$)" type="number" step="0.01" min="0" value={editingItem.amount} onChange={e => setEditingItem(f=>({...f,amount:e.target.value}))}/>
+          <Inp label="Data" type="date" value={editingItem.date} onChange={e => setEditingItem(f=>({...f,date:e.target.value}))}/>
           {isIncome
-            ? <Sel label="Pagamento" value={editItem.method} onChange={e=>setEditItem(f=>({...f,method:e.target.value}))}>{['PIX','Dinheiro','Cartao de Debito','Cartao de Credito','Boleto','Transferencia'].map(m=><option key={m}>{m}</option>)}</Sel>
-            : <Sel label="Categoria" value={editItem.cat} onChange={e=>setEditItem(f=>({...f,cat:e.target.value}))}>{cats.map(c=><option key={c}>{c}</option>)}</Sel>
+            ? <Sel label="Pagamento" value={editingItem.method} onChange={e => setEditingItem(f=>({...f,method:e.target.value}))}>{PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}</Sel>
+            : <Sel label="Categoria" value={editingItem.category} onChange={e => setEditingItem(f=>({...f,category:e.target.value}))}>{EXPENSE_CATEGORIES.map(c => <option key={c}>{c}</option>)}</Sel>
           }
         </Modal>
       )}
     </div>
   );
-};
+});
 
-const InventoryView = ({products,losses,onAddProduct,onEditProduct,onDeleteProduct,onAddLoss,onEditLoss,onDeleteLoss,onAdjustStock,brand,toast,confirm}) => {
-  const [tab,setTab] = useState('products');
-  const [search,setSearch] = useState('');
-  const [collapsed,setCollapsed] = useState(new Set());
-  const [pm,setPm] = useState(false);
-  const [editP,setEditP] = useState(null);
-  const [lm,setLm] = useState(false);
-  const [editL,setEditL] = useState(null);
-  const [sm,setSm] = useState(null);
-  const [pf,setPf] = useState({name:'',category:'',price:'',cost:'',stock:''});
-  const [lf,setLf] = useState({desc:'',qty:'1',reason:'',date:today()});
-  const [sq,setSq] = useState('1');
-  const [saving,setSaving] = useState(false);
-  const saveProd = async () => {
-    if(!pf.name||!pf.price) return;
+// ─── Estoque ─────────────────────────────────────────────────────────────────
+const InventoryView = memo(({products, losses, onAddProduct, onEditProduct, onDeleteProduct, onAddLoss, onEditLoss, onDeleteLoss, onAdjustStock, brand, showToast, showConfirm}) => {
+  const [activeTab,      setActiveTab]      = useState('products');
+  const [searchText,     setSearchText]     = useState('');
+  const [collapsedCats,  setCollapsedCats]  = useState(new Set());
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [showAddLoss,    setShowAddLoss]    = useState(false);
+  const [editingLoss,    setEditingLoss]    = useState(null);
+  const [reposingStock,  setReposingStock]  = useState(null);
+  const [productForm,    setProductForm]    = useState({name:'', category:'', price:'', cost:'', stock:''});
+  const [lossForm,       setLossForm]       = useState({desc:'', qty:'1', reason:'', date:today()});
+  const [repoQty,        setRepoQty]        = useState('1');
+  const [saving,         setSaving]         = useState(false);
+
+  const handleAddProduct = async () => {
+    if(!productForm.name || !productForm.price) return;
     setSaving(true);
-    await onAddProduct({id:'P'+String(Date.now()).slice(-6),name:safe(pf.name),category:pf.category||null,price:Number(pf.price),cost:pf.cost?Number(pf.cost):null,stock:pf.stock!==''?Number(pf.stock):null});
-    toast('Produto adicionado!'); setSaving(false); setPm(false); setPf({name:'',category:'',price:'',cost:'',stock:''});
+    await onAddProduct({id:'P'+String(Date.now()).slice(-6), name:sanitizeText(productForm.name), category:productForm.category||null, price:Number(productForm.price), cost:productForm.cost?Number(productForm.cost):null, stock:productForm.stock!==''?Number(productForm.stock):null});
+    showToast('Produto adicionado!'); setSaving(false); setShowAddProduct(false); setProductForm({name:'',category:'',price:'',cost:'',stock:''});
   };
-  const saveEditP = async () => {
-    if(!editP.name||!editP.price) return;
+
+  const handleEditProduct = async () => {
+    if(!editingProduct.name || !editingProduct.price) return;
     setSaving(true);
-    await onEditProduct(editP.id,{name:safe(editP.name),category:editP.category||null,price:Number(editP.price),cost:editP.cost?Number(editP.cost):null,stock:editP.stock!==''&&editP.stock!=null?Number(editP.stock):null});
-    toast('Produto atualizado'); setSaving(false); setEditP(null);
+    await onEditProduct(editingProduct.id, {name:sanitizeText(editingProduct.name), category:editingProduct.category||null, price:Number(editingProduct.price), cost:editingProduct.cost?Number(editingProduct.cost):null, stock:editingProduct.stock!==''&&editingProduct.stock!=null?Number(editingProduct.stock):null});
+    showToast('Produto atualizado'); setSaving(false); setEditingProduct(null);
   };
-  const saveLoss = async () => {
-    if(!lf.desc||!lf.qty) return;
+
+  const handleAddLoss = async () => {
+    if(!lossForm.desc || !lossForm.qty) return;
     setSaving(true);
-    await onAddLoss({id:uid(),desc:safe(lf.desc),qty:Number(lf.qty),reason:lf.reason,date:lf.date});
-    const p=products.find(p=>p.name===lf.desc); if(p&&p.stock!=null) await onAdjustStock(p.id,-Number(lf.qty));
-    toast('Perda registrada'); setSaving(false); setLm(false); setLf({desc:'',qty:'1',reason:'',date:today()});
+    await onAddLoss({id:generateId(), desc:sanitizeText(lossForm.desc), qty:Number(lossForm.qty), reason:sanitizeText(lossForm.reason), date:lossForm.date});
+    const matchingProduct = products.find(p => p.name===lossForm.desc);
+    if(matchingProduct && matchingProduct.stock!=null) await onAdjustStock(matchingProduct.id, -Number(lossForm.qty));
+    showToast('Perda registrada'); setSaving(false); setShowAddLoss(false); setLossForm({desc:'',qty:'1',reason:'',date:today()});
   };
-  const saveEditL = async () => {
-    if(!editL.desc||!editL.qty) return;
+
+  const handleEditLoss = async () => {
+    if(!editingLoss.desc || !editingLoss.qty) return;
     setSaving(true);
-    await onEditLoss(editL.id,{desc:safe(editL.desc),qty:Number(editL.qty),reason:editL.reason,date:editL.date});
-    toast('Perda atualizada'); setSaving(false); setEditL(null);
+    await onEditLoss(editingLoss.id, {desc:sanitizeText(editingLoss.desc), qty:Number(editingLoss.qty), reason:sanitizeText(editingLoss.reason), date:editingLoss.date});
+    showToast('Perda atualizada'); setSaving(false); setEditingLoss(null);
   };
-  const saveStock = async () => {
-    if(!sq||!sm) return;
+
+  const handleRepoStock = async () => {
+    if(!repoQty || !reposingStock) return;
     setSaving(true);
-    await onAdjustStock(sm,Number(sq));
-    toast('Estoque atualizado!'); setSaving(false); setSm(null); setSq('1');
+    await onAdjustStock(reposingStock, Number(repoQty));
+    showToast('Estoque atualizado!'); setSaving(false); setReposingStock(null); setRepoQty('1');
   };
-  const toggleCat = cat => setCollapsed(p=>{const n=new Set(p);n.has(cat)?n.delete(cat):n.add(cat);return n;});
-  const disp = search.trim() ? products.filter(p=>[p.name,p.category,p.id].filter(Boolean).some(v=>v.toLowerCase().includes(search.toLowerCase()))) : products;
-  const grouped = Object.entries(disp.reduce((a,p)=>{const k=p.category||'Sem categoria';(a[k]=a[k]||[]).push(p);return a;},{})).sort(([a],[b])=>a==='Sem categoria'?1:b==='Sem categoria'?-1:a.localeCompare(b));
-  const sp = sm ? products.find(p=>p.id===sm) : null;
+
+  const toggleCategory = useCallback(cat => setCollapsedCats(prev => {
+    const next = new Set(prev); next.has(cat) ? next.delete(cat) : next.add(cat); return next;
+  }), []);
+
+  const filteredProducts = useMemo(() =>
+    searchText.trim()
+      ? products.filter(p => [p.name, p.category, p.id].filter(Boolean).some(v => v.toLowerCase().includes(searchText.toLowerCase())))
+      : products,
+    [products, searchText]
+  );
+
+  const groupedProducts = useMemo(() =>
+    Object.entries(filteredProducts.reduce((groups, product) => {
+      const cat = product.category || 'Sem categoria';
+      (groups[cat] = groups[cat]||[]).push(product);
+      return groups;
+    }, {})).sort(([a],[b]) => a==='Sem categoria'?1:b==='Sem categoria'?-1:a.localeCompare(b)),
+    [filteredProducts]
+  );
+
+  const reposingProduct = reposingStock ? products.find(p => p.id===reposingStock) : null;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between">
         <div><h2 className="text-2xl font-bold text-gray-900">Estoque</h2><p className="text-sm text-gray-400 mt-0.5">{products.length+' item'+(products.length!==1?'s':'')}</p></div>
         <div className="flex gap-2">
-          {tab==='products' && <button onClick={()=>setPm(true)} className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90" style={{background:brand.color}}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Adicionar</button>}
-          {tab==='losses' && <button onClick={()=>setLm(true)} className="flex items-center gap-2 bg-red-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Perda</button>}
+          {activeTab==='products' && <button onClick={() => setShowAddProduct(true)} className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90" style={{background:brand.color}}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Adicionar</button>}
+          {activeTab==='losses'   && <button onClick={() => setShowAddLoss(true)} className="flex items-center gap-2 bg-red-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Perda</button>}
         </div>
       </div>
+
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-        {[{key:'products',label:'Produtos e Servicos'},{key:'losses',label:'Perdas'}].map(t=>(
-          <button key={t.key} onClick={()=>setTab(t.key)} className={'flex-1 py-2 text-sm font-medium rounded-lg transition '+(tab===t.key?'bg-white text-gray-900 shadow-sm':'text-gray-500')}>{t.label}</button>
+        {[{key:'products',label:'Produtos e Servicos'},{key:'losses',label:'Perdas'}].map(tab => (
+          <button key={tab.key} onClick={() => setActiveTab(tab.key)} className={'flex-1 py-2 text-sm font-medium rounded-lg transition '+(activeTab===tab.key?'bg-white text-gray-900 shadow-sm':'text-gray-500')}>{tab.label}</button>
         ))}
       </div>
-      {tab==='products' && (
+
+      {activeTab==='products' && (
         <Card>
           <div className="px-5 py-3 border-b border-gray-50">
-            <div className="relative"><svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome ou categoria..." className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:border-gray-300"/></div>
+            <div className="relative"><svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder="Buscar por nome ou categoria..." className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:border-gray-300"/></div>
           </div>
-          {disp.length===0
+          {filteredProducts.length===0
             ? <Empty icon="📦" title="Nenhum item" sub="Adicione produtos ou servicos com categoria, custo e estoque."/>
-            : grouped.map(([cat,items])=>(
-                <div key={cat}>
-                  <button onClick={()=>toggleCat(cat)} className="w-full flex items-center justify-between px-5 py-2.5 bg-gray-50 hover:bg-gray-100 transition border-b border-gray-100">
+            : groupedProducts.map(([category, items]) => (
+                <div key={category}>
+                  <button onClick={() => toggleCategory(category)} className="w-full flex items-center justify-between px-5 py-2.5 bg-gray-50 hover:bg-gray-100 transition border-b border-gray-100">
                     <div className="flex items-center gap-2">
-                      <svg className={'w-3.5 h-3.5 text-gray-400 transition-transform '+(collapsed.has(cat)?'-rotate-90':'')} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
-                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{cat}</span>
+                      <svg className={'w-3.5 h-3.5 text-gray-400 transition-transform '+(collapsedCats.has(category)?'-rotate-90':'')} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{category}</span>
                     </div>
                     <span className="text-xs text-gray-400">{items.length+' '+(items.length===1?'item':'itens')}</span>
                   </button>
-                  {!collapsed.has(cat) && (
-                    <div className="divide-y divide-gray-50">{items.map(p=>(
-                      <div key={p.id} className="px-4 py-3.5 flex items-center justify-between gap-3">
+                  {!collapsedCats.has(category) && (
+                    <div className="divide-y divide-gray-50">{items.map(product => (
+                      <div key={product.id} className="px-4 py-3.5 flex items-center justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-800">{p.name}</p>
+                          <p className="text-sm font-medium text-gray-800">{product.name}</p>
                           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                            <span className="text-xs text-gray-400">{'Venda: '+fmt(p.price)}</span>
-                            {p.cost!=null && <><span className="text-xs text-gray-400">{'Custo: '+fmt(p.cost)}</span><span className="text-xs text-green-600 font-medium">{'Margem: '+(((p.price-p.cost)/p.price)*100).toFixed(0)+'%'}</span></>}
+                            <span className="text-xs text-gray-400">Venda: {fmt(product.price)}</span>
+                            {product.cost!=null && (
+                              <><span className="text-xs text-gray-400">Custo: {fmt(product.cost)}</span>
+                              <span className="text-xs text-green-600 font-medium">Margem: {(((product.price-product.cost)/product.price)*100).toFixed(0)}%</span></>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          {p.stock!=null && <button onClick={()=>{setSm(p.id);setSq('1');}} className={'text-xs font-semibold px-2.5 py-1 rounded-lg mr-1 '+(p.stock<=0?'bg-red-50 text-red-600':p.stock<=5?'bg-amber-50 text-amber-700':'bg-green-50 text-green-700')}>{p.stock<=0?'Esgotado':p.stock+' un'}</button>}
-                          <EditBtn onClick={()=>setEditP({id:p.id,name:p.name,category:p.category||'',price:String(p.price),cost:p.cost!=null?String(p.cost):'',stock:p.stock!=null?String(p.stock):''})}/>
-                          <DelBtn onClick={()=>confirm('Excluir "'+p.name+'"?',async()=>{await onDeleteProduct(p.id);toast('Produto removido');})}/>
+                          {product.stock!=null && (
+                            <button onClick={() => { setReposingStock(product.id); setRepoQty('1'); }}
+                              className={'text-xs font-semibold px-2.5 py-1 rounded-lg mr-1 '+(product.stock<=0?'bg-red-50 text-red-600':product.stock<=5?'bg-amber-50 text-amber-700':'bg-green-50 text-green-700')}>
+                              {product.stock<=0 ? 'Esgotado' : product.stock+' un'}
+                            </button>
+                          )}
+                          <EditBtn onClick={() => setEditingProduct({id:product.id,name:product.name,category:product.category||'',price:String(product.price),cost:product.cost!=null?String(product.cost):'',stock:product.stock!=null?String(product.stock):''})}/>
+                          <DelBtn  onClick={() => showConfirm('Excluir "'+product.name+'"?', async () => { await onDeleteProduct(product.id); showToast('Produto removido'); })}/>
                         </div>
                       </div>
                     ))}</div>
@@ -576,80 +785,137 @@ const InventoryView = ({products,losses,onAddProduct,onEditProduct,onDeleteProdu
           }
         </Card>
       )}
-      {tab==='losses' && (
+
+      {activeTab==='losses' && (
         <Card>
           {losses.length===0
             ? <Empty icon="⚠️" title="Nenhuma perda" sub="Registre produtos vencidos, cancelados ou danificados."/>
-            : <div className="divide-y divide-gray-50">{[...losses].sort((a,b)=>b.date.localeCompare(a.date)).map(l=>(
-                <div key={l.id} className="flex items-center justify-between px-4 py-3.5 gap-3">
+            : <div className="divide-y divide-gray-50">{[...losses].sort((a,b) => b.date.localeCompare(a.date)).map(loss => (
+                <div key={loss.id} className="flex items-center justify-between px-4 py-3.5 gap-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm flex-shrink-0">!</div>
-                    <div className="min-w-0"><p className="text-sm font-medium text-gray-800">{l.qty+'x '+l.desc}</p><p className="text-xs text-gray-400">{fmtDate(l.date)+(l.reason?' . '+l.reason:'')}</p></div>
+                    <div className="min-w-0"><p className="text-sm font-medium text-gray-800">{loss.qty+'x '+loss.desc}</p><p className="text-xs text-gray-400">{fmtDate(loss.date)+(loss.reason?' - '+loss.reason:'')}</p></div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <EditBtn onClick={()=>setEditL({id:l.id,desc:l.desc,qty:String(l.qty),reason:l.reason||'',date:l.date})}/>
-                    <DelBtn onClick={()=>confirm('Excluir esta perda?',async()=>{await onDeleteLoss(l.id);toast('Perda removida');})}/>
+                    <EditBtn onClick={() => setEditingLoss({id:loss.id,desc:loss.desc,qty:String(loss.qty),reason:loss.reason||'',date:loss.date})}/>
+                    <DelBtn  onClick={() => showConfirm('Excluir esta perda?', async () => { await onDeleteLoss(loss.id); showToast('Perda removida'); })}/>
                   </div>
                 </div>
               ))}</div>
           }
         </Card>
       )}
-      {pm && <Modal title="Novo Produto ou Servico" onClose={()=>setPm(false)} onSave={saveProd} saving={saving}>
-        <Inp label="Nome *" value={pf.name} onChange={e=>setPf(f=>({...f,name:e.target.value}))} placeholder="Ex: Corte de cabelo, Camiseta P..."/>
-        <Inp label="Categoria" value={pf.category} onChange={e=>setPf(f=>({...f,category:e.target.value}))} placeholder="Ex: Servicos, Roupas, Alimentos..."/>
+
+      {showAddProduct && <Modal title="Novo Produto ou Servico" onClose={() => setShowAddProduct(false)} onSave={handleAddProduct} saving={saving}>
+        <Inp label="Nome *" value={productForm.name} onChange={e => setProductForm(f=>({...f,name:e.target.value}))} placeholder="Ex: Corte de cabelo, Camiseta P..." maxLength={MAX_TEXT}/>
+        <Inp label="Categoria" value={productForm.category} onChange={e => setProductForm(f=>({...f,category:e.target.value}))} placeholder="Ex: Servicos, Roupas..." maxLength={50}/>
         <div className="grid grid-cols-2 gap-3">
-          <Inp label="Preco de venda *" type="number" step="0.01" min="0" value={pf.price} onChange={e=>setPf(f=>({...f,price:e.target.value}))} placeholder="0,00"/>
-          <Inp label="Custo" type="number" step="0.01" min="0" value={pf.cost} onChange={e=>setPf(f=>({...f,cost:e.target.value}))} placeholder="0,00"/>
+          <Inp label="Preco de venda *" type="number" step="0.01" min="0" value={productForm.price} onChange={e => setProductForm(f=>({...f,price:e.target.value}))} placeholder="0,00"/>
+          <Inp label="Custo" type="number" step="0.01" min="0" value={productForm.cost} onChange={e => setProductForm(f=>({...f,cost:e.target.value}))} placeholder="0,00"/>
         </div>
-        <Inp label="Estoque inicial (em branco para servicos)" type="number" min="0" value={pf.stock} onChange={e=>setPf(f=>({...f,stock:e.target.value}))} placeholder="Ex: 50"/>
+        <Inp label="Estoque inicial (vazio para servicos)" type="number" min="0" value={productForm.stock} onChange={e => setProductForm(f=>({...f,stock:e.target.value}))} placeholder="Ex: 50"/>
       </Modal>}
-      {editP && <Modal title="Editar Produto" onClose={()=>setEditP(null)} onSave={saveEditP} saving={saving} saveLabel="Salvar alteracoes">
-        <Inp label="Nome *" value={editP.name} onChange={e=>setEditP(f=>({...f,name:e.target.value}))}/>
-        <Inp label="Categoria" value={editP.category} onChange={e=>setEditP(f=>({...f,category:e.target.value}))} placeholder="Ex: Servicos, Roupas..."/>
+
+      {editingProduct && <Modal title="Editar Produto" onClose={() => setEditingProduct(null)} onSave={handleEditProduct} saving={saving} saveLabel="Salvar alteracoes">
+        <Inp label="Nome *" value={editingProduct.name} onChange={e => setEditingProduct(f=>({...f,name:e.target.value}))} maxLength={MAX_TEXT}/>
+        <Inp label="Categoria" value={editingProduct.category} onChange={e => setEditingProduct(f=>({...f,category:e.target.value}))} placeholder="Ex: Servicos, Roupas..." maxLength={50}/>
         <div className="grid grid-cols-2 gap-3">
-          <Inp label="Preco de venda *" type="number" step="0.01" min="0" value={editP.price} onChange={e=>setEditP(f=>({...f,price:e.target.value}))}/>
-          <Inp label="Custo" type="number" step="0.01" min="0" value={editP.cost} onChange={e=>setEditP(f=>({...f,cost:e.target.value}))} placeholder="Opcional"/>
+          <Inp label="Preco de venda *" type="number" step="0.01" min="0" value={editingProduct.price} onChange={e => setEditingProduct(f=>({...f,price:e.target.value}))}/>
+          <Inp label="Custo" type="number" step="0.01" min="0" value={editingProduct.cost} onChange={e => setEditingProduct(f=>({...f,cost:e.target.value}))} placeholder="Opcional"/>
         </div>
-        <Inp label="Estoque atual" type="number" min="0" value={editP.stock} onChange={e=>setEditP(f=>({...f,stock:e.target.value}))} placeholder="Em branco para servicos"/>
+        <Inp label="Estoque atual" type="number" min="0" value={editingProduct.stock} onChange={e => setEditingProduct(f=>({...f,stock:e.target.value}))} placeholder="Vazio para servicos"/>
       </Modal>}
-      {lm && <Modal title="Registrar Perda" onClose={()=>setLm(false)} onSave={saveLoss} color="#dc2626" saving={saving}>
-        <div className="flex flex-col gap-1.5"><label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Produto</label><PSearch products={products} value={lf.desc} onSelect={p=>setLf(f=>({...f,desc:p.name}))} onChange={v=>setLf(f=>({...f,desc:v}))} placeholder="Buscar ou digitar"/></div>
-        <Inp label="Quantidade" type="number" min="1" value={lf.qty} onChange={e=>setLf(f=>({...f,qty:e.target.value}))}/>
-        <Inp label="Motivo (opcional)" value={lf.reason} onChange={e=>setLf(f=>({...f,reason:e.target.value}))} placeholder="Ex: Vencimento, Avaria..."/>
-        <Inp label="Data" type="date" value={lf.date} onChange={e=>setLf(f=>({...f,date:e.target.value}))}/>
+
+      {showAddLoss && <Modal title="Registrar Perda" onClose={() => setShowAddLoss(false)} onSave={handleAddLoss} color="#dc2626" saving={saving}>
+        <div className="flex flex-col gap-1.5"><label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Produto</label><PSearch products={products} value={lossForm.desc} onSelect={p => setLossForm(f=>({...f,desc:p.name}))} onChange={v => setLossForm(f=>({...f,desc:v}))} placeholder="Buscar ou digitar"/></div>
+        <Inp label="Quantidade" type="number" min="1" value={lossForm.qty} onChange={e => setLossForm(f=>({...f,qty:e.target.value}))}/>
+        <Inp label="Motivo (opcional)" value={lossForm.reason} onChange={e => setLossForm(f=>({...f,reason:e.target.value}))} placeholder="Ex: Vencimento, Avaria..." maxLength={MAX_TEXT}/>
+        <Inp label="Data" type="date" value={lossForm.date} onChange={e => setLossForm(f=>({...f,date:e.target.value}))}/>
       </Modal>}
-      {editL && <Modal title="Editar Perda" onClose={()=>setEditL(null)} onSave={saveEditL} color="#dc2626" saving={saving} saveLabel="Salvar alteracoes">
-        <div className="flex flex-col gap-1.5"><label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Produto</label><PSearch products={products} value={editL.desc} onSelect={p=>setEditL(f=>({...f,desc:p.name}))} onChange={v=>setEditL(f=>({...f,desc:v}))} placeholder="Buscar ou digitar"/></div>
-        <Inp label="Quantidade" type="number" min="1" value={editL.qty} onChange={e=>setEditL(f=>({...f,qty:e.target.value}))}/>
-        <Inp label="Motivo" value={editL.reason} onChange={e=>setEditL(f=>({...f,reason:e.target.value}))} placeholder="Ex: Vencimento..."/>
-        <Inp label="Data" type="date" value={editL.date} onChange={e=>setEditL(f=>({...f,date:e.target.value}))}/>
+
+      {editingLoss && <Modal title="Editar Perda" onClose={() => setEditingLoss(null)} onSave={handleEditLoss} color="#dc2626" saving={saving} saveLabel="Salvar alteracoes">
+        <div className="flex flex-col gap-1.5"><label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Produto</label><PSearch products={products} value={editingLoss.desc} onSelect={p => setEditingLoss(f=>({...f,desc:p.name}))} onChange={v => setEditingLoss(f=>({...f,desc:v}))} placeholder="Buscar ou digitar"/></div>
+        <Inp label="Quantidade" type="number" min="1" value={editingLoss.qty} onChange={e => setEditingLoss(f=>({...f,qty:e.target.value}))}/>
+        <Inp label="Motivo" value={editingLoss.reason} onChange={e => setEditingLoss(f=>({...f,reason:e.target.value}))} maxLength={MAX_TEXT}/>
+        <Inp label="Data" type="date" value={editingLoss.date} onChange={e => setEditingLoss(f=>({...f,date:e.target.value}))}/>
       </Modal>}
-      {sm && sp && <Modal title={'Repor estoque: '+sp.name} onClose={()=>setSm(null)} onSave={saveStock} saving={saving} saveLabel="Adicionar">
-        <div className="rounded-xl bg-gray-50 px-4 py-3 flex items-center justify-between"><span className="text-sm text-gray-600">Estoque atual</span><span className="text-lg font-bold">{sp.stock+' un.'}</span></div>
-        <Inp label="Quantidade a adicionar" type="number" min="1" value={sq} onChange={e=>setSq(e.target.value)} placeholder="Ex: 10"/>
-        {sq&&Number(sq)>0 && <p className="text-xs text-gray-400 text-center">{'Novo estoque: '+((sp.stock||0)+Number(sq))+' un.'}</p>}
+
+      {reposingStock && reposingProduct && <Modal title={'Repor estoque: '+reposingProduct.name} onClose={() => setReposingStock(null)} onSave={handleRepoStock} saving={saving} saveLabel="Adicionar">
+        <div className="rounded-xl bg-gray-50 px-4 py-3 flex items-center justify-between"><span className="text-sm text-gray-600">Estoque atual</span><span className="text-lg font-bold">{reposingProduct.stock+' un.'}</span></div>
+        <Inp label="Quantidade a adicionar" type="number" min="1" value={repoQty} onChange={e => setRepoQty(e.target.value)} placeholder="Ex: 10"/>
+        {repoQty && Number(repoQty)>0 && <p className="text-xs text-gray-400 text-center">{'Novo estoque: '+((reposingProduct.stock||0)+Number(repoQty))+' un.'}</p>}
       </Modal>}
     </div>
   );
-};
+});
 
-const TEMPLATES = [
-  {id:'welcome',name:'Boas-vindas',subject:'Seu acesso ao sistema de gestao esta pronto!',body:'Ola [Nome],\n\nSeu acesso esta pronto.\n\nLink: https://gestao-financeira-7heu.onrender.com\nE-mail: [email]\nSenha: [senha]\n\nQualquer duvida, estou a disposicao!\n\nAbracos,\n[Seu nome]'},
-  {id:'report',name:'Relatorio mensal',subject:'Relatorio financeiro de [Mes]',body:'Ola [Nome],\n\nResumo de [Mes]:\n\nEntradas: R$ [valor]\nSaidas: R$ [valor]\nLucro: R$ [valor]\n\nAcesse o sistema para o detalhamento completo.\n\nAbracos,\n[Seu nome]'},
-  {id:'reminder',name:'Lembrete mensalidade',subject:'Mensalidade do sistema de gestao',body:'Ola [Nome],\n\nLembrando que a mensalidade vence em breve.\n\nValor: R$ [valor]\nVencimento: [data]\n\nAbracos,\n[Seu nome]'},
-  {id:'custom',name:'Personalizado',subject:'',body:''},
+// ─── E-mails ──────────────────────────────────────────────────────────────────
+const EMAIL_TEMPLATES = [
+  {id:'welcome', name:'Boas-vindas',      subject:'Seu acesso ao sistema esta pronto!',     body:'Ola [Nome],
+
+Seu acesso ao sistema de gestao financeira esta configurado.
+
+Link: https://gestao-financeira-7heu.onrender.com
+E-mail: [email]
+Senha: [senha]
+
+Qualquer duvida, estou a disposicao!
+
+AbracOS,
+[Seu nome]'},
+  {id:'report',  name:'Relatorio mensal', subject:'Relatorio financeiro de [Mes]',          body:'Ola [Nome],
+
+Resumo de [Mes/Ano]:
+
+Entradas: R$ [valor]
+Saidas:   R$ [valor]
+Lucro:    R$ [valor]
+
+Acesse o sistema para o detalhamento completo.
+
+AbracOS,
+[Seu nome]'},
+  {id:'reminder',name:'Mensalidade',      subject:'Mensalidade do sistema de gestao',       body:'Ola [Nome],
+
+Lembrando que a mensalidade vence em breve.
+
+Valor: R$ [valor]
+Vencimento: [data]
+
+AbracOS,
+[Seu nome]'},
+  {id:'custom',  name:'Personalizado',    subject:'',                                       body:''},
 ];
 
-const EmailView = ({brand,toast}) => {
-  const [to,setTo] = useState('');
-  const [subject,setSubject] = useState('');
-  const [body,setBody] = useState('');
-  const [tpl,setTpl] = useState('custom');
-  const [copied,setCopied] = useState(false);
-  const applyTpl = id => { setTpl(id); const t=TEMPLATES.find(t=>t.id===id); if(t){setSubject(t.subject);setBody(t.body.replace(/\n/g,'\n'));} };
-  const send = () => { if(!to||!subject||!body) return; window.open('mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank'); toast('Abrindo seu e-mail...'); };
-  const copy = async () => { await navigator.clipboard.writeText('Para: '+to+'\nAssunto: '+subject+'\n\n'+body); setCopied(true); setTimeout(()=>setCopied(false),2000); toast('Copiado!'); };
+const EmailView = memo(({brand, showToast}) => {
+  const [toEmail,  setToEmail]  = useState('');
+  const [subject,  setSubject]  = useState('');
+  const [body,     setBody]     = useState('');
+  const [template, setTemplate] = useState('custom');
+  const [copied,   setCopied]   = useState(false);
+
+  const applyTemplate = useCallback(id => {
+    setTemplate(id);
+    const tpl = EMAIL_TEMPLATES.find(t => t.id===id);
+    if(tpl) { setSubject(tpl.subject); setBody(tpl.body); }
+  }, []);
+
+  const handleSend = useCallback(() => {
+    if(!toEmail || !subject || !body) return;
+    window.open('mailto:'+encodeURIComponent(toEmail)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body), '_blank');
+    showToast('Abrindo seu e-mail...');
+  }, [toEmail, subject, body, showToast]);
+
+  const handleCopy = useCallback(async () => {
+    await navigator.clipboard.writeText('Para: '+toEmail+'
+Assunto: '+subject+'
+
+'+body);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    showToast('Copiado!');
+  }, [toEmail, subject, body, showToast]);
+
   return (
     <div className="flex flex-col gap-6">
       <div><h2 className="text-2xl font-bold text-gray-900">E-mails</h2><p className="text-sm text-gray-400 mt-0.5">Templates prontos e editor livre</p></div>
@@ -657,23 +923,27 @@ const EmailView = ({brand,toast}) => {
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Template</p>
           <div className="flex gap-2 flex-wrap">
-            {TEMPLATES.map(t=>(
-              <button key={t.id} onClick={()=>applyTpl(t.id)} className={'text-xs font-medium px-3 py-1.5 rounded-xl border transition '+(tpl===t.id?'border-transparent text-white':'border-gray-200 text-gray-600 hover:bg-gray-50')} style={tpl===t.id?{background:brand.color}:{}}>
+            {EMAIL_TEMPLATES.map(t => (
+              <button key={t.id} onClick={() => applyTemplate(t.id)}
+                className={'text-xs font-medium px-3 py-1.5 rounded-xl border transition '+(template===t.id?'border-transparent text-white':'border-gray-200 text-gray-600 hover:bg-gray-50')}
+                style={template===t.id ? {background:brand.color} : {}}>
                 {t.name}
               </button>
             ))}
           </div>
         </div>
-        <Inp label="Para (e-mail)" type="email" value={to} onChange={e=>setTo(e.target.value)} placeholder="cliente@email.com"/>
-        <Inp label="Assunto" value={subject} onChange={e=>setSubject(e.target.value)} placeholder="Assunto do e-mail"/>
-        <Textarea label="Mensagem" value={body} onChange={e=>setBody(e.target.value)} placeholder="Escreva sua mensagem aqui..."/>
-        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3"><p className="text-xs text-blue-700">Substitua os textos em [colchetes] antes de enviar.</p></div>
+        <Inp label="Para (e-mail)" type="email" value={toEmail} onChange={e => setToEmail(e.target.value)} placeholder="cliente@email.com"/>
+        <Inp label="Assunto" value={subject} onChange={e => setSubject(e.target.value)} placeholder="Assunto do e-mail"/>
+        <Textarea label="Mensagem" value={body} onChange={e => setBody(e.target.value)} placeholder="Escreva sua mensagem aqui..."/>
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+          <p className="text-xs text-blue-700">Substitua os textos em [colchetes] antes de enviar.</p>
+        </div>
         <div className="flex gap-2">
-          <button onClick={copy} className="flex-1 flex items-center justify-center gap-2 border border-gray-200 text-gray-700 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition">
+          <button onClick={handleCopy} className="flex-1 flex items-center justify-center gap-2 border border-gray-200 text-gray-700 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-            {copied?'Copiado!':'Copiar'}
+            {copied ? 'Copiado!' : 'Copiar'}
           </button>
-          <button onClick={send} disabled={!to||!subject||!body} className="flex-1 flex items-center justify-center gap-2 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-40" style={{background:brand.color}}>
+          <button onClick={handleSend} disabled={!toEmail||!subject||!body} className="flex-1 flex items-center justify-center gap-2 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-40" style={{background:brand.color}}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
             Abrir no e-mail
           </button>
@@ -681,277 +951,359 @@ const EmailView = ({brand,toast}) => {
       </Card>
     </div>
   );
-};
+});
 
-const ReportView = ({tx,toast}) => {
-  const months = useMemo(()=>[...new Set(tx.map(t=>t.date.slice(0,7)))].sort((a,b)=>b.localeCompare(a)),[tx]);
-  const [month,setMonth] = useState(today().slice(0,7));
-  const filtered = tx.filter(t=>t.date.startsWith(month));
-  const income = filtered.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-  const expense = filtered.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-  const bycat = filtered.filter(t=>t.type==='expense').reduce((a,t)=>{const k=t.category||'Outro';a[k]=(a[k]||0)+t.amount;return a;},{});
-  const exportCSV = () => {
-    const rows=filtered.map(t=>t.date+',"'+t.desc+'",'+t.amount.toFixed(2)+','+(t.type==='income'?'Entrada':'Saida')+','+(t.method||t.category||''));
-    const csv='Data,Descricao,Valor,Tipo,Metodo/Cat\n'+rows.join('\n');
-    const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download='relatorio-'+month+'.csv'; a.click();
-    toast('CSV exportado!');
-  };
+// ─── Relatorios ───────────────────────────────────────────────────────────────
+const ReportView = memo(({transactions, showToast}) => {
+  const availableMonths = useMemo(() => [...new Set(transactions.map(t => t.date.slice(0,7)))].sort((a,b) => b.localeCompare(a)), [transactions]);
+  const [selectedMonth, setSelectedMonth] = useState(today().slice(0,7));
+
+  const monthlyData = useMemo(() => {
+    const monthTx  = transactions.filter(t => t.date.startsWith(selectedMonth));
+    const income   = monthTx.filter(t => t.type==='income').reduce((s,t) => s+t.amount, 0);
+    const expenses = monthTx.filter(t => t.type==='expense').reduce((s,t) => s+t.amount, 0);
+    const byCategory = monthTx.filter(t => t.type==='expense').reduce((groups,t) => {
+      const cat = t.category||'Outro'; groups[cat] = (groups[cat]||0)+t.amount; return groups;
+    }, {});
+    return {income, expenses, profit:income-expenses, byCategory, all:monthTx};
+  }, [transactions, selectedMonth]);
+
+  const handleExportCSV = useCallback(() => {
+    const header = 'Data,Descricao,Valor,Tipo,Metodo/Cat';
+    const rows = monthlyData.all.map(t =>
+      t.date+',"'+t.desc+'",'+t.amount.toFixed(2)+','+(t.type==='income'?'Entrada':'Saida')+','+(t.method||t.category||'')
+    );
+    const csv = '﻿' + header + '
+' + rows.join('
+');
+    const link = document.createElement('a');
+    link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    link.download = 'relatorio-'+selectedMonth+'.csv';
+    link.click();
+    showToast('CSV exportado!');
+  }, [monthlyData, selectedMonth, showToast]);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between">
         <div><h2 className="text-2xl font-bold text-gray-900">Relatorio</h2><p className="text-sm text-gray-400 mt-0.5">Fechamento mensal</p></div>
-        {filtered.length>0 && <button onClick={exportCSV} className="flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>CSV
-        </button>}
+        {monthlyData.all.length > 0 && (
+          <button onClick={handleExportCSV} className="flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>CSV
+          </button>
+        )}
       </div>
-      {months.length===0 ? <Card><Empty icon="📊" title="Nenhum dado" sub="Registre vendas e despesas para gerar relatorios."/></Card> : (
-        <>
-          <Sel label="Periodo" value={month} onChange={e=>setMonth(e.target.value)}>{months.map(m=><option key={m} value={m}>{monthLabel(m)}</option>)}</Sel>
-          <div className="grid grid-cols-3 gap-3">
-            {[{l:'Entradas',v:income,c:'#16a34a'},{l:'Saidas',v:expense,c:'#ef4444'},{l:'Lucro',v:income-expense,c:income-expense>=0?'#16a34a':'#ef4444'}].map(({l,v,c})=>(
-              <Card key={l} className="p-4 text-center overflow-hidden relative">
-                <div className="absolute top-0 left-0 right-0 h-0.5" style={{background:c}}/>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{l}</p>
-                <p className="text-sm font-bold mt-2" style={{color:c}}>{fmt(v)}</p>
-              </Card>
-            ))}
-          </div>
-          {Object.keys(bycat).length>0 && (
-            <Card className="p-5">
-              <p className="text-sm font-semibold text-gray-800 mb-3">Despesas por categoria</p>
-              <div className="flex flex-col gap-2.5">
-                {Object.entries(bycat).sort(([,a],[,b])=>b-a).map(([cat,val])=>(
-                  <div key={cat} className="flex items-center gap-3">
-                    <span className="text-xs text-gray-500 w-20 flex-shrink-0 truncate">{cat}</span>
-                    <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden"><div className="h-full bg-red-400 rounded-full" style={{width:(val/expense*100).toFixed(0)+'%'}}/></div>
-                    <span className="text-xs font-semibold text-gray-600 w-20 text-right">{fmt(val)}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-          <Card>
-            <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-              <p className="text-sm font-semibold text-gray-800">Movimentacoes</p>
-              <span className="text-xs text-gray-400">{filtered.length+' registros'}</span>
+      {availableMonths.length===0
+        ? <Card><Empty icon="📊" title="Nenhum dado" sub="Registre vendas e despesas para gerar relatorios."/></Card>
+        : <>
+            <Sel label="Periodo" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
+              {availableMonths.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+            </Sel>
+            <div className="grid grid-cols-3 gap-3">
+              {[{l:'Entradas',v:monthlyData.income,c:'#16a34a'},{l:'Saidas',v:monthlyData.expenses,c:'#ef4444'},{l:'Lucro',v:monthlyData.profit,c:monthlyData.profit>=0?'#16a34a':'#ef4444'}].map(({l,v,c}) => (
+                <Card key={l} className="p-4 text-center overflow-hidden relative">
+                  <div className="absolute top-0 left-0 right-0 h-0.5" style={{background:c}}/>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{l}</p>
+                  <p className="text-sm font-bold mt-2" style={{color:c}}>{fmt(v)}</p>
+                </Card>
+              ))}
             </div>
-            {filtered.length===0 ? <div className="py-10 text-center text-sm text-gray-400">Sem registros neste mes.</div> : (
-              <div className="divide-y divide-gray-50">{[...filtered].sort((a,b)=>b.date.localeCompare(a.date)).map(t=>(
-                <div key={t.id} className="flex items-center justify-between px-5 py-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={'w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 '+(t.type==='income'?'bg-green-50 text-green-600':'bg-red-50 text-red-500')}>{t.type==='income'?'UP':'DOWN'}</div>
-                    <div className="min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{t.desc}</p><p className="text-xs text-gray-400">{fmtDate(t.date)+' . '+(t.method||t.category||'')}</p></div>
-                  </div>
-                  <span className={'text-sm font-semibold flex-shrink-0 ml-3 '+(t.type==='income'?'text-green-600':'text-red-500')}>{(t.type==='income'?'+':'-')+fmt(t.amount)}</span>
+            {Object.keys(monthlyData.byCategory).length > 0 && (
+              <Card className="p-5">
+                <p className="text-sm font-semibold text-gray-800 mb-3">Despesas por categoria</p>
+                <div className="flex flex-col gap-2.5">
+                  {Object.entries(monthlyData.byCategory).sort(([,a],[,b]) => b-a).map(([cat,val]) => (
+                    <div key={cat} className="flex items-center gap-3">
+                      <span className="text-xs text-gray-500 w-20 flex-shrink-0 truncate">{cat}</span>
+                      <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden"><div className="h-full bg-red-400 rounded-full" style={{width:(val/monthlyData.expenses*100).toFixed(0)+'%'}}/></div>
+                      <span className="text-xs font-semibold text-gray-600 w-20 text-right">{fmt(val)}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}</div>
+              </Card>
             )}
-          </Card>
-        </>
-      )}
+            <Card>
+              <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-800">Movimentacoes</p>
+                <span className="text-xs text-gray-400">{monthlyData.all.length+' registros'}</span>
+              </div>
+              {monthlyData.all.length===0
+                ? <div className="py-10 text-center text-sm text-gray-400">Sem registros neste mes.</div>
+                : <div className="divide-y divide-gray-50">{[...monthlyData.all].sort((a,b) => b.date.localeCompare(a.date)).map(tx => (
+                    <div key={tx.id} className="flex items-center justify-between px-5 py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={'w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 '+(tx.type==='income'?'bg-green-50 text-green-600':'bg-red-50 text-red-500')}>{tx.type==='income'?'+':'-'}</div>
+                        <div className="min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{tx.desc}</p><p className="text-xs text-gray-400">{fmtDate(tx.date)+' - '+(tx.method||tx.category||'')}</p></div>
+                      </div>
+                      <span className={'text-sm font-semibold flex-shrink-0 ml-3 '+(tx.type==='income'?'text-green-600':'text-red-500')}>{(tx.type==='income'?'+':'-')+fmt(tx.amount)}</span>
+                    </div>
+                  ))}</div>
+              }
+            </Card>
+          </>
+      }
     </div>
   );
-};
+});
 
-const AdminPanel = ({toast}) => {
-  const [form,setForm] = useState({email:'',password:''});
-  const [creating,setCreating] = useState(false);
-  const [created,setCreated] = useState(null);
-  const [copied,setCopied] = useState(false);
-  const create = async () => {
-    if(!form.email||!form.password) return;
-    if(form.password.length<8){toast('Senha deve ter ao menos 8 caracteres.','error');return;}
+// ─── Painel do administrador ─────────────────────────────────────────────────
+// SEGURANÇA: admin verificado no banco (user_roles), nao por e-mail
+const AdminPanel = memo(({showToast}) => {
+  const [form,       setForm]    = useState({email:'', password:''});
+  const [creating,   setCreating]= useState(false);
+  const [createdUser,setCreated] = useState(null);
+  const [copied,     setCopied]  = useState(false);
+
+  // SEGURANÇA: senha some automaticamente apos 30 segundos
+  // Evita senha exposta por tempo indeterminado na tela
+  useEffect(() => {
+    if(!createdUser) return;
+    const timer = setTimeout(() => setCreated(null), 30000);
+    return () => clearTimeout(timer);
+  }, [createdUser]);
+
+  const handleCreate = async () => {
+    if(!form.email || !form.password) return;
+    if(form.password.length < 8) { showToast('Senha deve ter ao menos 8 caracteres.','error'); return; }
     setCreating(true);
-    const {error} = await sb.auth.signUp({email:form.email,password:form.password});
-    if(error){
-      if(error.message.includes('already'))toast('E-mail ja cadastrado.','error');
-      else toast('Erro: '+error.message,'error');
+    const {error} = await sb.auth.signUp({email:form.email, password:form.password});
+    if(error) {
+      showToast(error.message.includes('already') ? 'E-mail ja cadastrado.' : 'Erro: '+error.message, 'error');
     } else {
-      setCreated({email:form.email,password:form.password});
-      setForm({email:'',password:''});
-      toast('Cliente criado!');
+      setCreated({email:form.email, password:form.password});
+      setForm({email:'', password:''});
+      showToast('Cliente criado! Credenciais disponiveis por 30 segundos.');
     }
     setCreating(false);
   };
-  const copyMsg = async () => {
-    const msg = 'Sistema de Gestao Financeira\n\nLink: https://gestao-financeira-7heu.onrender.com\nE-mail: '+created.email+'\nSenha: '+created.password+'\n\nAcesse e configure o nome da empresa em Configuracoes.';
+
+  const handleCopyCredentials = async () => {
+    const msg = 'Sistema de Gestao Financeira
+
+Link: https://gestao-financeira-7heu.onrender.com
+E-mail: '+createdUser.email+'
+Senha: '+createdUser.password+'
+
+Acesse e configure o nome da empresa em Configuracoes.';
     await navigator.clipboard.writeText(msg);
-    setCopied(true); setTimeout(()=>setCopied(false),2500);
-    toast('Copiado! Cole no WhatsApp.');
+    setCopied(true); setTimeout(() => setCopied(false), 2500);
+    showToast('Copiado! Cole no WhatsApp.');
   };
+
   return (
     <div className="flex flex-col gap-4">
       <div><p className="text-sm font-semibold text-gray-800 mb-1">Criar novo cliente</p><p className="text-xs text-gray-400 mb-3">Preencha e-mail e senha. O cliente usa essas credenciais para entrar.</p></div>
-      <Inp label="E-mail do cliente" type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="cliente@email.com"/>
+      <Inp label="E-mail do cliente" type="email" value={form.email} onChange={e => setForm(f=>({...f,email:e.target.value}))} placeholder="cliente@email.com"/>
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Senha</label>
         <div className="flex gap-2">
-          <input type="text" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="Minimo 8 caracteres" className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition flex-1"/>
-          <button onClick={()=>setForm(f=>({...f,password:genPwd()}))} className="px-3 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 flex-shrink-0">Gerar</button>
+          <input type="text" value={form.password} onChange={e => setForm(f=>({...f,password:e.target.value}))} placeholder="Minimo 8 caracteres"
+            className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition flex-1"/>
+          <button onClick={() => setForm(f=>({...f,password:generatePassword()}))}
+            className="px-3 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 flex-shrink-0">Gerar</button>
         </div>
       </div>
-      <button onClick={create} disabled={creating||!form.email||!form.password} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40 bg-green-600">
-        {creating?<Spin white/>:'Criar cliente'}
+      <button onClick={handleCreate} disabled={creating||!form.email||!form.password}
+        className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40 bg-green-600">
+        {creating ? <Spin white/> : 'Criar cliente'}
       </button>
-      {created && (
+      {createdUser && (
         <div className="rounded-xl bg-green-50 border border-green-100 p-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2"><span className="text-green-600">OK</span><p className="text-sm font-semibold text-green-800">Cliente criado!</p></div>
-          <div className="bg-white rounded-xl p-3 font-mono text-xs flex flex-col gap-1">
-            <p><span className="text-gray-400">E-mail: </span><span className="font-semibold">{created.email}</span></p>
-            <p><span className="text-gray-400">Senha:  </span><span className="font-semibold">{created.password}</span></p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-green-800">Cliente criado!</p>
+            <p className="text-xs text-amber-600 font-medium">Some em 30s</p>
           </div>
-          <button onClick={copyMsg} className="w-full flex items-center justify-center gap-2 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90">
-            {copied?'Copiado!':'Copiar para WhatsApp'}
+          <div className="bg-white rounded-xl p-3 font-mono text-xs flex flex-col gap-1">
+            <p><span className="text-gray-400">E-mail: </span><span className="font-semibold">{createdUser.email}</span></p>
+            <p><span className="text-gray-400">Senha:  </span><span className="font-semibold">{createdUser.password}</span></p>
+          </div>
+          <button onClick={handleCopyCredentials}
+            className="w-full flex items-center justify-center gap-2 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90">
+            {copied ? 'Copiado!' : 'Copiar para WhatsApp'}
           </button>
-          <button onClick={()=>setCreated(null)} className="text-xs text-gray-400 hover:text-gray-600 text-center">Criar outro cliente</button>
+          <button onClick={() => setCreated(null)} className="text-xs text-gray-400 hover:text-gray-600 text-center">Criar outro cliente</button>
         </div>
       )}
     </div>
   );
-};
+});
 
-const SettingsView = ({brand,session,onSave,toast,confirm}) => {
-  const isAdmin = session && session.user && session.user.email === 'admin@gestao.com';
-  const [tab,setTab] = useState('brand');
-  const [form,setForm] = useState({...brand});
-  const [saving,setSaving] = useState(false);
-  const [pwForm,setPwForm] = useState({newPw:'',confirm:''});
-  const [pwSaving,setPwSaving] = useState(false);
-  const [uploading,setUploading] = useState(false);
-  const fileRef = useRef();
-  const COLORS = ['#16a34a','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2','#be185d','#374151','#b45309','#0d9488'];
-  const saveBrand = async () => { setSaving(true); await onSave(form); toast('Configuracoes salvas!'); setSaving(false); };
-  const changePw = async () => {
-    if(pwForm.newPw!==pwForm.confirm){toast('As senhas nao coincidem.','error');return;}
-    if(pwForm.newPw.length<8){toast('Senha deve ter ao menos 8 caracteres.','error');return;}
+// ─── Configuracoes ────────────────────────────────────────────────────────────
+const SettingsView = memo(({brand, session, isAdmin, onSaveBrand, showToast, showConfirm}) => {
+  const ACCENT_COLORS = ['#16a34a','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2','#be185d','#374151','#b45309','#0d9488'];
+
+  const [activeTab,    setActiveTab]   = useState('brand');
+  const [brandForm,    setBrandForm]   = useState({...brand});
+  const [saving,       setSaving]      = useState(false);
+  const [pwForm,       setPwForm]      = useState({newPw:'', confirm:''});
+  const [pwSaving,     setPwSaving]    = useState(false);
+  const [uploading,    setUploading]   = useState(false);
+  const fileInputRef = useRef();
+
+  const handleSaveBrand = async () => {
+    setSaving(true);
+    await onSaveBrand(brandForm);
+    showToast('Configuracoes salvas!');
+    setSaving(false);
+  };
+
+  const handleChangePassword = async () => {
+    if(pwForm.newPw !== pwForm.confirm) { showToast('As senhas nao coincidem.','error'); return; }
+    if(pwForm.newPw.length < 8) { showToast('Senha deve ter ao menos 8 caracteres.','error'); return; }
     setPwSaving(true);
     const {error} = await sb.auth.updateUser({password:pwForm.newPw});
-    if(error) toast('Erro ao alterar senha.','error');
-    else {toast('Senha alterada!'); setPwForm({newPw:'',confirm:''});}
+    if(error) showToast('Erro ao alterar senha.','error');
+    else { showToast('Senha alterada!'); setPwForm({newPw:'',confirm:''}); }
     setPwSaving(false);
   };
-  const uploadLogo = async file => {
+
+  const handleUploadLogo = async (file) => {
     if(!file) return;
-    if(file.size>2*1024*1024){toast('Imagem deve ter menos de 2MB.','error');return;}
+    if(file.size > 2*1024*1024) { showToast('Imagem deve ter menos de 2MB.','error'); return; }
     setUploading(true);
-    const ext=file.name.split('.').pop();
-    const path=session.user.id+'/logo.'+ext;
-    const {error} = await sb.storage.from('logos').upload(path,file,{upsert:true});
-    if(error){toast('Erro no upload.','error');setUploading(false);return;}
+    const extension = file.name.split('.').pop();
+    const path = session.user.id+'/logo.'+extension;
+    const {error} = await sb.storage.from('logos').upload(path, file, {upsert:true});
+    if(error) { showToast('Erro no upload.','error'); setUploading(false); return; }
     const {data:{publicUrl}} = sb.storage.from('logos').getPublicUrl(path);
-    setForm(f=>({...f,logo_url:publicUrl+'?t='+Date.now()}));
-    toast('Logo enviada!'); setUploading(false);
+    setBrandForm(f => ({...f, logo_url:publicUrl+'?t='+Date.now()}));
+    showToast('Logo enviada!');
+    setUploading(false);
   };
+
   const tabs = [{key:'brand',label:'Branding'},{key:'security',label:'Seguranca'},{key:'account',label:'Conta'}];
-  if(isAdmin) tabs.push({key:'clients',label:'Clientes'});
+  if(isAdmin) tabs.push({key:'clients', label:'Clientes'});
+
   return (
     <div className="flex flex-col gap-6">
       <div><h2 className="text-2xl font-bold text-gray-900">Configuracoes</h2><p className="text-sm text-gray-400 mt-0.5">Aparencia, seguranca e conta</p></div>
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 flex-wrap">
-        {tabs.map(t=>(
-          <button key={t.key} onClick={()=>setTab(t.key)} className={'flex-1 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap '+(tab===t.key?'bg-white text-gray-900 shadow-sm':'text-gray-500')}>{t.label}</button>
+        {tabs.map(tab => (
+          <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+            className={'flex-1 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap '+(activeTab===tab.key?'bg-white text-gray-900 shadow-sm':'text-gray-500')}>
+            {tab.label}
+          </button>
         ))}
       </div>
-      {tab==='brand' && (
+
+      {activeTab==='brand' && (
         <Card className="p-6 flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Logo da empresa</label>
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden border border-gray-200 flex items-center justify-center" style={{background:form.color}}>
-                {form.logo_url ? <img src={form.logo_url} alt="logo" className="w-full h-full object-cover"/> : <span className="text-2xl">{form.logo}</span>}
+              <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden border border-gray-200 flex items-center justify-center" style={{background:brandForm.color}}>
+                {brandForm.logo_url ? <img src={brandForm.logo_url} alt="logo" className="w-full h-full object-cover"/> : <span className="text-2xl">{brandForm.logo}</span>}
               </div>
               <div className="flex flex-col gap-2 flex-1">
-                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e=>uploadLogo(e.target.files[0])}/>
-                <button onClick={()=>fileRef.current.click()} disabled={uploading} className="flex items-center justify-center gap-2 border border-gray-200 text-gray-600 rounded-xl py-2 text-sm font-medium hover:bg-gray-50">
-                  {uploading?<><Spin/> Enviando...</>:'Upload de logo'}
+                <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => handleUploadLogo(e.target.files[0])}/>
+                <button onClick={() => fileInputRef.current.click()} disabled={uploading}
+                  className="flex items-center justify-center gap-2 border border-gray-200 text-gray-600 rounded-xl py-2 text-sm font-medium hover:bg-gray-50">
+                  {uploading ? <><Spin/> Enviando...</> : 'Upload de logo'}
                 </button>
-                {form.logo_url && <button onClick={()=>setForm(f=>({...f,logo_url:null}))} className="text-xs text-red-400 hover:text-red-600 text-center">Remover logo</button>}
-                <p className="text-xs text-gray-400 text-center">PNG, JPG . Max 2MB</p>
+                {brandForm.logo_url && <button onClick={() => setBrandForm(f=>({...f,logo_url:null}))} className="text-xs text-red-400 hover:text-red-600 text-center">Remover logo</button>}
+                <p className="text-xs text-gray-400 text-center">PNG, JPG - Max 2MB</p>
               </div>
             </div>
           </div>
-          <Inp label="Nome da empresa" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Nome da empresa"/>
-          <Inp label="Emoji (quando sem logo)" value={form.logo} onChange={e=>setForm(f=>({...f,logo:e.target.value}))} placeholder="💼"/>
+          <Inp label="Nome da empresa" value={brandForm.name} onChange={e => setBrandForm(f=>({...f,name:e.target.value}))} placeholder="Nome da empresa" maxLength={80}/>
+          <Inp label="Emoji (quando sem logo)" value={brandForm.logo} onChange={e => setBrandForm(f=>({...f,logo:e.target.value}))} placeholder="💼"/>
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cor principal</label>
-            <div className="flex gap-2 flex-wrap">{COLORS.map(c=>(
-              <button key={c} onClick={()=>setForm(f=>({...f,color:c}))} className="w-9 h-9 rounded-full hover:scale-110 transition-transform flex items-center justify-center" style={{background:c}}>
-                {form.color===c && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
-              </button>
-            ))}</div>
-            <Inp label="Hex personalizado" value={form.color} onChange={e=>setForm(f=>({...f,color:e.target.value}))} placeholder="#16a34a"/>
+            <div className="flex gap-2 flex-wrap">
+              {ACCENT_COLORS.map(color => (
+                <button key={color} onClick={() => setBrandForm(f=>({...f,color}))}
+                  className="w-9 h-9 rounded-full hover:scale-110 transition-transform flex items-center justify-center" style={{background:color}}>
+                  {brandForm.color===color && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
+                </button>
+              ))}
+            </div>
+            <Inp label="Hex personalizado" value={brandForm.color} onChange={e => setBrandForm(f=>({...f,color:e.target.value}))} placeholder="#16a34a"/>
           </div>
           <div className="rounded-xl p-4 bg-gray-50 border border-gray-100">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Pre-visualizacao</p>
             <div className="flex items-center gap-3 p-3 rounded-xl w-fit" style={{background:'#0f172a'}}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden" style={{background:form.color}}>
-                {form.logo_url ? <img src={form.logo_url} alt="logo" className="w-full h-full object-cover"/> : <span className="text-lg">{form.logo}</span>}
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden" style={{background:brandForm.color}}>
+                {brandForm.logo_url ? <img src={brandForm.logo_url} alt="logo" className="w-full h-full object-cover"/> : <span className="text-lg">{brandForm.logo}</span>}
               </div>
-              <span className="font-bold text-white">{form.name||'Nome da empresa'}</span>
+              <span className="font-bold text-white">{brandForm.name||'Nome da empresa'}</span>
             </div>
           </div>
-          <button onClick={saveBrand} disabled={saving} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{background:form.color}}>
-            {saving?<Spin white/>:'Salvar e aplicar'}
+          <button onClick={handleSaveBrand} disabled={saving} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{background:brandForm.color}}>
+            {saving ? <Spin white/> : 'Salvar e aplicar'}
           </button>
         </Card>
       )}
-      {tab==='security' && (
+
+      {activeTab==='security' && (
         <Card className="p-6 flex flex-col gap-5">
-          <div><p className="text-sm font-semibold text-gray-800 mb-1">Alterar senha</p><p className="text-xs text-gray-400 mb-4">Use uma senha forte com letras, numeros e simbolos.</p>
+          <div>
+            <p className="text-sm font-semibold text-gray-800 mb-1">Alterar senha</p>
+            <p className="text-xs text-gray-400 mb-4">Use uma senha forte com letras, numeros e simbolos.</p>
             <div className="flex flex-col gap-3">
-              <Inp label="Nova senha" type="password" value={pwForm.newPw} onChange={e=>setPwForm(f=>({...f,newPw:e.target.value}))} placeholder="Minimo 8 caracteres" hint={pwForm.newPw.length>0&&pwForm.newPw.length<8?'Muito curta':''}/>
-              <Inp label="Confirmar senha" type="password" value={pwForm.confirm} onChange={e=>setPwForm(f=>({...f,confirm:e.target.value}))} placeholder="Repita a senha" hint={pwForm.confirm&&pwForm.newPw!==pwForm.confirm?'Senhas diferentes':''}/>
-              <button onClick={changePw} disabled={pwSaving||!pwForm.newPw||!pwForm.confirm} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40" style={{background:'#374151'}}>
-                {pwSaving?<Spin white/>:'Alterar senha'}
+              <Inp label="Nova senha" type="password" value={pwForm.newPw} onChange={e => setPwForm(f=>({...f,newPw:e.target.value}))} placeholder="Minimo 8 caracteres"
+                hint={pwForm.newPw.length>0 && pwForm.newPw.length<8 ? 'Muito curta' : ''}/>
+              <Inp label="Confirmar senha" type="password" value={pwForm.confirm} onChange={e => setPwForm(f=>({...f,confirm:e.target.value}))} placeholder="Repita a senha"
+                hint={pwForm.confirm && pwForm.newPw!==pwForm.confirm ? 'Senhas diferentes' : ''}/>
+              <button onClick={handleChangePassword} disabled={pwSaving||!pwForm.newPw||!pwForm.confirm}
+                className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40" style={{background:'#374151'}}>
+                {pwSaving ? <Spin white/> : 'Alterar senha'}
               </button>
             </div>
           </div>
           <div className="border-t border-gray-100 pt-4">
             <p className="text-sm font-semibold text-gray-800 mb-2">Seguranca do sistema</p>
-            {['Dados criptografados no Supabase','Cada usuario acessa apenas seus dados (RLS)','Conexao sempre via HTTPS','Sessao expira automaticamente','Nunca compartilhe sua senha'].map((s,i)=>(
-              <div key={i} className="flex items-start gap-2 mb-1.5"><span className="text-green-500 text-sm">OK</span><p className="text-sm text-gray-600">{s}</p></div>
+            {['Dados criptografados no Supabase','Cada usuario acessa apenas seus dados (RLS ativo)','Conexao sempre via HTTPS','Sessao expira automaticamente','Admin verificado no banco de dados'].map((item, i) => (
+              <div key={i} className="flex items-start gap-2 mb-1.5"><span className="text-green-500 text-sm">OK</span><p className="text-sm text-gray-600">{item}</p></div>
             ))}
           </div>
         </Card>
       )}
-      {tab==='account' && (
+
+      {activeTab==='account' && (
         <Card className="p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold" style={{background:brand.color}}>
-              {session&&session.user&&session.user.email?session.user.email[0].toUpperCase():'U'}
+              {session?.user?.email?.[0]?.toUpperCase()||'U'}
             </div>
-            <div><p className="text-sm font-semibold text-gray-800">{session&&session.user?session.user.email:''}</p><p className="text-xs text-gray-400">Usuario ativo</p></div>
+            <div>
+              <p className="text-sm font-semibold text-gray-800">{session?.user?.email||''}</p>
+              <p className="text-xs text-gray-400">Usuario ativo</p>
+            </div>
           </div>
           <div className="border-t border-gray-100 pt-2">
-            <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Versao</span><span className="font-medium">5.0</span></div>
-            <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Banco</span><span className="font-medium">Supabase (PostgreSQL)</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-500">Hospedagem</span><span className="font-medium">Render</span></div>
+            {[['Versao','5.1 - Revisado'],['Banco','Supabase (PostgreSQL)'],['Hospedagem','Render']].map(([k,v]) => (
+              <div key={k} className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">{k}</span><span className="font-medium">{v}</span></div>
+            ))}
           </div>
-          <button onClick={()=>confirm('Sair da conta?',()=>sb.auth.signOut())} className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Sair da conta</button>
+          <button onClick={() => showConfirm('Sair da conta?', () => sb.auth.signOut())}
+            className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Sair da conta</button>
         </Card>
       )}
-      {tab==='clients' && isAdmin && (
-        <Card className="p-6"><AdminPanel toast={toast}/></Card>
+
+      {activeTab==='clients' && isAdmin && (
+        <Card className="p-6"><AdminPanel showToast={showToast}/></Card>
       )}
     </div>
   );
-};
+});
 
-const Login = () => {
-  const [email,setEmail] = useState('');
-  const [pass,setPass] = useState('');
-  const [err,setErr] = useState('');
-  const [loading,setLoading] = useState(false);
-  const login = async () => {
-    if(!email||!pass) return;
-    setLoading(true); setErr('');
-    const {error} = await sb.auth.signInWithPassword({email,password:pass});
-    if(error){
-      if(error.message.includes('Invalid'))setErr('E-mail ou senha incorretos.');
-      else setErr('Erro ao entrar. Tente novamente.');
+// ─── Tela de login ────────────────────────────────────────────────────────────
+const LoginScreen = () => {
+  const [email,   setEmail]   = useState('');
+  const [password,setPassword]= useState('');
+  const [error,   setError]   = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if(!email || !password) return;
+    setLoading(true); setError('');
+    const {error: authError} = await sb.auth.signInWithPassword({email, password});
+    if(authError) {
+      setError(authError.message.includes('Invalid') ? 'E-mail ou senha incorretos.' : 'Erro ao entrar. Tente novamente.');
     }
     setLoading(false);
   };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{background:'#0f172a'}}>
       <div className="w-full max-w-sm">
@@ -961,11 +1313,12 @@ const Login = () => {
           <p className="text-slate-400 text-sm mt-1">Entre com seu e-mail e senha</p>
         </div>
         <Card className="p-6 flex flex-col gap-4">
-          <Inp label="E-mail" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com"/>
-          <Inp label="Senha" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==='Enter'&&login()}/>
-          {err && <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-2.5"><p className="text-sm text-red-600">{err}</p></div>}
-          <button onClick={login} disabled={loading||!email||!pass} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 mt-1 disabled:opacity-50 bg-green-600">
-            {loading?<Spin white/>:'Entrar'}
+          <Inp label="E-mail" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com"/>
+          <Inp label="Senha" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" onKeyDown={e => e.key==='Enter' && handleLogin()}/>
+          {error && <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-2.5"><p className="text-sm text-red-600">{error}</p></div>}
+          <button onClick={handleLogin} disabled={loading||!email||!password}
+            className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 mt-1 disabled:opacity-50 bg-green-600">
+            {loading ? <Spin white/> : 'Entrar'}
           </button>
         </Card>
       </div>
@@ -973,145 +1326,197 @@ const Login = () => {
   );
 };
 
+// ─── App (componente raiz) ────────────────────────────────────────────────────
 function App() {
-  const [session,setSession] = useState(null);
-  const [appLoading,setAppLoading] = useState(true);
-  const [dataLoading,setDataLoading] = useState(false);
-  const [view,setView] = useState('dashboard');
-  const [brand,setBrand] = useState(INIT_BRAND);
-  const [tx,setTx] = useState([]);
-  const [products,setProducts] = useState([]);
-  const [losses,setLosses] = useState([]);
-  const [sidebarOpen,setSidebarOpen] = useState(false);
-  const [toastData,setToastData] = useState(null);
-  const [confirmData,setConfirmData] = useState(null);
-  const [dataError,setDataError] = useState(null);
+  const [session,      setSession]      = useState(null);
+  const [isAdmin,      setIsAdmin]      = useState(false);
+  const [appLoading,   setAppLoading]   = useState(true);
+  const [dataLoading,  setDataLoading]  = useState(false);
+  const [currentView,  setCurrentView]  = useState('dashboard');
+  const [brand,        setBrand]        = useState(INIT_BRAND);
+  const [transactions, setTransactions] = useState([]);
+  const [products,     setProducts]     = useState([]);
+  const [losses,       setLosses]       = useState([]);
+  const [sidebarOpen,  setSidebarOpen]  = useState(false);
+  const [toastData,    setToastData]    = useState(null);
+  const [confirmData,  setConfirmData]  = useState(null);
+  const [dataError,    setDataError]    = useState(null);
 
-  const toast = useCallback((msg,type='success') => {
-    setToastData({msg,type});
-    setTimeout(()=>setToastData(null),3000);
-  },[]);
-  const confirm = useCallback((msg,onOk) => setConfirmData({msg,onOk}),[]);
+  // useCallback garante que showToast e showConfirm nao mudam de referencia
+  // e nao causam re-renders desnecessarios nos filhos
+  const showToast = useCallback((msg, type='success') => {
+    setToastData({msg, type});
+    setTimeout(() => setToastData(null), 3000);
+  }, []);
 
-  const loadData = async uid => {
+  const showConfirm = useCallback((message, onConfirm) => {
+    setConfirmData({message, onConfirm});
+  }, []);
+
+  const loadUserData = async (userId) => {
     setDataLoading(true); setDataError(null);
     try {
-      const [pr,pdr,txr,lr] = await Promise.all([
-        sb.from('company_profiles').select('*').eq('user_id',uid).maybeSingle(),
-        sb.from('products').select('*').order('created_at'),
-        sb.from('transactions').select('*').order('date',{ascending:false}),
-        sb.from('losses').select('*').order('date',{ascending:false}),
+      // Queries com LIMIT = nunca carrega mais que QUERY_LIMIT registros de uma vez
+      const [profileRes, productsRes, transactionsRes, lossesRes, roleRes] = await Promise.all([
+        sb.from('company_profiles').select('*').eq('user_id', userId).maybeSingle(),
+        sb.from('products').select('*').eq('user_id', userId).order('created_at').limit(QUERY_LIMIT),
+        sb.from('transactions').select('*').eq('user_id', userId).order('date',{ascending:false}).limit(QUERY_LIMIT),
+        sb.from('losses').select('*').eq('user_id', userId).order('date',{ascending:false}).limit(QUERY_LIMIT),
+        // SEGURANCA: busca o papel do usuario no banco, nao verifica por e-mail
+        sb.from('user_roles').select('role').eq('user_id', userId).maybeSingle(),
       ]);
-      if(pr.data) setBrand({name:pr.data.name,logo:pr.data.logo,color:pr.data.color,logo_url:pr.data.logo_url||null});
-      if(pdr.data) setProducts(pdr.data);
-      if(txr.data) setTx(txr.data.map(t=>({...t,desc:t.description,cat:t.category})));
-      if(lr.data) setLosses(lr.data.map(l=>({...l,desc:l.description})));
-    } catch(e) { setDataError('Erro ao carregar dados. Verifique sua conexao.'); }
+
+      if(profileRes.data) setBrand({name:profileRes.data.name, logo:profileRes.data.logo, color:profileRes.data.color, logo_url:profileRes.data.logo_url||null});
+      if(productsRes.data) setProducts(productsRes.data);
+      if(transactionsRes.data) setTransactions(transactionsRes.data.map(t => ({...t, desc:t.description, cat:t.category})));
+      if(lossesRes.data) setLosses(lossesRes.data.map(l => ({...l, desc:l.description})));
+
+      // SEGURANCA: admin real vem do banco, nao do e-mail
+      setIsAdmin(roleRes.data?.role === 'admin');
+    } catch(err) {
+      setDataError('Erro ao carregar dados. Verifique sua conexao.');
+    }
     setDataLoading(false);
   };
 
   useEffect(() => {
     sb.auth.getSession().then(({data:{session}}) => {
       setSession(session);
-      if(session) loadData(session.user.id);
+      if(session) loadUserData(session.user.id);
       setAppLoading(false);
     });
-    const {data:{subscription}} = sb.auth.onAuthStateChange((_,session) => {
+
+    // onAuthStateChange gerencia sessao automaticamente
+    // inclui renovacao do token antes de expirar
+    const {data:{subscription}} = sb.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      if(session) loadData(session.user.id);
-      else { setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); }
+      if(session) {
+        if(event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          loadUserData(session.user.id);
+        }
+      } else {
+        // Limpa dados ao fazer logout
+        setTransactions([]); setProducts([]); setLosses([]);
+        setBrand(INIT_BRAND); setIsAdmin(false);
+      }
     });
+
     return () => subscription.unsubscribe();
-  },[]);
+  }, []);
 
-  const addTx = async t => {
-    const row = {id:t.id,type:t.type,description:t.desc,amount:t.amount,date:t.date,method:t.method||null,category:t.cat||null,items:t.items||null,user_id:session.user.id};
+  // ─── Funcoes de banco com tratamento de erro ───────────────────────────────
+  const addTransaction = async (tx) => {
+    const row = {id:tx.id, type:tx.type, description:tx.desc, amount:tx.amount, date:tx.date, method:tx.method||null, category:tx.cat||null, items:tx.items||null, user_id:session.user.id};
     const {error} = await sb.from('transactions').insert(row);
-    if(error){toast('Erro ao salvar.','error');return;}
-    setTx(p=>[{...t,...row,desc:row.description,cat:row.category},...p]);
+    if(error) { showToast('Erro ao salvar. Tente novamente.','error'); return; }
+    setTransactions(prev => [{...tx,...row, desc:row.description, cat:row.category}, ...prev]);
   };
-  const editTx = async (id,u) => {
-    const row = {description:u.desc,amount:u.amount,date:u.date,method:u.method||null,category:u.cat||null};
+
+  const editTransaction = async (id, updates) => {
+    const row = {description:updates.desc, amount:updates.amount, date:updates.date, method:updates.method||null, category:updates.cat||null};
     const {error} = await sb.from('transactions').update(row).eq('id',id);
-    if(!error) setTx(p=>p.map(t=>t.id===id?{...t,...row,desc:row.description,cat:row.category}:t));
-    else toast('Erro ao atualizar.','error');
+    if(error) { showToast('Erro ao atualizar.','error'); return; }
+    setTransactions(prev => prev.map(t => t.id===id ? {...t,...row, desc:row.description, cat:row.category} : t));
   };
-  const deleteTx = async id => { await sb.from('transactions').delete().eq('id',id); setTx(p=>p.filter(t=>t.id!==id)); };
 
-  const addProduct = async p => {
-    const row = {...p,user_id:session.user.id};
+  const deleteTransaction = async (id) => {
+    const {error} = await sb.from('transactions').delete().eq('id',id);
+    if(error) { showToast('Erro ao excluir.','error'); return; }
+    setTransactions(prev => prev.filter(t => t.id!==id));
+  };
+
+  const addProduct = async (product) => {
+    const row = {...product, user_id:session.user.id};
     const {error} = await sb.from('products').insert(row);
-    if(error){toast('Erro ao salvar produto.','error');return;}
-    setProducts(prev=>[...prev,row]);
-  };
-  const editProduct = async (id,u) => {
-    const {error} = await sb.from('products').update(u).eq('id',id);
-    if(!error) setProducts(p=>p.map(p=>p.id===id?{...p,...u}:p));
-    else toast('Erro ao atualizar.','error');
-  };
-  const deleteProduct = async id => { await sb.from('products').delete().eq('id',id); setProducts(p=>p.filter(p=>p.id!==id)); };
-  const adjustStock = async (id,delta) => {
-    const p = products.find(p=>p.id===id); if(!p) return;
-    const ns = Math.max(0,(p.stock||0)+delta);
-    await sb.from('products').update({stock:ns}).eq('id',id);
-    setProducts(p=>p.map(p=>p.id===id?{...p,stock:ns}:p));
+    if(error) { showToast('Erro ao salvar produto.','error'); return; }
+    setProducts(prev => [...prev, row]);
   };
 
-  const addLoss = async l => {
-    const row = {id:l.id,description:l.desc,qty:l.qty,reason:l.reason||null,date:l.date,user_id:session.user.id};
+  const editProduct = async (id, updates) => {
+    const {error} = await sb.from('products').update(updates).eq('id',id);
+    if(error) { showToast('Erro ao atualizar.','error'); return; }
+    setProducts(prev => prev.map(p => p.id===id ? {...p,...updates} : p));
+  };
+
+  const deleteProduct = async (id) => {
+    const {error} = await sb.from('products').delete().eq('id',id);
+    if(error) { showToast('Erro ao excluir.','error'); return; }
+    setProducts(prev => prev.filter(p => p.id!==id));
+  };
+
+  const adjustStock = async (productId, delta) => {
+    const product = products.find(p => p.id===productId);
+    if(!product) return;
+    const newStock = Math.max(0, (product.stock||0) + delta);
+    const {error} = await sb.from('products').update({stock:newStock}).eq('id',productId);
+    if(error) return;
+    setProducts(prev => prev.map(p => p.id===productId ? {...p, stock:newStock} : p));
+  };
+
+  const addLoss = async (loss) => {
+    const row = {id:loss.id, description:loss.desc, qty:loss.qty, reason:loss.reason||null, date:loss.date, user_id:session.user.id};
     const {error} = await sb.from('losses').insert(row);
-    if(error){toast('Erro ao salvar perda.','error');return;}
-    setLosses(p=>[{...l,...row},...p]);
+    if(error) { showToast('Erro ao salvar perda.','error'); return; }
+    setLosses(prev => [{...loss,...row}, ...prev]);
   };
-  const editLoss = async (id,u) => {
-    const row = {description:u.desc,qty:u.qty,reason:u.reason||null,date:u.date};
+
+  const editLoss = async (id, updates) => {
+    const row = {description:updates.desc, qty:updates.qty, reason:updates.reason||null, date:updates.date};
     const {error} = await sb.from('losses').update(row).eq('id',id);
-    if(!error) setLosses(p=>p.map(l=>l.id===id?{...l,...row,desc:row.description}:l));
-    else toast('Erro ao atualizar.','error');
-  };
-  const deleteLoss = async id => { await sb.from('losses').delete().eq('id',id); setLosses(p=>p.filter(l=>l.id!==id)); };
-
-  const saveBrand = async nb => {
-    await sb.from('company_profiles').upsert({user_id:session.user.id,name:nb.name,logo:nb.logo,color:nb.color,logo_url:nb.logo_url||null});
-    setBrand(nb);
+    if(error) { showToast('Erro ao atualizar.','error'); return; }
+    setLosses(prev => prev.map(l => l.id===id ? {...l,...row, desc:row.description} : l));
   };
 
-  const Loader = ({text}) => (
+  const deleteLoss = async (id) => {
+    const {error} = await sb.from('losses').delete().eq('id',id);
+    if(error) { showToast('Erro ao excluir.','error'); return; }
+    setLosses(prev => prev.filter(l => l.id!==id));
+  };
+
+  const saveBrand = async (newBrand) => {
+    const {error} = await sb.from('company_profiles').upsert({user_id:session.user.id, name:sanitizeText(newBrand.name), logo:newBrand.logo, color:newBrand.color, logo_url:newBrand.logo_url||null});
+    if(error) { showToast('Erro ao salvar.','error'); return; }
+    setBrand(newBrand);
+  };
+
+  const LoadingScreen = ({text}) => (
     <div className="min-h-screen flex items-center justify-center flex-col gap-3" style={{background:'#f8fafc'}}>
       <div className="w-10 h-10 border-2 border-gray-200 rounded-full animate-spin" style={{borderTopColor:'#16a34a'}}/>
       {text && <p className="text-sm text-gray-400">{text}</p>}
     </div>
   );
 
-  if(appLoading) return <Loader/>;
-  if(!session) return <Login/>;
-  if(dataLoading) return <Loader text="Carregando seus dados..."/>;
-  if(dataError) return (
+  if(appLoading)  return <LoadingScreen/>;
+  if(!session)    return <LoginScreen/>;
+  if(dataLoading) return <LoadingScreen text="Carregando seus dados..."/>;
+  if(dataError)   return (
     <div className="min-h-screen flex items-center justify-center flex-col gap-4 p-6" style={{background:'#f8fafc'}}>
       <span className="text-4xl">⚠️</span>
       <p className="text-sm font-semibold text-gray-700">{dataError}</p>
-      <button onClick={()=>loadData(session.user.id)} className="px-6 py-2.5 text-white rounded-xl text-sm font-semibold bg-green-600">Tentar novamente</button>
+      <button onClick={() => loadUserData(session.user.id)} className="px-6 py-2.5 text-white rounded-xl text-sm font-semibold bg-green-600">Tentar novamente</button>
     </div>
   );
 
-  const p = {brand,toast,confirm};
+  // Props compartilhadas entre telas
+  const sharedProps = {brand, showToast, showConfirm};
+
   const views = {
-    dashboard: <Dashboard tx={tx} products={products} brand={brand} onNav={setView}/>,
-    income: <TxView type="income" tx={tx} products={products} onAdd={addTx} onEdit={editTx} onDelete={deleteTx} onDeductStock={(id,qty)=>adjustStock(id,-qty)} {...p}/>,
-    expense: <TxView type="expense" tx={tx} products={products} onAdd={addTx} onEdit={editTx} onDelete={deleteTx} onDeductStock={()=>{}} {...p}/>,
-    inventory: <InventoryView products={products} losses={losses} onAddProduct={addProduct} onEditProduct={editProduct} onDeleteProduct={deleteProduct} onAddLoss={addLoss} onEditLoss={editLoss} onDeleteLoss={deleteLoss} onAdjustStock={adjustStock} {...p}/>,
-    email: <EmailView brand={brand} toast={toast}/>,
-    report: <ReportView tx={tx} toast={toast}/>,
-    settings: <SettingsView brand={brand} session={session} onSave={saveBrand} toast={toast} confirm={confirm}/>,
+    dashboard: <Dashboard transactions={transactions} products={products} brand={brand} onNavigate={setCurrentView}/>,
+    income:    <TransactionView type="income"  transactions={transactions} products={products} onAdd={addTransaction} onEdit={editTransaction} onDelete={deleteTransaction} onDeductStock={(id,qty) => adjustStock(id,-qty)} {...sharedProps}/>,
+    expense:   <TransactionView type="expense" transactions={transactions} products={products} onAdd={addTransaction} onEdit={editTransaction} onDelete={deleteTransaction} onDeductStock={()=>{}} {...sharedProps}/>,
+    inventory: <InventoryView products={products} losses={losses} onAddProduct={addProduct} onEditProduct={editProduct} onDeleteProduct={deleteProduct} onAddLoss={addLoss} onEditLoss={editLoss} onDeleteLoss={deleteLoss} onAdjustStock={adjustStock} {...sharedProps}/>,
+    email:     <EmailView brand={brand} showToast={showToast}/>,
+    report:    <ReportView transactions={transactions} showToast={showToast}/>,
+    settings:  <SettingsView brand={brand} session={session} isAdmin={isAdmin} onSaveBrand={saveBrand} showToast={showToast} showConfirm={showConfirm}/>,
   };
 
   return (
     <div className="min-h-screen flex" style={{background:'#f8fafc'}}>
-      <Offline/>
-      <Sidebar view={view} onNav={setView} brand={brand} open={sidebarOpen} onClose={()=>setSidebarOpen(false)}/>
+      <OfflineBanner/>
+      <Sidebar currentView={currentView} onNavigate={setCurrentView} brand={brand} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)}/>
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         <header className="sticky top-0 z-20 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 lg:hidden">
-          <button onClick={()=>setSidebarOpen(true)} className="text-gray-400 p-1 rounded-lg hover:bg-gray-100">
+          <button onClick={() => setSidebarOpen(true)} className="text-gray-400 p-1 rounded-lg hover:bg-gray-100">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
           <div className="flex items-center gap-2">
@@ -1122,10 +1527,10 @@ function App() {
             <span className="font-bold text-gray-900 text-sm">{brand.name}</span>
           </div>
         </header>
-        <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto">{views[view]}</main>
+        <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto">{views[currentView]}</main>
       </div>
       <Toast toast={toastData}/>
-      {confirmData && <Confirm msg={confirmData.msg} onOk={()=>{confirmData.onOk();setConfirmData(null);}} onCancel={()=>setConfirmData(null)}/>}
+      {confirmData && <ConfirmDialog message={confirmData.message} onConfirm={() => { confirmData.onConfirm(); setConfirmData(null); }} onCancel={() => setConfirmData(null)}/>}
     </div>
   );
 }
