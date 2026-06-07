@@ -13,62 +13,51 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 11
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: '17'
 
-      - name: Instalar Android SDK components
+      - name: Instalar SDK components
         run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "platforms;android-33" "build-tools;33.0.2" 2>&1 | grep -E "Warning|Error|done" | head -10
+            "platforms;android-33" "build-tools;33.0.2" 2>&1 | tail -5
 
-      - name: Setup Gradle 7.5
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '7.5'
-
-      - name: Verificar estrutura do projeto
-        working-directory: android
+      - name: Baixar e instalar Gradle 7.5
         run: |
-          echo "=== Arquivos do projeto ==="
-          find . -name "*.gradle" -o -name "*.xml" -o -name "*.java" | head -20
-          echo "=== settings.gradle ==="
-          cat settings.gradle
-          echo "=== app/build.gradle ==="  
-          cat app/build.gradle
+          wget -q https://services.gradle.org/distributions/gradle-7.5-bin.zip
+          unzip -q gradle-7.5-bin.zip
+          echo "$PWD/gradle-7.5/bin" >> $GITHUB_PATH
+          $PWD/gradle-7.5/bin/gradle --version
 
       - name: Gerar keystore
         run: |
-          keytool -genkeypair -keystore android/app/keystore.jks -alias key0 \
+          keytool -genkeypair -keystore $PWD/android/app/keystore.jks -alias key0 \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass gestao2024 -keypass gestao2024 \
             -dname "CN=Gestao,O=Gestao,C=BR" -noprompt
+          echo "Keystore: $(ls -lh android/app/keystore.jks)"
 
-      - name: Build APK Debug
+      - name: Build APK
         working-directory: android
         run: |
-          gradle assembleDebug --no-daemon --info 2>&1
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          gradle assembleDebug --no-daemon 2>&1
         env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          STORE_PASS: gestao2024
+          KEY_PASS: gestao2024
 
-      - name: Verificar resultado
+      - name: Encontrar APK
         run: |
-          echo "=== Buscando APK em todo o projeto ==="
-          find . -name "*.apk" -type f 2>/dev/null || echo "NENHUM APK ENCONTRADO"
-          echo "=== Conteudo de android/app/build/ ==="
-          find android/app/build -type f 2>/dev/null | head -30 || echo "sem pasta build"
+          echo "Procurando APK..."
+          find . -name "*.apk" 2>/dev/null
+          find android -type d -name "outputs" 2>/dev/null
           
           mkdir -p apk-output
-          APK=$(find . -name "*.apk" -type f 2>/dev/null | head -1)
-          if [ -n "$APK" ]; then
-            cp "$APK" apk-output/gestao-financeira.apk
-            echo "APK copiado: $APK"
-            ls -lh apk-output/
-          else
-            echo "APK nao gerado"
-          fi
+          find . -name "*.apk" -exec cp {} apk-output/gestao-financeira.apk \; 2>/dev/null
+          ls -lh apk-output/ 2>/dev/null || echo "Pasta apk-output vazia"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
