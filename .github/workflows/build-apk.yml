@@ -27,76 +27,128 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Bubblewrap
+      - name: Gerar icones PNG
+        run: |
+          npm install canvas 2>/dev/null || true
+          node -e "
+          const fs = require('fs');
+          // SVG simples convertido — canvas pode nao estar disponivel
+          // Usa Python como fallback
+          " || python3 - << 'PYICON'
+          import struct, zlib, base64, os
+
+          def png(size):
+              def chunk(t, d):
+                  c = struct.pack('>I', len(d)) + t + d
+                  return c + struct.pack('>I', zlib.crc32(t + d) & 0xffffffff)
+              
+              # Cria imagem RGBA simples: fundo verde, letra G branca
+              img = []
+              cx, cy = size//2, size//2
+              r = int(size * 0.45)
+              
+              for y in range(size):
+                  row = [0]  # filter byte
+                  for x in range(size):
+                      dx, dy = x - cx, y - cy
+                      dist = (dx*dx + dy*dy) ** 0.5
+                      
+                      # Fundo arredondado verde
+                      corner = int(size * 0.18)
+                      in_bg = True
+                      if x < corner and y < corner:
+                          in_bg = (x - corner)**2 + (y - corner)**2 < corner**2
+                      elif x > size-corner and y < corner:
+                          in_bg = (x - (size-corner))**2 + (y - corner)**2 < corner**2
+                      elif x < corner and y > size-corner:
+                          in_bg = (x - corner)**2 + (y - (size-corner))**2 < corner**2
+                      elif x > size-corner and y > size-corner:
+                          in_bg = (x - (size-corner))**2 + (y - (size-corner))**2 < corner**2
+                      
+                      if not in_bg:
+                          row.extend([0, 0, 0, 0])
+                      else:
+                          # Letra G simplificada
+                          gx = int(size * 0.3)
+                          gy = int(size * 0.25)
+                          gw = int(size * 0.38)
+                          gh = int(size * 0.5)
+                          thick = max(2, size // 20)
+                          
+                          in_g = False
+                          # Arco superior
+                          if abs(dist - r * 0.55) < thick and dy < 0:
+                              in_g = True
+                          # Lado esquerdo
+                          if abs(dx + r*0.45) < thick and abs(dy) < r*0.55:
+                              in_g = True
+                          # Barra horizontal direita
+                          if dy > 0 and dy < thick*1.5 and dx > 0 and dx < r*0.45:
+                              in_g = True
+                          # Lado direito inferior
+                          if abs(dx - r*0.45) < thick and dy > 0 and dy < r*0.55:
+                              in_g = True
+                          # Base
+                          if abs(dy - r*0.55) < thick and abs(dx) < r*0.45:
+                              in_g = True
+                          
+                          if in_g:
+                              row.extend([255, 255, 255, 255])
+                          else:
+                              row.extend([22, 163, 74, 255])
+                  img.append(bytes(row))
+              
+              raw = b''.join(img)
+              compressed = zlib.compress(raw, 9)
+              
+              sig = b'\x89PNG\r\n\x1a\n'
+              ihdr_data = struct.pack('>IIBBBBB', size, size, 8, 2, 0, 0, 0)
+              idat_data = compressed
+              
+              return (sig 
+                      + chunk(b'IHDR', ihdr_data)
+                      + chunk(b'IDAT', idat_data)
+                      + chunk(b'IEND', b''))
+          
+          for s in [192, 512]:
+              with open(f'icon-{s}.png', 'wb') as f:
+                  f.write(png(s))
+              print(f'icon-{s}.png gerado ({os.path.getsize(f"icon-{s}.png")} bytes)')
+          PYICON
+
+      - name: Instalar Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      - name: Gerar keystore de assinatura
+      - name: Gerar keystore
         run: |
-          keytool -genkeypair -v \
-            -keystore $GITHUB_WORKSPACE/android.keystore \
+          keytool -genkeypair \
+            -keystore android.keystore \
             -alias android \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass gestao2024 -keypass gestao2024 \
-            -dname "CN=Gestao Financeira,OU=App,O=Gestao,L=Braganca,S=Para,C=BR" \
+            -dname "CN=Gestao,OU=App,O=Gestao,L=Braganca,S=Para,C=BR" \
             -noprompt
 
-      - name: Criar config do Bubblewrap
+      - name: Inicializar TWA
         run: |
-          cat > twa-manifest.json << 'TWAJSON'
-          {
-            "packageId": "com.gestaofinanceira.app",
-            "host": "gestao-financeira-7heu.onrender.com",
-            "name": "Gestao Financeira",
-            "shortName": "Gestao",
-            "themeColor": "#16a34a",
-            "navigationColor": "#0f172a",
-            "backgroundColor": "#0f172a",
-            "startUrl": "/",
-            "iconUrl": "https://gestao-financeira-7heu.onrender.com/icon-512.svg",
-            "maskableIconUrl": "https://gestao-financeira-7heu.onrender.com/icon-512.svg",
-            "appVersionName": "1.0.0",
-            "appVersionCode": 1,
-            "signingKey": {
-              "path": "../android.keystore",
-              "alias": "android"
-            },
-            "useBrowserOnChromeOS": false,
-            "splashScreenFadeOutDuration": 300,
-            "enableNotifications": false,
-            "shortcuts": [],
-            "features": {},
-            "alphaDependencies": false,
-            "enableSiteSettingsShortcut": true,
-            "isChromeOSOnly": false,
-            "isMetaQuest": false,
-            "minSdkVersion": 19,
-            "targetSdkVersion": 34
-          }
-          TWAJSON
-
-      - name: Inicializar projeto TWA
-        run: |
-          bubblewrap init \
+          yes "" | bubblewrap init \
             --manifest https://gestao-financeira-7heu.onrender.com/manifest.json \
-            --directory twa-app
-        env:
-          BUBBLEWRAP_ACCEPT_OPTIONAL_DEPS: 'true'
+            --directory twa-app 2>&1 | tail -20
 
       - name: Build APK
         working-directory: twa-app
-        run: |
-          bubblewrap build \
-            --skipPwaValidation
+        run: bubblewrap build --skipPwaValidation
         env:
-          STORE_PASSWORD: gestao2024
-          KEY_PASSWORD: gestao2024
+          JAVA_HOME: ${{ env.JAVA_HOME }}
 
-      - name: Upload APK como artefato
+      - name: Encontrar APK
+        run: find . -name "*.apk" -type f 2>/dev/null | head -20
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: gestao-financeira-apk
+          name: gestao-financeira-v1.0
           path: |
-            twa-app/app-release-signed.apk
-            twa-app/app/build/outputs/apk/release/*.apk
-          retention-days: 30
+            **/*.apk
+          retention-days: 60
           if-no-files-found: warn
