@@ -55,7 +55,7 @@ const monthLabel = s => { const [y,m]=s.split('-'); return new Date(+y,+m-1).toL
 const sanitizeText = (value) => {
   if(value == null) return '';
   return String(value)
-    .replace(/[<>'"]/g, '')           // remove tags e aspas usadas em ataques
+    .replace(/[<>"]/g, "")           // remove tags e aspas usadas em ataques
     .replace(/javascript:/gi, '')     // bloqueia links javascript:
     .replace(/on\w+=/gi, '')          // bloqueia onclick= onerror= etc
     .trim()
@@ -544,9 +544,7 @@ const TransactionView = memo(({type, transactions, products, onAdd, onEdit, onDe
     const rows = filteredList.map(t =>
       t.date+',"'+t.desc+'",'+t.amount.toFixed(2)+','+(t.type==='income'?'Entrada':'Saida')+','+(t.method||t.category||'')
     );
-    const csv = '﻿' + header + '
-' + rows.join('
-');
+    const csv = String.fromCharCode(65279) + header + "\n" + rows.join("\n");
     const link = document.createElement('a');
     link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
     link.download = (isIncome?'vendas':'despesas')+'-'+today()+'.csv';
@@ -851,40 +849,16 @@ const InventoryView = memo(({products, losses, onAddProduct, onEditProduct, onDe
 
 // ─── E-mails ──────────────────────────────────────────────────────────────────
 const EMAIL_TEMPLATES = [
-  {id:'welcome', name:'Boas-vindas',      subject:'Seu acesso ao sistema esta pronto!',     body:'Ola [Nome],
-
-Seu acesso ao sistema de gestao financeira esta configurado.
-
-Link: https://gestao-financeira-7heu.onrender.com
-E-mail: [email]
-Senha: [senha]
-
-Qualquer duvida, estou a disposicao!
-
-AbracOS,
-[Seu nome]'},
-  {id:'report',  name:'Relatorio mensal', subject:'Relatorio financeiro de [Mes]',          body:'Ola [Nome],
-
-Resumo de [Mes/Ano]:
-
-Entradas: R$ [valor]
-Saidas:   R$ [valor]
-Lucro:    R$ [valor]
-
-Acesse o sistema para o detalhamento completo.
-
-AbracOS,
-[Seu nome]'},
-  {id:'reminder',name:'Mensalidade',      subject:'Mensalidade do sistema de gestao',       body:'Ola [Nome],
-
-Lembrando que a mensalidade vence em breve.
-
-Valor: R$ [valor]
-Vencimento: [data]
-
-AbracOS,
-[Seu nome]'},
-  {id:'custom',  name:'Personalizado',    subject:'',                                       body:''},
+  {id:'welcome',  name:'Boas-vindas',
+   subject:'Seu acesso ao sistema esta pronto!',
+   body:'Ola [Nome],\n\nSeu acesso esta pronto.\nLink: https://gestao-financeira-7heu.onrender.com\nE-mail: [email]\nSenha: [senha]\n\nAbracOS,\n[Seu nome]'},
+  {id:'report',   name:'Relatorio mensal',
+   subject:'Relatorio financeiro de [Mes]',
+   body:'Ola [Nome],\n\nResumo de [Mes]:\nEntradas: R$ [valor]\nSaidas: R$ [valor]\nLucro: R$ [valor]\n\nAbracOS,\n[Seu nome]'},
+  {id:'reminder', name:'Mensalidade',
+   subject:'Mensalidade do sistema de gestao',
+   body:'Ola [Nome],\n\nMensalidade vence em breve.\nValor: R$ [valor]\nVencimento: [data]\n\nAbracOS,\n[Seu nome]'},
+  {id:'custom',   name:'Personalizado', subject:'', body:''},
 ];
 
 const EmailView = memo(({brand, showToast}) => {
@@ -907,10 +881,10 @@ const EmailView = memo(({brand, showToast}) => {
   }, [toEmail, subject, body, showToast]);
 
   const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText('Para: '+toEmail+'
-Assunto: '+subject+'
+    await navigator.clipboard.writeText("Para: "+toEmail+"
+Assunto: "+subject+"
 
-'+body);
+"+body);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     showToast('Copiado!');
@@ -973,9 +947,7 @@ const ReportView = memo(({transactions, showToast}) => {
     const rows = monthlyData.all.map(t =>
       t.date+',"'+t.desc+'",'+t.amount.toFixed(2)+','+(t.type==='income'?'Entrada':'Saida')+','+(t.method||t.category||'')
     );
-    const csv = '﻿' + header + '
-' + rows.join('
-');
+    const csv = String.fromCharCode(65279) + header + "\n" + rows.join("\n");
     const link = document.createElement('a');
     link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
     link.download = 'relatorio-'+selectedMonth+'.csv';
@@ -1078,13 +1050,11 @@ const AdminPanel = memo(({showToast}) => {
   };
 
   const handleCopyCredentials = async () => {
-    const msg = 'Sistema de Gestao Financeira
-
-Link: https://gestao-financeira-7heu.onrender.com
-E-mail: '+createdUser.email+'
-Senha: '+createdUser.password+'
-
-Acesse e configure o nome da empresa em Configuracoes.';
+    const msg = 'Sistema de Gestao Financeira' +
+      '\n\nLink: https://gestao-financeira-7heu.onrender.com' +
+      '\nE-mail: '+createdUser.email+
+      '\nSenha: '+createdUser.password+
+      '\n\nAcesse e configure o nome da empresa em Configuracoes.'
     await navigator.clipboard.writeText(msg);
     setCopied(true); setTimeout(() => setCopied(false), 2500);
     showToast('Copiado! Cole no WhatsApp.');
