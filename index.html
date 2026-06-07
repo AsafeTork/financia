@@ -136,13 +136,13 @@ const PSearch = ({products,value,onSelect,onChange,placeholder}) => {
   const filtered = value.length>0 ? products.filter(p=>p.name.toLowerCase().includes(value.toLowerCase())) : products;
   return (
     <div className="relative flex-1">
-      <input value={value} onChange={e=>{onChange(e.target.value);setOpen(true);}} onFocus={()=>setOpen(true)} onBlur={()=>setTimeout(()=>setOpen(false),120)}
+      <input value={value} onChange={e=>{onChange(e.target.value);setOpen(true);}} onFocus={()=>setOpen(true)} onBlur={()=>setTimeout(()=>setOpen(false),300)}
         placeholder={placeholder||(products.length>0?'Buscar produto...':'Descricao')}
         className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition w-full"/>
       {open && products.length>0 && filtered.length>0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 z-30 overflow-hidden max-h-48 overflow-y-auto" style={{boxShadow:'0 8px 24px rgba(0,0,0,0.1)'}}>
           {filtered.map(p => (
-            <button key={p.id} onMouseDown={()=>{onSelect(p);setOpen(false);}} className="flex items-center justify-between w-full px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0">
+            <button key={p.id} onPointerDown={()=>{onSelect(p);setOpen(false);}} className="flex items-center justify-between w-full px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0">
               <div className="flex items-center gap-2 min-w-0">
                 {p.category && <span className="text-xs bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-md flex-shrink-0">{p.category}</span>}
                 <span className="text-sm text-gray-800 truncate">{p.name}</span>
@@ -1072,7 +1072,8 @@ function App() {
   const deleteLoss = async id => { await sb.from('losses').delete().eq('id',id); setLosses(p=>p.filter(l=>l.id!==id)); };
 
   const saveBrand = async nb => {
-    await sb.from('company_profiles').upsert({user_id:session.user.id,name:nb.name,logo:nb.logo,color:nb.color,logo_url:nb.logo_url||null});
+    const {error} = await sb.from('company_profiles').upsert({user_id:session.user.id,name:nb.name,logo:nb.logo,color:nb.color,logo_url:nb.logo_url||null});
+    if(error){showToast('Erro ao salvar configuracoes.','error');return;}
     setBrand(nb);
   };
 
