@@ -975,6 +975,7 @@ const Login = () => {
 
 function App() {
   const [session,setSession] = useState(null);
+  const [isAdminDB,setIsAdminDB] = useState(false);
   const [appLoading,setAppLoading] = useState(true);
   const [dataLoading,setDataLoading] = useState(false);
   const [view,setView] = useState('dashboard');
