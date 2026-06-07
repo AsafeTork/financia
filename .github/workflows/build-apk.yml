@@ -8,7 +8,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,136 +19,75 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Gerar icones PNG
-        run: |
-          npm install canvas 2>/dev/null || true
-          node -e "
-          const fs = require('fs');
-          // SVG simples convertido — canvas pode nao estar disponivel
-          // Usa Python como fallback
-          " || python3 - << 'PYICON'
-          import struct, zlib, base64, os
-
-          def png(size):
-              def chunk(t, d):
-                  c = struct.pack('>I', len(d)) + t + d
-                  return c + struct.pack('>I', zlib.crc32(t + d) & 0xffffffff)
-              
-              # Cria imagem RGBA simples: fundo verde, letra G branca
-              img = []
-              cx, cy = size//2, size//2
-              r = int(size * 0.45)
-              
-              for y in range(size):
-                  row = [0]  # filter byte
-                  for x in range(size):
-                      dx, dy = x - cx, y - cy
-                      dist = (dx*dx + dy*dy) ** 0.5
-                      
-                      # Fundo arredondado verde
-                      corner = int(size * 0.18)
-                      in_bg = True
-                      if x < corner and y < corner:
-                          in_bg = (x - corner)**2 + (y - corner)**2 < corner**2
-                      elif x > size-corner and y < corner:
-                          in_bg = (x - (size-corner))**2 + (y - corner)**2 < corner**2
-                      elif x < corner and y > size-corner:
-                          in_bg = (x - corner)**2 + (y - (size-corner))**2 < corner**2
-                      elif x > size-corner and y > size-corner:
-                          in_bg = (x - (size-corner))**2 + (y - (size-corner))**2 < corner**2
-                      
-                      if not in_bg:
-                          row.extend([0, 0, 0, 0])
-                      else:
-                          # Letra G simplificada
-                          gx = int(size * 0.3)
-                          gy = int(size * 0.25)
-                          gw = int(size * 0.38)
-                          gh = int(size * 0.5)
-                          thick = max(2, size // 20)
-                          
-                          in_g = False
-                          # Arco superior
-                          if abs(dist - r * 0.55) < thick and dy < 0:
-                              in_g = True
-                          # Lado esquerdo
-                          if abs(dx + r*0.45) < thick and abs(dy) < r*0.55:
-                              in_g = True
-                          # Barra horizontal direita
-                          if dy > 0 and dy < thick*1.5 and dx > 0 and dx < r*0.45:
-                              in_g = True
-                          # Lado direito inferior
-                          if abs(dx - r*0.45) < thick and dy > 0 and dy < r*0.55:
-                              in_g = True
-                          # Base
-                          if abs(dy - r*0.55) < thick and abs(dx) < r*0.45:
-                              in_g = True
-                          
-                          if in_g:
-                              row.extend([255, 255, 255, 255])
-                          else:
-                              row.extend([22, 163, 74, 255])
-                  img.append(bytes(row))
-              
-              raw = b''.join(img)
-              compressed = zlib.compress(raw, 9)
-              
-              sig = b'\x89PNG\r\n\x1a\n'
-              ihdr_data = struct.pack('>IIBBBBB', size, size, 8, 2, 0, 0, 0)
-              idat_data = compressed
-              
-              return (sig 
-                      + chunk(b'IHDR', ihdr_data)
-                      + chunk(b'IDAT', idat_data)
-                      + chunk(b'IEND', b''))
-          
-          for s in [192, 512]:
-              with open(f'icon-{s}.png', 'wb') as f:
-                  f.write(png(s))
-              print(f'icon-{s}.png gerado ({os.path.getsize(f"icon-{s}.png")} bytes)')
-          PYICON
-
-      - name: Instalar Bubblewrap
-        run: npm install -g @bubblewrap/cli
-
       - name: Gerar keystore
         run: |
           keytool -genkeypair \
-            -keystore android.keystore \
-            -alias android \
+            -keystore android/app/keystore.jks \
+            -alias key0 \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass gestao2024 -keypass gestao2024 \
             -dname "CN=Gestao,OU=App,O=Gestao,L=Braganca,S=Para,C=BR" \
             -noprompt
+          echo "Keystore criado"
 
-      - name: Inicializar TWA
+      - name: Preparar Gradle Wrapper
+        working-directory: android
         run: |
-          yes "" | bubblewrap init \
-            --manifest https://gestao-financeira-7heu.onrender.com/manifest.json \
-            --directory twa-app 2>&1 | tail -20
-
-      - name: Build APK
-        working-directory: twa-app
-        run: bubblewrap build --skipPwaValidation
+          gradle wrapper --gradle-version 8.4
         env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+        continue-on-error: true
 
-      - name: Encontrar APK
-        run: find . -name "*.apk" -type f 2>/dev/null | head -20
+      - name: Download Gradle direto
+        working-directory: android
+        run: |
+          mkdir -p gradle/wrapper
+          cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+          curl -L https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
+          wget -q https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar -O gradle/wrapper/gradle-wrapper.jar || \
+          curl -L https://services.gradle.org/distributions/gradle-8.4-bin.zip -o gradle-8.4.zip && \
+          unzip -q gradle-8.4.zip && \
+          cp gradle-8.4/lib/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.jar || true
+
+      - name: Instalar Gradle via SDK
+        run: |
+          sudo apt-get install -y gradle 2>/dev/null || true
+          gradle --version || true
+
+      - name: Build APK com Gradle direto
+        working-directory: android
+        run: |
+          # Usa gradle do sistema se wrapper nao funcionar
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleRelease \
+              -PSTORE_PASS=gestao2024 \
+              -PKEY_PASS=gestao2024 \
+              --no-daemon --stacktrace
+          else
+            gradle assembleRelease \
+              -PSTORE_PASS=gestao2024 \
+              -PKEY_PASS=gestao2024 \
+              --no-daemon --stacktrace
+          fi
+        env:
+          STORE_PASS: gestao2024
+          KEY_PASS: gestao2024
+          ANDROID_HOME: /usr/local/lib/android/sdk
+
+      - name: Listar APKs gerados
+        run: find android -name "*.apk" -type f | xargs ls -lh 2>/dev/null || echo "Nenhum APK encontrado"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: gestao-financeira-v1.0
-          path: |
-            **/*.apk
+          name: gestao-financeira-apk
+          path: android/app/build/outputs/apk/**/*.apk
           retention-days: 60
           if-no-files-found: warn
