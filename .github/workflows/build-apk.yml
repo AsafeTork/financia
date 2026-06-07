@@ -19,50 +19,39 @@ jobs:
           distribution: temurin
           java-version: '11'
 
-      - name: Setup Android + Build APK
+      - name: Diagnostico completo
         run: |
-          set -e
-          
-          # Android SDK
-          export ANDROID_HOME=/usr/local/lib/android/sdk
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "platforms;android-33" "build-tools;33.0.2" 2>&1 | tail -3
-          
-          # Keystore
-          keytool -genkeypair -keystore android/app/keystore.jks -alias key0 \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass gestao2024 -keypass gestao2024 \
-            -dname "CN=Gestao,O=Gestao,C=BR" -noprompt
-          
-          # Verificar Gradle disponivel
-          gradle --version 2>/dev/null || {
-            echo "Instalando Gradle..."
-            sudo apt-get install -y gradle 2>&1 | tail -3
-          }
-          
-          echo "Gradle: $(gradle --version | head -1)"
-          echo "Java: $(java -version 2>&1 | head -1)"
-          echo "ANDROID_HOME: $ANDROID_HOME"
-          
-          # Build
-          cd android
-          gradle assembleDebug --no-daemon --stacktrace 2>&1
-          
-          # Verificar resultado
-          echo "=== APKs gerados ==="
-          find . -name "*.apk" 2>/dev/null | tee /tmp/apks.txt
-          cat /tmp/apks.txt
+          mkdir -p debug-output
+          {
+            echo "=== JAVA ==="
+            java -version 2>&1
+            
+            echo "=== ANDROID_HOME ==="
+            echo $ANDROID_HOME
+            ls /usr/local/lib/android/sdk/ 2>/dev/null | head -10
+            
+            echo "=== GRADLE SISTEMA ==="
+            which gradle 2>/dev/null || echo "gradle nao no PATH"
+            gradle --version 2>/dev/null | head -3 || echo "gradle nao disponivel"
+            
+            echo "=== SDK MANAGER ==="
+            ls $ANDROID_HOME/cmdline-tools/ 2>/dev/null
+            
+            echo "=== PLATAFORMAS INSTALADAS ==="
+            ls $ANDROID_HOME/platforms/ 2>/dev/null
+            
+            echo "=== PROJETO ANDROID ==="
+            ls -la android/
+            ls -la android/app/ 2>/dev/null
+            cat android/settings.gradle 2>/dev/null
+            cat android/build.gradle 2>/dev/null
+            cat android/app/build.gradle 2>/dev/null
+          } | tee debug-output/diagnostico.txt
 
-      - name: Copiar APK
-        run: |
-          mkdir -p apk-output
-          find android -name "*.apk" -exec cp {} apk-output/gestao-financeira.apk \; 2>/dev/null
-          ls -lh apk-output/ || echo "Sem APK"
-
-      - name: Upload APK
+      - name: Upload diagnostico
         uses: actions/upload-artifact@v4
         with:
-          name: gestao-financeira-apk
-          path: apk-output/
-          retention-days: 90
+          name: diagnostico
+          path: debug-output/
+          retention-days: 1
           if-no-files-found: warn
