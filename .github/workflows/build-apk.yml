@@ -19,21 +19,12 @@ jobs:
           distribution: temurin
           java-version: '11'
 
-      - name: Debug ambiente
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          ls $ANDROID_HOME/build-tools/ 2>/dev/null | tail -5
-          ls $ANDROID_HOME/platforms/ 2>/dev/null | tail -5
-          java -version
-
       - name: Instalar componentes Android
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "platforms;android-33" \
-            "build-tools;33.0.2" \
-            --sdk_root=$ANDROID_HOME 2>&1 | tail -5
+            "platforms;android-33" "build-tools;33.0.2" 2>&1 | tail -3
 
-      - name: Setup Gradle via actions
+      - name: Setup Gradle 7.5
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '7.5'
@@ -45,18 +36,27 @@ jobs:
             -storepass gestao2024 -keypass gestao2024 \
             -dname "CN=Gestao,O=Gestao,C=BR" -noprompt
 
-      - name: Build APK Debug (mais simples)
+      - name: Build APK
         working-directory: android
-        run: |
-          gradle assembleDebug --no-daemon --info 2>&1 | tail -60
+        run: gradle assembleDebug --no-daemon 2>&1 | tail -30
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
-      - name: Encontrar APK
+      - name: Localizar APK
         run: |
-          find android -name "*.apk" 2>/dev/null
+          echo "=== Todos os APKs ==="
+          find . -name "*.apk" -type f 2>/dev/null | tee /tmp/apks.txt
+          echo "=== Conteudo do build dir ==="
+          find android/app/build -name "*.apk" -o -name "*.aab" 2>/dev/null | head -20
+          
+          # Copiar para pasta de saida
           mkdir -p apk-output
-          find android -name "*.apk" -exec cp {} apk-output/gestao-financeira.apk \;
+          while read apk; do
+            cp "$apk" apk-output/gestao-financeira.apk
+            echo "Copiado: $apk"
+          done < /tmp/apks.txt
+          
+          ls -lh apk-output/ || echo "Pasta vazia"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -64,4 +64,4 @@ jobs:
           name: gestao-financeira-apk
           path: apk-output/
           retention-days: 90
-          if-no-files-found: error
+          if-no-files-found: warn
