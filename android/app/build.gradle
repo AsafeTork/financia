@@ -1,0 +1,30 @@
+plugins { id 'com.android.application' }
+android {
+    compileSdk 34
+    defaultConfig {
+        applicationId "com.gestaofinanceira.app"
+        minSdk 19
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+    signingConfigs {
+        release {
+            storeFile file("keystore.jks")
+            storePassword System.getenv("STORE_PASS") ?: "gestao2024"
+            keyAlias "key0"
+            keyPassword System.getenv("KEY_PASS") ?: "gestao2024"
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+    namespace "com.gestaofinanceira.app"
+}
+dependencies {
+    implementation 'androidx.browser:browser:1.8.0'
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}
