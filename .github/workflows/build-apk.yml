@@ -29,6 +29,11 @@ jobs:
           distribution: temurin
           java-version: '11'
 
+      - name: Instalar dependencias de ícones
+        run: |
+          sudo apt-get install -y librsvg2-bin 2>/dev/null || true
+          pip install Pillow --break-system-packages --quiet
+
       - name: Instalar componentes Android
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
@@ -40,9 +45,6 @@ jobs:
           curl -fsSL "https://github.com/gradle/gradle/raw/v7.5.0/gradle/wrapper/gradle-wrapper.jar" \
             -o android/gradle/wrapper/gradle-wrapper.jar
           chmod +x android/gradlew
-
-      - name: Instalar Pillow
-        run: pip install Pillow --break-system-packages --quiet
 
       - name: Aplicar nome do app
         env:
@@ -57,25 +59,25 @@ jobs:
           LOGO_URL: ${{ github.event.inputs.logo_url || '' }}
         run: |
           if [ -n "$LOGO_URL" ]; then
-            curl -fsSL "$LOGO_URL" -o /tmp/logo --max-time 20 && echo "Logo OK" || echo "Sem logo"
+            curl -fsSL "$LOGO_URL" -o /tmp/logo --max-time 20 && echo "Logo OK" || echo "Sem logo URL"
           fi
 
-      - name: Gerar icones PNG
+      - name: Gerar ícones PNG
         env:
           HEX_COLOR: ${{ github.event.inputs.primary_color || '002f59' }}
         run: python3 scripts/gen_icons.py
 
+      - name: Verificar ícones gerados
+        run: find android -name "ic_launcher.png" | xargs ls -lh 2>/dev/null
+
       - name: Restaurar keystore permanente
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
-        run: |
-          echo "$KEYSTORE_B64" | base64 -d > android/app/financia.jks
-          echo "Keystore restaurado: $(ls -lh android/app/financia.jks)"
+        run: echo "$KEYSTORE_B64" | base64 -d > android/app/financia.jks
 
-      - name: Build APK Release assinado
+      - name: Build APK Release
         working-directory: android
-        run: |
-          ./gradlew assembleRelease --no-daemon 2>&1 | tail -30
+        run: ./gradlew assembleRelease --no-daemon 2>&1 | tail -20
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
           STORE_FILE: financia.jks
@@ -89,7 +91,8 @@ jobs:
         run: |
           mkdir -p apk-output
           SAFE=$(echo "$CLIENT_NAME" | tr ' ' '-' | tr -cd 'a-zA-Z0-9-' | tr '[:upper:]' '[:lower:]')
-          find android -name "*.apk" -exec cp {} "apk-output/${SAFE:-financia}.apk" \;
+          find android -name "*release*.apk" -exec cp {} "apk-output/${SAFE:-financia}.apk" \;
+          find android -name "*.apk" | head -1 | xargs -I{} cp {} "apk-output/${SAFE:-financia}.apk" 2>/dev/null || true
           ls -lh apk-output/
 
       - uses: actions/upload-artifact@v4
