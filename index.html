@@ -790,31 +790,6 @@ const triggerApkBuild = async (clientName, logoUrl, primaryColor) => {
 
 
 
-const GH_REPO = 'AsafeTork/gestao-financeira';
-const getGhToken = () => localStorage.getItem('nancia_gh_token') || '';
-
-const triggerApkBuild = async (clientName, logoUrl, primaryColor) => {
-  const tok = getGhToken();
-  if (!tok) return false;
-  const res = await fetch(
-    `https://api.github.com/repos/${GH_REPO}/actions/workflows/build-apk.yml/dispatches`,
-    { method:'POST',
-      headers:{Authorization:`token ${tok}`,'Content-Type':'application/json'},
-      body: JSON.stringify({ ref:'main', inputs:{
-        client_name: clientName||'Financia',
-        logo_url: logoUrl||'',
-        primary_color: (primaryColor||'#002f59').replace('#',''),
-      }})
-    }
-  );
-  return res.status === 204;
-};
-
-const fetchClients = async () => {
-  const { data } = await sb.from('company_profiles').select('*').order('user_id');
-  return data || [];
-};
-
 const GhTokenCard = ({toast}) => {
   const [tok,setTok] = React.useState(localStorage.getItem('nancia_gh_token')||'');
   const save = () => {
