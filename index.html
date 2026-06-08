@@ -9,17 +9,17 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-*{font-family:'Outfit',system-ui,sans-serif;box-sizing:border-box}
+*{font-family:'DM Sans',system-ui,sans-serif;box-sizing:border-box}
 body{margin:0;background:#f8fafc}
 @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .anim-up{animation:slideUp .2s ease}
 .anim-fade{animation:fadeIn .15s ease}
 </style>
-<meta name="theme-color" content="#16a34a">
+<meta name="theme-color" content="#002f59">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -38,7 +38,7 @@ const sb = createClient(
   'sb_publishable_EVJrndaIaxwLN9vUdSByUg__itH2rLy'
 );
 
-const INIT_BRAND = {name:'Gestao Pro', color:'#16a34a', logo:'💼', logo_url:null};
+const INIT_BRAND = {name:'Nancia', color:'#002f59', logo:'data:image/svg+xml,<svg%20xmlns="http://www.w3.org/2000/svg"%20viewBox="0%200%20100%20100"><rect%20x="2"%20y="52"%20width="22"%20height="46"%20rx="4"%20fill="%23002f59"/><rect%20x="31"%20y="22"%20width="22"%20height="76"%20rx="4"%20fill="%231a6b5c"/><rect%20x="60"%20y="2"%20width="22"%20height="96"%20rx="4"%20fill="%236ec6c8"/><path%20d="M82%2028%20L62%2020%20L38%2054%20L26%2043%20L18%2051%20L38%2071%20L82%2028Z"%20fill="%238cf2d1"/></svg>', logo_url:null};
 const fmt = v => Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const today = () => new Date().toISOString().slice(0,10);
 const prevDays = n => { const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); };
@@ -109,7 +109,7 @@ const Confirm = ({msg,onOk,onCancel}) => (
   </div>
 );
 
-const Modal = ({title,onClose,onSave,color='#16a34a',saving,children,saveLabel='Salvar',wide=false}) => (
+const Modal = ({title,onClose,onSave,color='#1a6b5c',saving,children,saveLabel='Salvar',wide=false}) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4 anim-fade" style={{background:'rgba(0,0,0,0.5)'}}>
     <div className={'bg-white rounded-2xl flex flex-col w-full '+(wide?'max-w-lg':'max-w-sm')} style={{boxShadow:'0 25px 60px rgba(0,0,0,0.2)',maxHeight:'90vh'}}>
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
@@ -250,7 +250,7 @@ const NAV = [
 const Sidebar = ({view,onNav,brand,open,onClose}) => (
   <>
     {open && <div className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden" onClick={onClose}/>}
-    <aside className={'fixed top-0 left-0 h-full w-64 z-40 flex flex-col transition-transform duration-300 '+(open?'translate-x-0':'-translate-x-full')+' lg:translate-x-0'} style={{background:'#0f172a'}}>
+    <aside className={'fixed top-0 left-0 h-full w-64 z-40 flex flex-col transition-transform duration-300 '+(open?'translate-x-0':'-translate-x-full')+' lg:translate-x-0'} style={{background:'#002f59'}}>
       <div className="px-5 py-5 flex items-center gap-3" style={{borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
         {brand.logo_url
           ? <img src={brand.logo_url} alt="logo" className="w-9 h-9 rounded-xl object-cover flex-shrink-0"/>
@@ -293,7 +293,7 @@ const BarChartSVG = ({data}) => {
         const x=i*W+pad, ih=Math.round((d.i/max)*(H-24)), oh=Math.round((d.o/max)*(H-24));
         return (
           <g key={i}>
-            <rect x={x} y={H-24-ih} width={bw} height={ih||1} fill="#16a34a" rx={2}/>
+            <rect x={x} y={H-24-ih} width={bw} height={ih||1} fill="#1a6b5c" rx={2}/>
             <rect x={x+bw+2} y={H-24-oh} width={bw} height={oh||1} fill="#fca5a5" rx={2}/>
             <text x={x+bw+1} y={H-6} textAnchor="middle" fontSize={9} fill="#9ca3af">{d.day}</text>
           </g>
@@ -338,7 +338,7 @@ const Dashboard = ({tx,products,brand,onNav}) => {
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <KpiCard label="Entradas (mes)" value={fmt(ti)} color="#16a34a"/>
+        <KpiCard label="Entradas (mes)" value={fmt(ti)} color="#1a6b5c"/>
         <KpiCard label="Saidas (mes)" value={fmt(to)} color="#ef4444"/>
         <KpiCard label="Lucro liquido" value={fmt(ti-to)} color={brand.color} sub="Este mes"/>
         <KpiCard label="Saldo hoje" value={fmt(di-dout)} color="#3b82f6" sub={'+'+fmt(di)+' / -'+fmt(dout)}/>
@@ -717,7 +717,7 @@ const ReportView = ({tx,toast}) => {
         <>
           <Sel label="Periodo" value={month} onChange={e=>setMonth(e.target.value)}>{months.map(m=><option key={m} value={m}>{monthLabel(m)}</option>)}</Sel>
           <div className="grid grid-cols-3 gap-3">
-            {[{l:'Entradas',v:income,c:'#16a34a'},{l:'Saidas',v:expense,c:'#ef4444'},{l:'Lucro',v:income-expense,c:income-expense>=0?'#16a34a':'#ef4444'}].map(({l,v,c})=>(
+            {[{l:'Entradas',v:income,c:'#1a6b5c'},{l:'Saidas',v:expense,c:'#ef4444'},{l:'Lucro',v:income-expense,c:income-expense>=0?'#1a6b5c':'#ef4444'}].map(({l,v,c})=>(
               <Card key={l} className="p-4 text-center overflow-hidden relative">
                 <div className="absolute top-0 left-0 right-0 h-0.5" style={{background:c}}/>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{l}</p>
@@ -829,7 +829,7 @@ const SettingsView = ({brand,session,onSave,toast,confirm}) => {
   const [pwSaving,setPwSaving] = useState(false);
   const [uploading,setUploading] = useState(false);
   const fileRef = useRef();
-  const COLORS = ['#16a34a','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2','#be185d','#374151','#b45309','#0d9488'];
+  const COLORS = ['#1a6b5c','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2','#be185d','#374151','#b45309','#0d9488'];
   const saveBrand = async () => { setSaving(true); await onSave(form); toast('Configuracoes salvas!'); setSaving(false); };
   const changePw = async () => {
     if(pwForm.newPw!==pwForm.confirm){toast('As senhas nao coincidem.','error');return;}
@@ -840,11 +840,28 @@ const SettingsView = ({brand,session,onSave,toast,confirm}) => {
     else {toast('Senha alterada!'); setPwForm({newPw:'',confirm:''});}
     setPwSaving(false);
   };
-  const uploadLogo = async file => {
-    if(!file) return;
+  const compressImage = rawFile => new Promise(resolve => {
+    if (rawFile.type === 'image/svg+xml') { resolve(rawFile); return; }
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 512;
+      let w = img.width, h = img.height;
+      if(w>MAX||h>MAX){if(w>h){h=Math.round((h/w)*MAX);w=MAX;}else{w=Math.round((w/h)*MAX);h=MAX;}}
+      const c = document.createElement('canvas');
+      c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(b=>resolve(b||rawFile),'image/webp',0.82);
+      URL.revokeObjectURL(img.src);
+    };
+    img.src = URL.createObjectURL(rawFile);
+  });
+
+  const uploadLogo = async rawFile => {
+    if(!rawFile) return;
+    const file = await compressImage(rawFile);
     if(file.size>2*1024*1024){toast('Imagem deve ter menos de 2MB.','error');return;}
     setUploading(true);
-    const ext=file.name.split('.').pop();
+    const ext = file.type==='image/webp' ? 'webp' : rawFile.name.split('.').pop();
     const path=session.user.id+'/logo.'+ext;
     const {error} = await sb.storage.from('logos').upload(path,file,{upsert:true});
     if(error){toast('Erro no upload.','error');setUploading(false);return;}
@@ -889,11 +906,11 @@ const SettingsView = ({brand,session,onSave,toast,confirm}) => {
                 {form.color===c && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
               </button>
             ))}</div>
-            <Inp label="Hex personalizado" value={form.color} onChange={e=>setForm(f=>({...f,color:e.target.value}))} placeholder="#16a34a"/>
+            <Inp label="Hex personalizado" value={form.color} onChange={e=>setForm(f=>({...f,color:e.target.value}))} placeholder="#1a6b5c"/>
           </div>
           <div className="rounded-xl p-4 bg-gray-50 border border-gray-100">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Pre-visualizacao</p>
-            <div className="flex items-center gap-3 p-3 rounded-xl w-fit" style={{background:'#0f172a'}}>
+            <div className="flex items-center gap-3 p-3 rounded-xl w-fit" style={{background:'#002f59'}}>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden" style={{background:form.color}}>
                 {form.logo_url ? <img src={form.logo_url} alt="logo" className="w-full h-full object-cover"/> : <span className="text-lg">{form.logo}</span>}
               </div>
@@ -979,21 +996,45 @@ const Login = () => {
     setLoading(false);
   };
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{background:'#0f172a'}}>
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">💼</div>
-          <h1 className="text-2xl font-bold text-white">Gestao Financeira</h1>
-          <p className="text-slate-400 text-sm mt-1">Entre com seu e-mail e senha</p>
+    <div className="min-h-screen flex" style={{background:'#f0f4ff'}}>
+      {/* Painel esquerdo — identidade visual */}
+      <div className="hidden lg:flex flex-col justify-between w-2/5 p-12" style={{background:'#002f59'}}>
+        <div>
+          <div dangerouslySetInnerHTML={{__html:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="48" height="48"><rect x="2" y="52" width="22" height="46" rx="4" fill="#ffffff" fill-opacity="0.3"/><rect x="31" y="22" width="22" height="76" rx="4" fill="#6ec6c8"/><rect x="60" y="2" width="22" height="96" rx="4" fill="#8cf2d1"/><path d="M82 28 L62 20 L38 54 L26 43 L18 51 L38 71 L82 28Z" fill="#ffffff"/></svg>`}}/>
+          <p className="text-white font-bold text-2xl mt-3" style={{letterSpacing:'-0.5px'}}>nancia</p>
         </div>
-        <Card className="p-6 flex flex-col gap-4">
-          <Inp label="E-mail" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com"/>
-          <Inp label="Senha" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==='Enter'&&login()}/>
-          {err && <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-2.5"><p className="text-sm text-red-600">{err}</p></div>}
-          <button onClick={login} disabled={loading||!email||!pass} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 mt-1 disabled:opacity-50 bg-green-600">
-            {loading?<Spin white/>:'Entrar'}
-          </button>
-        </Card>
+        <div>
+          <p className="text-white text-3xl font-bold leading-tight" style={{letterSpacing:'-0.5px'}}>Gestão financeira<br/><span style={{color:'#8cf2d1'}}>inteligente</span> para<br/>seu negócio.</p>
+          <p className="mt-4 text-sm" style={{color:'#6ec6c8'}}>Controle vendas, despesas e estoque<br/>em um só lugar — online e offline.</p>
+        </div>
+        <div className="flex gap-2">
+          <div className="w-2 h-2 rounded-full" style={{background:'#8cf2d1'}}/>
+          <div className="w-2 h-2 rounded-full" style={{background:'#6ec6c8', opacity:0.4}}/>
+          <div className="w-2 h-2 rounded-full" style={{background:'#6ec6c8', opacity:0.4}}/>
+        </div>
+      </div>
+      {/* Painel direito — formulário */}
+      <div className="flex-1 flex flex-col items-center justify-center p-8">
+        <div className="w-full max-w-xs">
+          {/* Logo mobile */}
+          <div className="lg:hidden text-center mb-10">
+            <div dangerouslySetInnerHTML={{__html:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="44" height="44" style="display:inline-block"><rect x="2" y="52" width="22" height="46" rx="4" fill="#002f59"/><rect x="31" y="22" width="22" height="76" rx="4" fill="#1a6b5c"/><rect x="60" y="2" width="22" height="96" rx="4" fill="#6ec6c8"/><path d="M82 28 L62 20 L38 54 L26 43 L18 51 L38 71 L82 28Z" fill="#8cf2d1"/></svg>`}}/>
+            <p className="font-bold text-xl mt-2" style={{color:'#002f59', letterSpacing:'-0.5px'}}>nancia</p>
+          </div>
+          <h2 className="text-2xl font-bold mb-1" style={{color:'#002f59', letterSpacing:'-0.5px'}}>Bem-vindo</h2>
+          <p className="text-sm mb-8" style={{color:'#64748b'}}>Entre com seu e-mail e senha</p>
+          <div className="flex flex-col gap-4">
+            <Inp label="E-mail" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com"/>
+            <Inp label="Senha" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==='Enter'&&login()}/>
+            {err && <p className="text-xs font-medium px-1" style={{color:'#dc2626'}}>{err}</p>}
+            <button onClick={login} disabled={loading||!email||!pass}
+              className="w-full text-white rounded-2xl py-3.5 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition-all"
+              style={{background:'#002f59', marginTop:4}}>
+              {loading ? <Spin white/> : 'Entrar'}
+            </button>
+          </div>
+          <p className="text-center text-xs mt-8" style={{color:'#94a3b8'}}>nancia · gestão financeira</p>
+        </div>
       </div>
     </div>
   );
@@ -1094,7 +1135,7 @@ const SyncBadge = ({ status }) => {
   if (status === 'idle') return null;
   const cfg = {
     syncing: { bg:'#2563eb', text:'Sincronizando...', icon:'↻' },
-    ok:      { bg:'#16a34a', text:'Sincronizado',     icon:'✓' },
+    ok:      { bg:'#1a6b5c', text:'Sincronizado',     icon:'✓' },
     error:   { bg:'#dc2626', text:'Sem internet',     icon:'⚠' },
   }[status];
   return (
@@ -1282,12 +1323,21 @@ function App() {
     const row = { user_id:uid, name:nb.name, logo:nb.logo, color:nb.color, logo_url:nb.logo_url||null, updated_at:now(), _synced:0, _updated_at:now() };
     await ldb.profiles.put(row);
     setBrand(nb);
+    // Notifica o Service Worker para atualizar o manifest dinamico
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'UPDATE_BRAND',
+        name: nb.name,
+        logo_url: nb.logo_url || null,
+        color: nb.color || '#002f59',
+      });
+    }
     if (navigator.onLine) { const {error}=await sb.from('company_profiles').upsert({user_id:uid,name:nb.name,logo:nb.logo,color:nb.color,logo_url:nb.logo_url||null}); if(!error) await ldb.profiles.update(uid,{_synced:1}); }
   };
 
   const Loader = ({text}) => (
     <div className="min-h-screen flex items-center justify-center flex-col gap-3" style={{background:'#f8fafc'}}>
-      <div className="w-10 h-10 border-2 border-gray-200 rounded-full animate-spin" style={{borderTopColor:'#16a34a'}}/>
+      <div className="w-10 h-10 border-2 border-gray-200 rounded-full animate-spin" style={{borderTopColor:'#1a6b5c'}}/>
       {text && <p className="text-sm text-gray-400">{text}</p>}
     </div>
   );
