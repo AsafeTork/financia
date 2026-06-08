@@ -38,7 +38,7 @@ const sb = createClient(
   'sb_publishable_EVJrndaIaxwLN9vUdSByUg__itH2rLy'
 );
 
-const INIT_BRAND = {name:'Financia', color:'#002f59', logo:'💼', logo_url:null}
+const INIT_BRAND = {name:'Financia', color:'#002f59', logo:'G', logo_url:null}
 const fmtDate = s => new Date(s+'T12:00').toLocaleDateString('pt-BR');
 const monthLabel = s => { const [y,m]=s.split('-'); return new Date(+y,+m-1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}); };
 const safe = s => String(s||'').replace(/[<>"]/g,'').replace(/javascript:/gi,'').trim().slice(0,200);
@@ -882,7 +882,7 @@ const AdminPanel = ({toast}) => {
       toast(error.message.includes('already')?'E-mail já cadastrado.':'Erro: '+error.message,'error');
       setCreating(false); return;
     }
-    const newUid = authData?.user?.id;
+    const newUid = authData && authData.user ? authData.user.id : null;
 
     // 2. Criar perfil da empresa para o novo cliente
     if(newUid){
@@ -890,7 +890,7 @@ const AdminPanel = ({toast}) => {
         user_id: newUid,
         name: form.companyName,
         color: form.primaryColor||'#002f59',
-        logo: '💼',
+        logo: 'G',
         logo_url: form.logoUrl||null,
       });
     }
@@ -1052,7 +1052,7 @@ const SettingsView = ({brand,session,onSave,toast,confirm,isAdmin}) => {
   const [uploading,setUploading] = useState(false);
   const fileRef = useRef();
   const COLORS = ['#1a6b5c','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2','#be185d','#374151','#b45309','#0d9488'];
-  const saveBrand = async () => { setSaving(true); await onSave(form); toast('Configuracoes salvas!'); setSaving(false); };
+  const handleSaveBrand = async () => { setSaving(true); await onSave(form); toast('Configuracoes salvas!'); setSaving(false); };
   const changePw = async () => {
     if(pwForm.newPw!==pwForm.confirm){toast('As senhas nao coincidem.','error');return;}
     if(pwForm.newPw.length<8){toast('Senha deve ter ao menos 8 caracteres.','error');return;}
@@ -1139,7 +1139,7 @@ const SettingsView = ({brand,session,onSave,toast,confirm,isAdmin}) => {
               <span className="font-bold text-white">{form.name||'Nome da empresa'}</span>
             </div>
           </div>
-          <button onClick={saveBrand} disabled={saving} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{background:form.color}}>
+          <button onClick={handleSaveBrand} disabled={saving} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{background:form.color}}>
             {saving?<Spin white/>:'Salvar e aplicar'}
           </button>
         </Card>
@@ -1432,7 +1432,7 @@ function App() {
     setProducts(prods);
     setTx(txs.map(t => ({ ...t, desc:t.description||t.desc, cat:t.category||t.cat })));
     setLosses(lss.map(l => ({ ...l, desc:l.description||l.desc })));
-    setIsAdminDB(roleRes?.data?.role === 'admin');
+    setIsAdminDB(roleRes?.data && data.role ? data.role : null === 'admin');
   };
 
   const fetchRole = async uid => {
@@ -1441,11 +1441,11 @@ function App() {
         sb.from('user_roles').select('role').eq('user_id',uid).maybeSingle(),
         new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),5000)),
       ]);
-      if (data?.role) {
+      if (data && data.role ? data.role : null) {
         await ldb.meta.put({ key:'role_'+uid, val:data.role });
         localStorage.setItem('is_admin', data.role==='admin'?'1':'0');
       }
-      return data?.role === 'admin';
+      return data && data.role ? data.role : null === 'admin';
     } catch(_) { return false; }
   };
 
@@ -1477,7 +1477,7 @@ function App() {
           if(pdr.data){ setProducts(pdr.data); await ldb.products.bulkPut(pdr.data.map(r=>toLocal(r,{user_id:uid}))); }
           if(txr.data){ const mapped=txr.data.map(t=>({...t,desc:t.description,cat:t.category})); setTx(mapped); await ldb.transactions.bulkPut(txr.data.map(r=>toLocal(r,{user_id:uid,desc:r.description,cat:r.category}))); }
           if(lr.data){ const mapped=lr.data.map(l=>({...l,desc:l.description})); setLosses(mapped); await ldb.losses.bulkPut(lr.data.map(r=>toLocal(r,{user_id:uid,desc:r.description}))); }
-          setIsAdminDB(roleRes?.data?.role==='admin');
+          setIsAdminDB(roleRes?.data && data.role ? data.role : null==='admin');
           await setLastSync(now());
         } catch(e2){ setDataError('Erro ao carregar dados.'); setDataLoading(false); }
       } else {
