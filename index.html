@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestão Financeira</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dexie@3/dist/dexie.min.js"></script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -998,8 +999,115 @@ const Login = () => {
   );
 };
 
+
+// ── IndexedDB local (Dexie) ──────────────────────────────────────────────────
+const ldb = new Dexie('gestao_offline');
+ldb.version(1).stores({
+  transactions: 'id, user_id, date, _synced, _deleted, _updated_at',
+  products:     'id, user_id, category, _synced, _deleted, _updated_at',
+  losses:       'id, user_id, date, _synced, _deleted, _updated_at',
+  profiles:     'user_id, _synced, _updated_at',
+  meta:         'key',
+});
+
+const now = () => new Date().toISOString();
+
+const getLastSync = async () => {
+  const r = await ldb.meta.get('last_sync');
+  return r ? r.val : '1970-01-01T00:00:00Z';
+};
+const setLastSync = ts => ldb.meta.put({ key: 'last_sync', val: ts });
+
+// Mapeia linha Supabase → local
+const toLocal = (row, extra = {}) => ({
+  ...row,
+  _synced: 1,
+  _deleted: 0,
+  _updated_at: row.updated_at || row.created_at || now(),
+  ...extra,
+});
+
+// Sincronização bidirecional por tabela
+const syncTable = async (uid, table, ldbTable, mapLocal, mapRemote) => {
+  if (!navigator.onLine) return;
+  const lastSync = await getLastSync();
+
+  // Push: locais não sincronizados
+  const unsynced = await ldbTable.where({ user_id: uid, _synced: 0 }).toArray();
+  for (const row of unsynced) {
+    const { _synced, _deleted, _updated_at, ...clean } = row;
+    if (_deleted) {
+      await sb.from(table).delete().eq('id', row.id);
+    } else {
+      await sb.from(table).upsert(mapRemote(clean));
+    }
+    await ldbTable.update(row.id, { _synced: 1 });
+  }
+
+  // Pull: remotos alterados desde o último sync
+  const { data } = await sb.from(table).select('*')
+    .eq('user_id', uid)
+    .gte('updated_at', lastSync)
+    .limit(1000);
+  for (const row of data || []) {
+    const existing = await ldbTable.get(row.id);
+    if (!existing || existing._synced === 1) {
+      await ldbTable.put(toLocal(row, mapLocal(row)));
+    }
+  }
+};
+
+const syncProfiles = async uid => {
+  if (!navigator.onLine) return;
+  const unsynced = await ldb.profiles.where({ user_id: uid, _synced: 0 }).toArray();
+  for (const row of unsynced) {
+    const { _synced, _deleted, _updated_at, ...clean } = row;
+    await sb.from('company_profiles').upsert(clean);
+    await ldb.profiles.update(uid, { _synced: 1 });
+  }
+  const { data } = await sb.from('company_profiles').select('*').eq('user_id', uid).maybeSingle();
+  if (data) await ldb.profiles.put(toLocal(data));
+};
+
+const syncAll = async uid => {
+  if (!uid || !navigator.onLine) return false;
+  try {
+    const ts = now();
+    await Promise.all([
+      syncTable(uid, 'transactions', ldb.transactions,
+        r => ({ desc: r.description, cat: r.category }),
+        r => ({ ...r, description: r.desc||r.description, category: r.cat||r.category })
+      ),
+      syncTable(uid, 'products', ldb.products, ()=>{}, r=>r),
+      syncTable(uid, 'losses', ldb.losses,
+        r => ({ desc: r.description }),
+        r => ({ ...r, description: r.desc||r.description })
+      ),
+      syncProfiles(uid),
+    ]);
+    await setLastSync(ts);
+    return true;
+  } catch(e) { return false; }
+};
+
+const SyncBadge = ({ status }) => {
+  if (status === 'idle') return null;
+  const cfg = {
+    syncing: { bg:'#2563eb', text:'Sincronizando...', icon:'↻' },
+    ok:      { bg:'#16a34a', text:'Sincronizado',     icon:'✓' },
+    error:   { bg:'#dc2626', text:'Sem internet',     icon:'⚠' },
+  }[status];
+  return (
+    <div style={{position:'fixed',top:8,right:8,zIndex:9999,background:cfg.bg,color:'#fff',borderRadius:20,padding:'4px 12px',fontSize:12,fontWeight:600,display:'flex',alignItems:'center',gap:4,boxShadow:'0 2px 8px rgba(0,0,0,0.2)'}}>
+      <span style={{display:'inline-block',animation:status==='syncing'?'spin 1s linear infinite':'none'}}>{cfg.icon}</span>
+      {cfg.text}
+    </div>
+  );
+};
 function App() {
   const [session,setSession] = useState(null);
+  const [syncStatus,setSyncStatus] = useState('idle'); // idle | syncing | ok | error
+  const uidRef = React.useRef(null);
   const [isAdminDB,setIsAdminDB] = useState(false);
   const [appLoading,setAppLoading] = useState(true);
   const [dataLoading,setDataLoading] = useState(false);
@@ -1019,22 +1127,62 @@ function App() {
   },[]);
   const confirm = useCallback((msg,onOk) => setConfirmData({msg,onOk}),[]);
 
+  const loadFromLocal = async uid => {
+    const [profile, prods, txs, lss, roleRes] = await Promise.all([
+      ldb.profiles.get(uid),
+      ldb.products.where({ user_id: uid, _deleted: 0 }).sortBy('created_at'),
+      ldb.transactions.where({ user_id: uid, _deleted: 0 }).reverse().sortBy('date'),
+      ldb.losses.where({ user_id: uid, _deleted: 0 }).reverse().sortBy('date'),
+      sb.from('user_roles').select('role').eq('user_id', uid).maybeSingle(),
+    ]);
+    if (profile) setBrand({ name:profile.name, logo:profile.logo, color:profile.color, logo_url:profile.logo_url||null });
+    setProducts(prods);
+    setTx(txs.map(t => ({ ...t, desc:t.description||t.desc, cat:t.category||t.cat })));
+    setLosses(lss.map(l => ({ ...l, desc:l.description||l.desc })));
+    setIsAdminDB(roleRes?.data?.role === 'admin');
+  };
+
   const loadData = async uid => {
+    uidRef.current = uid;
     setDataLoading(true); setDataError(null);
     try {
-      const [pr,pdr,txr,lr,roleRes] = await Promise.all([
-        sb.from('company_profiles').select('*').eq('user_id',uid).maybeSingle(),
-        sb.from('products').select('*').order('created_at').limit(500),
-        sb.from('transactions').select('*').order('date',{ascending:false}).limit(500),
-        sb.from('losses').select('*').order('date',{ascending:false}).limit(500),
-        sb.from('user_roles').select('role').eq('user_id',uid).maybeSingle(),
-      ]);
-      if(pr.data) setBrand({name:pr.data.name,logo:pr.data.logo,color:pr.data.color,logo_url:pr.data.logo_url||null});
-      if(pdr.data) setProducts(pdr.data);
-      if(txr.data) setTx(txr.data.map(t=>({...t,desc:t.description,cat:t.category})));
-      if(lr.data) setLosses(lr.data.map(l=>({...l,desc:l.description})));
-      setIsAdminDB(roleRes?.data?.role==='admin');
-    } catch(e) { setDataError('Erro ao carregar dados. Verifique sua conexao.'); }
+      // Carrega local primeiro (instantâneo)
+      await loadFromLocal(uid);
+      setDataLoading(false);
+      // Sincroniza em background
+      if (navigator.onLine) {
+        setSyncStatus('syncing');
+        const ok = await syncAll(uid);
+        if (ok) {
+          await loadFromLocal(uid);
+          setSyncStatus('ok');
+          setTimeout(() => setSyncStatus('idle'), 3000);
+        } else {
+          setSyncStatus('error');
+        }
+      }
+    } catch(e) {
+      // Se local vazio e offline, tenta Supabase
+      if (navigator.onLine) {
+        try {
+          const [pr,pdr,txr,lr,roleRes] = await Promise.all([
+            sb.from('company_profiles').select('*').eq('user_id',uid).maybeSingle(),
+            sb.from('products').select('*').order('created_at').limit(500),
+            sb.from('transactions').select('*').order('date',{ascending:false}).limit(500),
+            sb.from('losses').select('*').order('date',{ascending:false}).limit(500),
+            sb.from('user_roles').select('role').eq('user_id',uid).maybeSingle(),
+          ]);
+          if(pr.data){ const p=pr.data; setBrand({name:p.name,logo:p.logo,color:p.color,logo_url:p.logo_url||null}); await ldb.profiles.put(toLocal(p)); }
+          if(pdr.data){ setProducts(pdr.data); await ldb.products.bulkPut(pdr.data.map(r=>toLocal(r,{user_id:uid}))); }
+          if(txr.data){ const mapped=txr.data.map(t=>({...t,desc:t.description,cat:t.category})); setTx(mapped); await ldb.transactions.bulkPut(txr.data.map(r=>toLocal(r,{user_id:uid,desc:r.description,cat:r.category}))); }
+          if(lr.data){ const mapped=lr.data.map(l=>({...l,desc:l.description})); setLosses(mapped); await ldb.losses.bulkPut(lr.data.map(r=>toLocal(r,{user_id:uid,desc:r.description}))); }
+          setIsAdminDB(roleRes?.data?.role==='admin');
+          await setLastSync(now());
+        } catch(e2){ setDataError('Erro ao carregar dados.'); }
+      } else {
+        setDataError('Sem conexao e sem dados locais. Conecte-se pelo menos uma vez.');
+      }
+    }
     setDataLoading(false);
   };
 
@@ -1049,60 +1197,89 @@ function App() {
       if(session) loadData(session.user.id);
       else { setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); }
     });
-    return () => subscription.unsubscribe();
+    const onOnline = async () => {
+      const uid = uidRef.current;
+      if (!uid) return;
+      setSyncStatus('syncing');
+      const ok = await syncAll(uid);
+      if (ok) { await loadFromLocal(uid); setSyncStatus('ok'); setTimeout(()=>setSyncStatus('idle'),3000); }
+      else setSyncStatus('error');
+    };
+    window.addEventListener('online', onOnline);
+    return () => { subscription.unsubscribe(); window.removeEventListener('online', onOnline); };
   },[]);
 
   const addTx = async t => {
-    const row = {id:t.id,type:t.type,description:t.desc,amount:t.amount,date:t.date,method:t.method||null,category:t.cat||null,items:t.items||null,user_id:session.user.id};
-    const {error} = await sb.from('transactions').insert(row);
-    if(error){toast('Erro ao salvar.','error');return;}
-    setTx(p=>[{...t,...row,desc:row.description,cat:row.category},...p]);
+    const uid = session.user.id;
+    const row = { id:t.id, type:t.type, description:t.desc, amount:t.amount, date:t.date, method:t.method||null, category:t.cat||null, items:t.items||null, user_id:uid, updated_at:now(), _synced:0, _deleted:0, _updated_at:now(), desc:t.desc, cat:t.cat||null };
+    await ldb.transactions.put(row);
+    setTx(p=>[row,...p]);
+    if (navigator.onLine) { const {error}=await sb.from('transactions').upsert({id:row.id,type:row.type,description:row.description,amount:row.amount,date:row.date,method:row.method,category:row.category,items:row.items,user_id:uid,updated_at:row.updated_at}); if(!error) await ldb.transactions.update(row.id,{_synced:1}); }
   };
   const editTx = async (id,u) => {
-    const row = {description:u.desc,amount:u.amount,date:u.date,method:u.method||null,category:u.cat||null};
-    const {error} = await sb.from('transactions').update(row).eq('id',id);
-    if(!error) setTx(p=>p.map(t=>t.id===id?{...t,...row,desc:row.description,cat:row.category}:t));
-    else toast('Erro ao atualizar.','error');
+    const upd = { description:u.desc, amount:u.amount, date:u.date, method:u.method||null, category:u.cat||null, updated_at:now(), _synced:0, _updated_at:now(), desc:u.desc, cat:u.cat||null };
+    await ldb.transactions.update(id, upd);
+    setTx(p=>p.map(t=>t.id===id?{...t,...upd}:t));
+    if (navigator.onLine) { const {error}=await sb.from('transactions').update({description:upd.description,amount:upd.amount,date:upd.date,method:upd.method,category:upd.category,updated_at:upd.updated_at}).eq('id',id); if(!error) await ldb.transactions.update(id,{_synced:1}); }
   };
-  const deleteTx = async id => { await sb.from('transactions').delete().eq('id',id); setTx(p=>p.filter(t=>t.id!==id)); };
+  const deleteTx = async id => {
+    await ldb.transactions.update(id, { _deleted:1, _synced:0, _updated_at:now() });
+    setTx(p=>p.filter(t=>t.id!==id));
+    if (navigator.onLine) { await sb.from('transactions').delete().eq('id',id); await ldb.transactions.delete(id); }
+  };
 
   const addProduct = async p => {
-    const row = {...p,user_id:session.user.id};
-    const {error} = await sb.from('products').insert(row);
-    if(error){toast('Erro ao salvar produto.','error');return;}
+    const uid = session.user.id;
+    const row = { ...p, user_id:uid, updated_at:now(), _synced:0, _deleted:0, _updated_at:now() };
+    await ldb.products.put(row);
     setProducts(prev=>[...prev,row]);
+    if (navigator.onLine) { const {error}=await sb.from('products').upsert({id:row.id,name:row.name,category:row.category,price:row.price,cost:row.cost,stock:row.stock,user_id:uid,updated_at:row.updated_at}); if(!error) await ldb.products.update(row.id,{_synced:1}); }
   };
   const editProduct = async (id,u) => {
-    const {error} = await sb.from('products').update(u).eq('id',id);
-    if(!error) setProducts(p=>p.map(p=>p.id===id?{...p,...u}:p));
-    else toast('Erro ao atualizar.','error');
+    const upd = { ...u, updated_at:now(), _synced:0, _updated_at:now() };
+    await ldb.products.update(id, upd);
+    setProducts(p=>p.map(p=>p.id===id?{...p,...upd}:p));
+    if (navigator.onLine) { const {error}=await sb.from('products').update({...u,updated_at:upd.updated_at}).eq('id',id); if(!error) await ldb.products.update(id,{_synced:1}); }
   };
-  const deleteProduct = async id => { await sb.from('products').delete().eq('id',id); setProducts(p=>p.filter(p=>p.id!==id)); };
+  const deleteProduct = async id => {
+    await ldb.products.update(id, { _deleted:1, _synced:0, _updated_at:now() });
+    setProducts(p=>p.filter(p=>p.id!==id));
+    if (navigator.onLine) { await sb.from('products').delete().eq('id',id); await ldb.products.delete(id); }
+  };
   const adjustStock = async (id,delta) => {
     const p = products.find(p=>p.id===id); if(!p) return;
     const ns = Math.max(0,(p.stock||0)+delta);
-    await sb.from('products').update({stock:ns}).eq('id',id);
-    setProducts(p=>p.map(p=>p.id===id?{...p,stock:ns}:p));
+    const upd = { stock:ns, updated_at:now(), _synced:0, _updated_at:now() };
+    await ldb.products.update(id, upd);
+    setProducts(p=>p.map(p=>p.id===id?{...p,...upd}:p));
+    if (navigator.onLine) { const {error}=await sb.from('products').update({stock:ns,updated_at:upd.updated_at}).eq('id',id); if(!error) await ldb.products.update(id,{_synced:1}); }
   };
 
   const addLoss = async l => {
-    const row = {id:l.id,description:l.desc,qty:l.qty,reason:l.reason||null,date:l.date,user_id:session.user.id};
-    const {error} = await sb.from('losses').insert(row);
-    if(error){toast('Erro ao salvar perda.','error');return;}
-    setLosses(p=>[{...l,...row},...p]);
+    const uid = session.user.id;
+    const row = { id:l.id, description:l.desc, qty:l.qty, reason:l.reason||null, date:l.date, user_id:uid, updated_at:now(), _synced:0, _deleted:0, _updated_at:now(), desc:l.desc };
+    await ldb.losses.put(row);
+    setLosses(p=>[row,...p]);
+    if (navigator.onLine) { const {error}=await sb.from('losses').upsert({id:row.id,description:row.description,qty:row.qty,reason:row.reason,date:row.date,user_id:uid,updated_at:row.updated_at}); if(!error) await ldb.losses.update(row.id,{_synced:1}); }
   };
   const editLoss = async (id,u) => {
-    const row = {description:u.desc,qty:u.qty,reason:u.reason||null,date:u.date};
-    const {error} = await sb.from('losses').update(row).eq('id',id);
-    if(!error) setLosses(p=>p.map(l=>l.id===id?{...l,...row,desc:row.description}:l));
-    else toast('Erro ao atualizar.','error');
+    const upd = { description:u.desc, qty:u.qty, reason:u.reason||null, date:u.date, updated_at:now(), _synced:0, _updated_at:now(), desc:u.desc };
+    await ldb.losses.update(id, upd);
+    setLosses(p=>p.map(l=>l.id===id?{...l,...upd}:l));
+    if (navigator.onLine) { const {error}=await sb.from('losses').update({description:upd.description,qty:upd.qty,reason:upd.reason,date:upd.date,updated_at:upd.updated_at}).eq('id',id); if(!error) await ldb.losses.update(id,{_synced:1}); }
   };
-  const deleteLoss = async id => { await sb.from('losses').delete().eq('id',id); setLosses(p=>p.filter(l=>l.id!==id)); };
+  const deleteLoss = async id => {
+    await ldb.losses.update(id, { _deleted:1, _synced:0, _updated_at:now() });
+    setLosses(p=>p.filter(l=>l.id!==id));
+    if (navigator.onLine) { await sb.from('losses').delete().eq('id',id); await ldb.losses.delete(id); }
+  };
 
   const saveBrand = async nb => {
-    const {error} = await sb.from('company_profiles').upsert({user_id:session.user.id,name:nb.name,logo:nb.logo,color:nb.color,logo_url:nb.logo_url||null});
-    if(error){showToast('Erro ao salvar configuracoes.','error');return;}
+    const uid = session.user.id;
+    const row = { user_id:uid, name:nb.name, logo:nb.logo, color:nb.color, logo_url:nb.logo_url||null, updated_at:now(), _synced:0, _updated_at:now() };
+    await ldb.profiles.put(row);
     setBrand(nb);
+    if (navigator.onLine) { const {error}=await sb.from('company_profiles').upsert({user_id:uid,name:nb.name,logo:nb.logo,color:nb.color,logo_url:nb.logo_url||null}); if(!error) await ldb.profiles.update(uid,{_synced:1}); }
   };
 
   const Loader = ({text}) => (
@@ -1137,6 +1314,7 @@ function App() {
   return (
     <div className="min-h-screen flex" style={{background:'#f8fafc'}}>
       <Offline/>
+      <SyncBadge status={syncStatus}/>
       <Sidebar view={view} onNav={setView} brand={brand} open={sidebarOpen} onClose={()=>setSidebarOpen(false)}/>
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         <header className="sticky top-0 z-20 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 lg:hidden">
