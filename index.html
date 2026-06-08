@@ -1654,4 +1654,12 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
-</html>
+</html<script>
+window.onerror=function(msg,src,line,col,err){
+  var d=document.createElement('div');
+  d.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:#fee2e2;padding:20px;z-index:99999;overflow:auto;font-family:monospace;font-size:13px';
+  d.innerHTML='<b style="color:red">ERRO:</b> '+msg+'<br>Linha '+line+'<br><pre>'+(err?err.stack:'')+'</pre>';
+  document.body.appendChild(d);
+};
+</script>
+>
