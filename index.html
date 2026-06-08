@@ -38,10 +38,7 @@ const sb = createClient(
   'sb_publishable_EVJrndaIaxwLN9vUdSByUg__itH2rLy'
 );
 
-const INIT_BRAND = {name:'Financia', color:'#002f59', logo:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMjAwMCIgem9vbUFuZFBhbj0ibWFnbmlmeSIgdmlld0JveD0iMCAwIDE1MDAgMTQ5OS45OTk5MzMiIGhlaWdodD0iMjAwMCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ieE1pZFlNaWQgbWVldCIgdmVyc2lvbj0iMS4wIj48ZGVmcz48Y2xpcFBhdGggaWQ9IjFlYjk2M2JmMTkiPjxwYXRoIGQ9Ik0gMC4xOTkyMTkgNDcwIEwgMjY4LjQ2ODc1IDQ3MCBMIDI2OC40Njg3NSA5MzkuMTUyMzQ0IEwgMC4xOTkyMTkgOTM5LjE1MjM0NCBaIE0gMC4xOTkyMTkgNDcwICIgY2xpcC1ydWxlPSJub256ZXJvIi8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9IjI0ZWNkN2JmMTEiPjxwYXRoIGQ9Ik0gMjcuMTg3NSA0NzAgTCAyNDEuNjYwMTU2IDQ3MCBDIDI1Ni40NjQ4NDQgNDcwIDI2OC40Njg3NSA0ODIuMDAzOTA2IDI2OC40Njg3NSA0OTYuODA4NTk0IEwgMjY4LjQ2ODc1IDkxMi4zNDM3NSBDIDI2OC40Njg3NSA5MjcuMTQ4NDM4IDI1Ni40NjQ4NDQgOTM5LjE1MjM0NCAyNDEuNjYwMTU2IDkzOS4xNTIzNDQgTCAyNy4xODc1IDkzOS4xNTIzNDQgQyAxMi4zODI4MTIgOTM5LjE1MjM0NCAwLjM3ODkwNiA5MjcuMTQ4NDM4IDAuMzc4OTA2IDkxMi4zNDM3NSBMIDAuMzc4OTA2IDQ5Ni44MDg1OTQgQyAwLjM3ODkwNiA0ODIuMDAzOTA2IDEyLjM4MjgxMiA0NzAgMjcuMTg3NSA0NzAgWiBNIDI3LjE4NzUgNDcwICIgY2xpcC1ydWxlPSJub256ZXJvIi8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9Ijk4NDM3OGNkZGIiPjxwYXRoIGQ9Ik0gMC4xOTkyMTkgMCBMIDI2OC40Njg3NSAwIEwgMjY4LjQ2ODc1IDQ2OS4xNTIzNDQgTCAwLjE5OTIxOSA0NjkuMTUyMzQ0IFogTSAwLjE5OTIxOSAwICIgY2xpcC1ydWxlPSJub256ZXJvIi8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImEzZTlhNmU4MWEiPjxwYXRoIGQ9Ik0gMjcuMTg3NSAwIEwgMjQxLjY2MDE1NiAwIEMgMjU2LjQ2NDg0NCAwIDI2OC40Njg3NSAxMi4wMDM5MDYgMjY4LjQ2ODc1IDI2LjgwODU5NCBMIDI2OC40Njg3NSA0NDIuMzQzNzUgQyAyNjguNDY4NzUgNDU3LjE0ODQzOCAyNTYuNDY0ODQ0IDQ2OS4xNTIzNDQgMjQxLjY2MDE1NiA0NjkuMTUyMzQ0IEwgMjcuMTg3NSA0NjkuMTUyMzQ0IEMgMTIuMzgyODEyIDQ2OS4xNTIzNDQgMC4zNzg5MDYgNDU3LjE0ODQzOCAwLjM3ODkwNiA0NDIuMzQzNzUgTCAwLjM3ODkwNiAyNi44MDg1OTQgQyAwLjM3ODkwNiAxMi4wMDM5MDYgMTIuMzgyODEyIDAgMjcuMTg3NSAwIFogTSAyNy4xODc1IDAgIiBjbGlwLXJ1bGU9Im5vbnplcm8iLz48L2NsaXBQYXRoPjxjbGlwUGF0aCBpZD0iNWZlNTczOTVkYSI+PHJlY3QgeD0iMCIgd2lkdGg9IjI2OSIgeT0iMCIgaGVpZ2h0PSI0NzAiLz48L2NsaXBQYXRoPjxjbGlwUGF0aCBpZD0iODZhNGQ1NGZhZiI+PHBhdGggZD0iTSAzNzUgMjAxIEwgNjQzLjc4OTA2MiAyMDEgTCA2NDMuNzg5MDYyIDkzOS4xNTIzNDQgTCAzNzUgOTM5LjE1MjM0NCBaIE0gMzc1IDIwMSAiIGNsaXAtcnVsZT0ibm9uemVybyIvPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSJjNjE5ZDA5ZTMxIj48cGF0aCBkPSJNIDQwMi41MTE3MTkgMjAxLjkxNDA2MiBMIDYxNi45ODA0NjkgMjAxLjkxNDA2MiBDIDYzMS43ODUxNTYgMjAxLjkxNDA2MiA2NDMuNzg5MDYyIDIxMy45MTQwNjIgNjQzLjc4OTA2MiAyMjguNzIyNjU2IEwgNjQzLjc4OTA2MiA5MTIuMzQzNzUgQyA2NDMuNzg5MDYyIDkyNy4xNDg0MzggNjMxLjc4NTE1NiA5MzkuMTUyMzQ0IDYxNi45ODA0NjkgOTM5LjE1MjM0NCBMIDQwMi41MTE3MTkgOTM5LjE1MjM0NCBDIDM4Ny43MDMxMjUgOTM5LjE1MjM0NCAzNzUuNzAzMTI1IDkyNy4xNDg0MzggMzc1LjcwMzEyNSA5MTIuMzQzNzUgTCAzNzUuNzAzMTI1IDIyOC43MjI2NTYgQyAzNzUuNzAzMTI1IDIxMy45MTQwNjIgMzg3LjcwMzEyNSAyMDEuOTE0MDYyIDQwMi41MTE3MTkgMjAxLjkxNDA2MiBaIE0gNDAyLjUxMTcxOSAyMDEuOTE0MDYyICIgY2xpcC1ydWxlPSJub256ZXJvIi8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImVjNGM5NGQzYTYiPjxwYXRoIGQ9Ik0gMC41NTg1OTQgMC42Nzk2ODggTCAyNjguNzg5MDYyIDAuNjc5Njg4IEwgMjY4Ljc4OTA2MiA3MzguMTUyMzQ0IEwgMC41NTg1OTQgNzM4LjE1MjM0NCBaIE0gMC41NTg1OTQgMC42Nzk2ODggIiBjbGlwLXJ1bGU9Im5vbnplcm8iLz48L2NsaXBQYXRoPjxjbGlwUGF0aCBpZD0iNTY2ZTljZDJmNCI+PHBhdGggZD0iTSAyNy41MTE3MTkgMC45MTQwNjIgTCAyNDEuOTgwNDY5IDAuOTE0MDYyIEMgMjU2Ljc4NTE1NiAwLjkxNDA2MiAyNjguNzg5MDYyIDEyLjkxNDA2MiAyNjguNzg5MDYyIDI3LjcyMjY1NiBMIDI2OC43ODkwNjIgNzExLjM0Mzc1IEMgMjY4Ljc4OTA2MiA3MjYuMTQ4NDM4IDI1Ni43ODUxNTYgNzM4LjE1MjM0NCAyNDEuOTgwNDY5IDczOC4xNTIzNDQgTCAyNy41MTE3MTkgNzM4LjE1MjM0NCBDIDEyLjcwMzEyNSA3MzguMTUyMzQ0IDAuNzAzMTI1IDcyNi4xNDg0MzggMC43MDMxMjUgNzExLjM0Mzc1IEwgMC43MDMxMjUgMjcuNzIyNjU2IEMgMC43MDMxMjUgMTIuOTE0MDYyIDEyLjcwMzEyNSAwLjkxNDA2MiAyNy41MTE3MTkgMC45MTQwNjIgWiBNIDI3LjUxMTcxOSAwLjkxNDA2MiAiIGNsaXAtcnVsZT0ibm9uemVybyIvPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSIyMzJkNmRlZjI1Ij48cmVjdCB4PSIwIiB3aWR0aD0iMjY5IiB5PSIwIiBoZWlnaHQ9IjczOSIvPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSJmZDJlNjQwYzU2Ij48cGF0aCBkPSJNIDc1MSAwLjgwMDc4MSBMIDEwMTkuMTEzMjgxIDAuODAwNzgxIEwgMTAxOS4xMTMyODEgOTM5LjE1MjM0NCBMIDc1MSA5MzkuMTUyMzQ0IFogTSA3NTEgMC44MDA3ODEgIiBjbGlwLXJ1bGU9Im5vbnplcm8iLz48L2NsaXBQYXRoPjxjbGlwUGF0aCBpZD0iN2JjOTQzNmVlYiI+PHBhdGggZD0iTSA3NzcuODMyMDMxIDAuODQ3NjU2IEwgOTkyLjMwMDc4MSAwLjg0NzY1NiBDIDEwMDcuMTA5Mzc1IDAuODQ3NjU2IDEwMTkuMTEzMjgxIDEyLjg1MTU2MiAxMDE5LjExMzI4MSAyNy42NTYyNSBMIDEwMTkuMTEzMjgxIDkxMi4zNDM3NSBDIDEwMTkuMTEzMjgxIDkyNy4xNDg0MzggMTAwNy4xMDkzNzUgOTM5LjE1MjM0NCA5OTIuMzAwNzgxIDkzOS4xNTIzNDQgTCA3NzcuODMyMDMxIDkzOS4xNTIzNDQgQyA3NjMuMDI3MzQ0IDkzOS4xNTIzNDQgNzUxLjAyMzQzOCA5MjcuMTQ4NDM4IDc1MS4wMjM0MzggOTEyLjM0Mzc1IEwgNzUxLjAyMzQzOCAyNy42NTYyNSBDIDc1MS4wMjM0MzggMTIuODUxNTYyIDc2My4wMjczNDQgMC44NDc2NTYgNzc3LjgzMjAzMSAwLjg0NzY1NiBaIE0gNzc3LjgzMjAzMSAwLjg0NzY1NiAiIGNsaXAtcnVsZT0ibm9uemVybyIvPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSI4ZWMyM2Q0MDMxIj48cGF0aCBkPSJNIDAgMC44MDA3ODEgTCAyNjguMTEzMjgxIDAuODAwNzgxIEwgMjY4LjExMzI4MSA5MzkuMTUyMzQ0IEwgMCA5MzkuMTUyMzQ0IFogTSAwIDAuODAwNzgxICIgY2xpcC1ydWxlPSJub256ZXJvIi8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9Ijk3ZDZiMWRmYWQiPjxwYXRoIGQ9Ik0gMjYuODMyMDMxIDAuODQ3NjU2IEwgMjQxLjMwMDc4MSAwLjg0NzY1NiBDIDI1Ni4xMDkzNzUgMC44NDc2NTYgMjY4LjExMzI4MSAxMi44NTE1NjIgMjY4LjExMzI4MSAyNy42NTYyNSBMIDI2OC4xMTMyODEgOTEyLjM0Mzc1IEMgMjY4LjExMzI4MSA5MjcuMTQ4NDM4IDI1Ni4xMDkzNzUgOTM5LjE1MjM0NCAyNDEuMzAwNzgxIDkzOS4xNTIzNDQgTCAyNi44MzIwMzEgOTM5LjE1MjM0NCBDIDEyLjAyNzM0NCA5MzkuMTUyMzQ0IDAuMDIzNDM3NSA5MjcuMTQ4NDM4IDAuMDIzNDM3NSA5MTIuMzQzNzUgTCAwLjAyMzQzNzUgMjcuNjU2MjUgQyAwLjAyMzQzNzUgMTIuODUxNTYyIDEyLjAyNzM0NCAwLjg0NzY1NiAyNi44MzIwMzEgMC44NDc2NTYgWiBNIDI2LjgzMjAzMSAwLjg0NzY1NiAiIGNsaXAtcnVsZT0ibm9uemVybyIvPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSI3NDliNGYwMDJmIj48cmVjdCB4PSIwIiB3aWR0aD0iMjY5IiB5PSIwIiBoZWlnaHQ9Ijk0MCIvPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSIzMzg2MWUxNThiIj48cGF0aCBkPSJNIDUxMCAxODguNTI3MzQ0IEwgMTI0NS41NTg1OTQgMTg4LjUyNzM0NCBMIDEyNDUuNTU4NTk0IDc1MS41MTE3MTkgTCA1MTAgNzUxLjUxMTcxOSBaIE0gNTEwIDE4OC41MjczNDQgIiBjbGlwLXJ1bGU9Im5vbnplcm8iLz48L2NsaXBQYXRoPjxjbGlwUGF0aCBpZD0iM2M3YWI0ZTAwOSI+PHJlY3QgeD0iMCIgd2lkdGg9IjEyNDYiIHk9IjAiIGhlaWdodD0iOTQwIi8+PC9jbGlwUGF0aD48L2RlZnM+PGcgdHJhbnNmb3JtPSJtYXRyaXgoMSwgMCwgMCwgMSwgMTI3LCAyODApIj48ZyBjbGlwLXBhdGg9InVybCgjM2M3YWI0ZTAwOSkiPjxnIGNsaXAtcGF0aD0idXJsKCMxZWI5NjNiZjE5KSI+PGcgY2xpcC1wYXRoPSJ1cmwoIzI0ZWNkN2JmMTEpIj48ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLCAwLCAwLCAxLCAwLCA0NzApIj48ZyBjbGlwLXBhdGg9InVybCgjNWZlNTczOTVkYSkiPjxnIGNsaXAtcGF0aD0idXJsKCM5ODQzNzhjZGRiKSI+PGcgY2xpcC1wYXRoPSJ1cmwoI2EzZTlhNmU4MWEpIj48cGF0aCBmaWxsPSIjMDAyZjU5IiBkPSJNIDAuMzc4OTA2IDAgTCAyNjguNDY4NzUgMCBMIDI2OC40Njg3NSA0NjkuMTUyMzQ0IEwgMC4zNzg5MDYgNDY5LjE1MjM0NCBaIE0gMC4zNzg5MDYgMCAiIGZpbGwtb3BhY2l0eT0iMSIgZmlsbC1ydWxlPSJub256ZXJvIi8+PC9nPjwvZz48L2c+PC9nPjwvZz48L2c+PGcgY2xpcC1wYXRoPSJ1cmwoIzg2YTRkNTRmYWYpIj48ZyBjbGlwLXBhdGg9InVybCgjYzYxOWQwOWUzMSkiPjxnIHRyYW5zZm9ybT0ibWF0cml4KDEsIDAsIDAsIDEsIDM3NSwgMjAxKSI+PGcgY2xpcC1wYXRoPSJ1cmwoIzIzMmQ2ZGVmMjUpIj48ZyBjbGlwLXBhdGg9InVybCgjZWM0Yzk0ZDNhNikiPjxnIGNsaXAtcGF0aD0idXJsKCM1NjZlOWNkMmY0KSI+PHBhdGggZmlsbD0iIzFhNmI1YyIgZD0iTSAwLjcwMzEyNSAwLjkxNDA2MiBMIDI2OC43ODkwNjIgMC45MTQwNjIgTCAyNjguNzg5MDYyIDczOC4xNTIzNDQgTCAwLjcwMzEyNSA3MzguMTUyMzQ0IFogTSAwLjcwMzEyNSAwLjkxNDA2MiAiIGZpbGwtb3BhY2l0eT0iMSIgZmlsbC1ydWxlPSJub256ZXJvIi8+PC9nPjwvZz48L2c+PC9nPjwvZz48L2c+PGcgY2xpcC1wYXRoPSJ1cmwoI2ZkMmU2NDBjNTYpIj48ZyBjbGlwLXBhdGg9InVybCgjN2JjOTQzNmVlYikiPjxnIHRyYW5zZm9ybT0ibWF0cml4KDEsIDAsIDAsIDEsIDc1MSwgMC4wMDAwMDAwMDAwMDAxMTM2ODcpIj48ZyBjbGlwLXBhdGg9InVybCgjNzQ5YjRmMDAyZikiPjxnIGNsaXAtcGF0aD0idXJsKCM4ZWMyM2Q0MDMxKSI+PGcgY2xpcC1wYXRoPSJ1cmwoIzk3ZDZiMWRmYWQpIj48cGF0aCBmaWxsPSIjNmVjNmM4IiBkPSJNIDAuMDIzNDM3NSAwLjg0NzY1NiBMIDI2OC4xMTMyODEgMC44NDc2NTYgTCAyNjguMTEzMjgxIDkzOS4xNTIzNDQgTCAwLjAyMzQzNzUgOTM5LjE1MjM0NCBaIE0gMC4wMjM0Mzc1IDAuODQ3NjU2ICIgZmlsbC1vcGFjaXR5PSIxIiBmaWxsLXJ1bGU9Im5vbnplcm8iLz48L2c+PC9nPjwvZz48L2c+PC9nPjwvZz48ZyBjbGlwLXBhdGg9InVybCgjMzM4NjFlMTU4YikiPjxwYXRoIGZpbGw9IiM4Y2YyZDEiIGQ9Ik0gMTI0NS4zMzIwMzEgMjg0LjUzNTE1NiBMIDExNDkuMzI0MjE5IDE4OC41MjczNDQgTCA3NzguMzk0NTMxIDU1Ny4yNzczNDQgTCA2MDYuMDIzNDM4IDM4Ny4wODU5MzggTCA1MTAuMDE1NjI1IDQ4My4wODk4NDQgQyA1OTkuNDc2NTYyIDU3Mi41NTA3ODEgNjg4LjkzNzUgNjYyLjAwNzgxMiA3NzguMzk0NTMxIDc1MS40Njg3NSBaIE0gMTI0NS4zMzIwMzEgMjg0LjUzNTE1NiAiIGZpbGwtb3BhY2l0eT0iMSIgZmlsbC1ydWxlPSJldmVub2RkIi8+PC9nPjwvZz48L2c+PC9zdmc+', logo_url:null}
-const fmt = v => Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-const today = () => new Date().toISOString().slice(0,10);
-const prevDays = n => { const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); };
+const INIT_BRAND = {name:'Financia', color:'#002f59', logo:'💼', logo_url:null}
 const fmtDate = s => new Date(s+'T12:00').toLocaleDateString('pt-BR');
 const monthLabel = s => { const [y,m]=s.split('-'); return new Date(+y,+m-1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}); };
 const safe = s => String(s||'').replace(/[<>"]/g,'').replace(/javascript:/gi,'').trim().slice(0,200);
@@ -876,16 +873,42 @@ const AdminPanel = ({toast}) => {
   const create = async () => {
     if(!form.email||!form.password) return;
     if(form.password.length<8){toast('Senha mínimo 8 chars.','error');return;}
+    if(!form.companyName){toast('Informe o nome da empresa.','error');return;}
     setCreating(true);
-    const {error} = await sb.auth.signUp({email:form.email,password:form.password});
-    if(error){toast(error.message.includes('already')?'E-mail já cadastrado.':'Erro: '+error.message,'error');setCreating(false);return;}
+
+    // 1. Criar conta no Supabase Auth
+    const {data:authData,error} = await sb.auth.signUp({email:form.email,password:form.password});
+    if(error){
+      toast(error.message.includes('already')?'E-mail já cadastrado.':'Erro: '+error.message,'error');
+      setCreating(false); return;
+    }
+    const newUid = authData?.user?.id;
+
+    // 2. Criar perfil da empresa para o novo cliente
+    if(newUid){
+      await sb.from('company_profiles').upsert({
+        user_id: newUid,
+        name: form.companyName,
+        color: form.primaryColor||'#002f59',
+        logo: '💼',
+        logo_url: form.logoUrl||null,
+      });
+    }
+
+    // 3. Disparar build do APK
+    const tok = getGhToken();
+    if(!tok){
+      toast('Cliente criado! Configure o token GitHub para gerar APK.','error');
+      setDone({...form,buildOk:false,newUid});
+      setForm(BLANK); setCreating(false); return;
+    }
     setBuilding(true);
     const built = await triggerApkBuild(form.companyName,form.logoUrl,form.primaryColor);
     setBuilding(false);
-    setDone({...form,buildOk:built});
+    setDone({...form,buildOk:built,newUid});
     setForm(BLANK);
     setCreating(false);
-    toast(built?'Cliente criado! APK em ~2min.':'Cliente criado! Token não configurado.');
+    toast(built?'Cliente criado! APK em ~2min.':'Erro ao disparar APK — verifique o token.', built?'success':'error');
   };
 
   const copyWpp = async (email,pass,name,build) => {
@@ -1097,7 +1120,7 @@ const SettingsView = ({brand,session,onSave,toast,confirm,isAdmin}) => {
             </div>
           </div>
           <Inp label="Nome da empresa" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Nome da empresa"/>
-          <Inp label="Emoji (quando sem logo)" value={form.logo} onChange={e=>setForm(f=>({...f,logo:e.target.value}))} placeholder="💼"/>
+
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cor principal</label>
             <div className="flex gap-2 flex-wrap">{COLORS.map(c=>(
