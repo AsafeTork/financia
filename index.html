@@ -790,6 +790,13 @@ const triggerApkBuild = async (clientName, logoUrl, primaryColor) => {
 
 
 
+const fetchClients = async () => {
+  try {
+    const { data } = await sb.from('company_profiles').select('*').order('user_id');
+    return data || [];
+  } catch(_) { return []; }
+};
+
 const GhTokenCard = ({toast}) => {
   const [tok,setTok] = React.useState(localStorage.getItem('nancia_gh_token')||'');
   const save = () => {
