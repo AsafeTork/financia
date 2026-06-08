@@ -1285,6 +1285,7 @@ ldb.version(2).stores({
 
 const now = () => new Date().toISOString();
 const today = () => new Date().toISOString().split('T')[0];
+const prevDays = n => { const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().split('T')[0]; };
 
 const getLastSync = async () => {
   const r = await ldb.meta.get('last_sync');
