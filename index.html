@@ -1390,13 +1390,14 @@ function App() {
   const confirm = useCallback((msg,onOk) => setConfirmData({msg,onOk}),[]);
 
   const loadFromLocal = async uid => {
-    const [profile, prods, txs, lss, roleRes] = await Promise.all([
+    const [profile, prods, txs, lss, roleMeta] = await Promise.all([
       ldb.profiles.get(uid),
       ldb.products.where('user_id').equals(uid).filter(r=>!r._deleted).sortBy('created_at'),
       ldb.transactions.where('user_id').equals(uid).filter(r=>!r._deleted).sortBy('date'),
       ldb.losses.where('user_id').equals(uid).filter(r=>!r._deleted).sortBy('date'),
-      sb.from('user_roles').select('role').eq('user_id', uid).maybeSingle(),
+      ldb.meta.get('role_' + uid),
     ]);
+    const roleRes = { data: roleMeta ? { role: roleMeta.val } : null };
     if (profile) setBrand({ name:profile.name, logo:profile.logo, color:profile.color, logo_url:profile.logo_url||null });
     setProducts(prods);
     setTx(txs.map(t => ({ ...t, desc:t.description||t.desc, cat:t.category||t.cat })));
@@ -1404,24 +1405,29 @@ function App() {
     setIsAdminDB(roleRes?.data?.role === 'admin');
   };
 
+  const fetchRole = async uid => {
+    try {
+      const { data } = await Promise.race([
+        sb.from('user_roles').select('role').eq('user_id',uid).maybeSingle(),
+        new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),5000)),
+      ]);
+      if (data?.role) await ldb.meta.put({ key:'role_'+uid, val:data.role });
+      return data?.role === 'admin';
+    } catch(_) { return false; }
+  };
+
   const loadData = async uid => {
     uidRef.current = uid;
     setDataLoading(true); setDataError(null);
     try {
-      // Carrega local primeiro (instantâneo)
       await loadFromLocal(uid);
       setDataLoading(false);
-      // Sincroniza em background
       if (navigator.onLine) {
         setSyncStatus('syncing');
-        const ok = await syncAll(uid);
-        if (ok) {
-          await loadFromLocal(uid);
-          setSyncStatus('ok');
-          setTimeout(() => setSyncStatus('idle'), 3000);
-        } else {
-          setSyncStatus('error');
-        }
+        const [ok, admin] = await Promise.all([syncAll(uid), fetchRole(uid)]);
+        if (admin) setIsAdminDB(true);
+        if (ok) { await loadFromLocal(uid); setSyncStatus('ok'); setTimeout(()=>setSyncStatus('idle'),3000); }
+        else { setSyncStatus('error'); setTimeout(()=>setSyncStatus('idle'),5000); }
       }
     } catch(e) {
       // Se local vazio e offline, tenta Supabase
