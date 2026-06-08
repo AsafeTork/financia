@@ -789,242 +789,250 @@ const triggerApkBuild = async (clientName, logoUrl, primaryColor) => {
 };
 
 
+
+const GH_REPO = 'AsafeTork/gestao-financeira';
+const getGhToken = () => localStorage.getItem('nancia_gh_token') || '';
+
+const triggerApkBuild = async (clientName, logoUrl, primaryColor) => {
+  const tok = getGhToken();
+  if (!tok) return false;
+  const res = await fetch(
+    `https://api.github.com/repos/${GH_REPO}/actions/workflows/build-apk.yml/dispatches`,
+    { method:'POST',
+      headers:{Authorization:`token ${tok}`,'Content-Type':'application/json'},
+      body: JSON.stringify({ ref:'main', inputs:{
+        client_name: clientName||'Financia',
+        logo_url: logoUrl||'',
+        primary_color: (primaryColor||'#002f59').replace('#',''),
+      }})
+    }
+  );
+  return res.status === 204;
+};
+
+const fetchClients = async () => {
+  const { data } = await sb.from('company_profiles').select('*').order('user_id');
+  return data || [];
+};
+
 const GhTokenCard = ({toast}) => {
-  const [tok, setTok] = React.useState(localStorage.getItem('nancia_gh_token') || '');
-  const saveToken = () => {
+  const [tok,setTok] = React.useState(localStorage.getItem('nancia_gh_token')||'');
+  const save = () => {
     const v = tok.trim();
-    if (v) { localStorage.setItem('nancia_gh_token', v); toast('Token salvo!'); }
-    else    { localStorage.removeItem('nancia_gh_token'); toast('Token removido.'); }
+    if(v){ localStorage.setItem('nancia_gh_token',v); toast('Token salvo!'); }
+    else { localStorage.removeItem('nancia_gh_token'); toast('Token removido.'); }
   };
   return (
-    <Card className="p-4">
-      <div className="flex flex-col gap-3">
-        <div>
-          <p className="text-sm font-bold text-gray-800 mb-0.5">Token GitHub Actions</p>
-          <p className="text-xs text-gray-400">Necessario para gerar APK automaticamente. Salvo so neste navegador.</p>
-        </div>
-        <div className="flex gap-2">
-          <input type="password" value={tok} onChange={e=>setTok(e.target.value)}
-            placeholder="ghp_xxxxxxxxxxxx"
-            className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 flex-1 font-mono"/>
-          <button onClick={saveToken}
-            className="px-4 py-2.5 text-white rounded-xl text-sm font-semibold hover:opacity-90 flex-shrink-0"
-            style={{background:'#002f59'}}>Salvar</button>
-        </div>
-        {!tok && (
-          <p className="text-xs font-semibold" style={{color:'#dc2626'}}>
-            Sem token — APK nao sera gerado automaticamente.
-          </p>
-        )}
-        {tok && <p className="text-xs text-green-600 font-semibold">Token configurado.</p>}
+    <Card className="p-4 flex flex-col gap-2">
+      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Token GitHub Actions</p>
+      <div className="flex gap-2">
+        <input type="password" value={tok} onChange={e=>setTok(e.target.value)}
+          placeholder="ghp_xxxxxxxxxxxx"
+          className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-mono flex-1 focus:outline-none focus:border-gray-400"/>
+        <button onClick={save} className="px-4 py-2 text-white rounded-xl text-sm font-semibold flex-shrink-0"
+          style={{background:'#002f59'}}>Salvar</button>
       </div>
+      {!tok && <p className="text-xs font-semibold" style={{color:'#dc2626'}}>⚠ Sem token — APK não gerado automaticamente.</p>}
     </Card>
   );
 };
 
 const AdminPanel = ({toast}) => {
-  const [form, setForm]       = useState({email:'', password:'', companyName:'', logoUrl:'', primaryColor:'#002f59', colors:['#002f59']});
-  const [creating, setCreating] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [building, setBuilding]   = useState(false);
-  const [created, setCreated]     = useState(null);
-  const [copied, setCopied]       = useState(false);
+  const BLANK = {email:'',password:'',companyName:'',logoUrl:'',primaryColor:'#002f59',colors:['#002f59']};
+  const [form,setForm]         = useState(BLANK);
+  const [creating,setCreating] = useState(false);
+  const [building,setBuilding] = useState(false);
+  const [done,setDone]         = useState(null);
+  const [clients,setClients]   = useState([]);
+  const [loadingClients,setLoadingClients] = useState(true);
+  const [uploading,setUploading] = useState(false);
   const logoRef = React.useRef();
+  const [copied,setCopied] = useState(null);
+
+  React.useEffect(() => {
+    fetchClients().then(c => { setClients(c); setLoadingClients(false); });
+  }, [done]);
 
   const extractColors = img => {
     try {
       const c = document.createElement('canvas');
-      c.width = 50; c.height = 50;
-      const ctx = c.getContext('2d');
-      ctx.drawImage(img, 0, 0, 50, 50);
-      const data = ctx.getImageData(0, 0, 50, 50).data;
-      const buckets = {};
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i+3] < 128) continue;
-        const r = Math.round(data[i]/32)*32;
-        const g = Math.round(data[i+1]/32)*32;
-        const b = Math.round(data[i+2]/32)*32;
-        if (r>230&&g>230&&b>230) continue;
-        const key = `${r},${g},${b}`;
-        buckets[key] = (buckets[key]||0)+1;
+      c.width=50; c.height=50;
+      const ctx=c.getContext('2d');
+      ctx.drawImage(img,0,0,50,50);
+      const d=ctx.getImageData(0,0,50,50).data;
+      const buckets={};
+      for(let i=0;i<d.length;i+=4){
+        if(d[i+3]<128) continue;
+        const r=Math.round(d[i]/32)*32;
+        const g=Math.round(d[i+1]/32)*32;
+        const b=Math.round(d[i+2]/32)*32;
+        if(r>230&&g>230&&b>230) continue;
+        const k=r+','+g+','+b;
+        buckets[k]=(buckets[k]||0)+1;
       }
-      const sorted = Object.entries(buckets).sort((a,b)=>b[1]-a[1]).slice(0,5);
-      const hexColors = sorted.map(([k])=>{
-        const [r,g,b]=k.split(',').map(Number);
-        return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
-      });
-      if(hexColors.length) setForm(f=>({...f, colors:hexColors, primaryColor:hexColors[0]}));
-    } catch(_) {}
+      const sorted=Object.entries(buckets).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      const hexes=sorted.map(([k])=>{const[r,g,b]=k.split(',').map(Number);return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');});
+      if(hexes.length) setForm(f=>({...f,colors:hexes,primaryColor:hexes[0]}));
+    } catch(_){}
   };
 
   const uploadLogo = async file => {
-    if (!file) return;
+    if(!file) return;
     setUploading(true);
-    const ext = file.name.split('.').pop();
-    const path = 'client-logos/' + Date.now() + '.' + ext;
-    const {error} = await sb.storage.from('logos').upload(path, file, {upsert:true});
-    if (error) { toast('Erro no upload.','error'); setUploading(false); return; }
+    const path='client-logos/'+Date.now()+'.'+file.name.split('.').pop();
+    const {error} = await sb.storage.from('logos').upload(path,file,{upsert:true});
+    if(error){toast('Erro no upload.','error');setUploading(false);return;}
     const {data:{publicUrl}} = sb.storage.from('logos').getPublicUrl(path);
-    const url = publicUrl + '?t=' + Date.now();
-    setForm(f => ({...f, logoUrl: url}));
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => extractColors(img);
-    img.src = url;
+    const url = publicUrl+'?t='+Date.now();
+    setForm(f=>({...f,logoUrl:url}));
+    const img=new Image(); img.crossOrigin='anonymous';
+    img.onload=()=>extractColors(img); img.src=url;
     setUploading(false);
     toast('Logo enviado!');
   };
 
   const create = async () => {
-    if (!form.email || !form.password) return;
-    if (form.password.length < 8) { toast('Senha minimo 8 caracteres.','error'); return; }
+    if(!form.email||!form.password) return;
+    if(form.password.length<8){toast('Senha mínimo 8 chars.','error');return;}
     setCreating(true);
-    const {error} = await sb.auth.signUp({email:form.email, password:form.password});
-    if (error) {
-      toast(error.message.includes('already') ? 'E-mail ja cadastrado.' : 'Erro: '+error.message, 'error');
-      setCreating(false); return;
-    }
-    toast('Conta criada! Gerando APK personalizado...');
+    const {error} = await sb.auth.signUp({email:form.email,password:form.password});
+    if(error){toast(error.message.includes('already')?'E-mail já cadastrado.':'Erro: '+error.message,'error');setCreating(false);return;}
     setBuilding(true);
-    const ok = await triggerApkBuild(form.companyName, form.logoUrl, form.primaryColor);
+    const built = await triggerApkBuild(form.companyName,form.logoUrl,form.primaryColor);
     setBuilding(false);
-    setCreated({
-      email: form.email,
-      password: form.password,
-      companyName: form.companyName,
-      logoUrl: form.logoUrl,
-      buildOk: ok,
-    });
-    setForm({email:'', password:'', companyName:'', logoUrl:'', primaryColor:'#002f59', colors:['#002f59']});
+    setDone({...form,buildOk:built});
+    setForm(BLANK);
     setCreating(false);
+    toast(built?'Cliente criado! APK em ~2min.':'Cliente criado! Token não configurado.');
   };
 
-  const copyMsg = async () => {
-    const apkLine = created.buildOk ? '\nAPK: github.com/AsafeTork/gestao-financeira/actions (disponivel em ~2min)' : '';
-    const msg = `${created.companyName || 'Gestao Financeira'}\n\nLink: https://gestao-financeira-7heu.onrender.com\nE-mail: ${created.email}\nSenha: ${created.password}${apkLine}`;
+  const copyWpp = async (email,pass,name,build) => {
+    const msg=(name||'Financia')+'\n\nLink: https://gestao-financeira-7heu.onrender.com\nE-mail: '+email+'\nSenha: '+pass+(build?'\nAPK: github.com/'+GH_REPO+'/actions':'');
     await navigator.clipboard.writeText(msg);
-    setCopied(true); setTimeout(()=>setCopied(false),2500);
-    toast('Copiado! Cole no WhatsApp.');
+    setCopied(email);
+    setTimeout(()=>setCopied(null),2000);
+    toast('Copiado!');
+  };
+
+  const rebuildApk = async (c) => {
+    const ok = await triggerApkBuild(c.name,c.logo_url,c.color);
+    toast(ok?'APK iniciado! Pronto em ~2min.':'Sem token GitHub.', ok?'success':'error');
   };
 
   return (
     <div className="flex flex-col gap-5">
+
+      {/* Clientes existentes */}
       <div>
-        <p className="text-sm font-bold text-gray-800 mb-0.5">Novo cliente</p>
-        <p className="text-xs text-gray-400">Preencha os dados. O APK personalizado e gerado automaticamente.</p>
+        <p className="text-sm font-bold text-gray-800 mb-3">Clientes cadastrados</p>
+        {loadingClients
+          ? <p className="text-xs text-gray-400">Carregando...</p>
+          : clients.length === 0
+            ? <p className="text-xs text-gray-400">Nenhum cliente ainda.</p>
+            : <div className="flex flex-col gap-2">
+                {clients.map(c => (
+                  <div key={c.user_id} className="rounded-xl border border-gray-100 p-3 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden"
+                      style={{background:c.color||'#002f59'}}>
+                      {c.logo_url
+                        ? <img src={c.logo_url} className="w-full h-full object-contain p-1"/>
+                        : <span className="text-white text-xs font-bold">{(c.name||'?')[0]}</span>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{c.name||'Sem nome'}</p>
+                    </div>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <button onClick={()=>rebuildApk(c)}
+                        className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                        title="Gerar APK">📦 APK</button>
+                      <a href={'https://github.com/'+GH_REPO+'/actions'} target="_blank"
+                        className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                        title="Ver builds">↗</a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+        }
       </div>
 
-      {/* Identidade visual */}
-      <div className="rounded-2xl border border-gray-100 p-4 flex flex-col gap-3" style={{background:'#f8fafc'}}>
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Identidade visual</p>
-        <Inp label="Nome da empresa" value={form.companyName} onChange={e=>setForm(f=>({  ...f,companyName:e.target.value}))} placeholder="Ex: Padaria do Joao"/>
+      <hr className="border-gray-100"/>
 
-        {/* Upload logo */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Logo</label>
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-200 overflow-hidden flex-shrink-0" style={{background:form.primaryColor+'18'}}>
-              {form.logoUrl
-                ? <img src={form.logoUrl} className="w-full h-full object-contain p-1"/>
-                : <span className="text-2xl">🏢</span>}
-            </div>
-            <div className="flex flex-col gap-1.5 flex-1">
-              <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={e=>uploadLogo(e.target.files[0])}/>
-              <button onClick={()=>logoRef.current.click()} disabled={uploading}
-                className="flex items-center justify-center gap-1.5 border border-gray-200 rounded-xl py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50">
-                {uploading ? <><Spin/> Enviando...</> : '📁 Upload de logo'}
-              </button>
-              {form.logoUrl && <p className="text-xs text-green-600 text-center">✓ Logo carregado</p>}
-            </div>
-          </div>
-        </div>
+      {/* Criar novo cliente */}
+      <div>
+        <p className="text-sm font-bold text-gray-800 mb-3">Novo cliente</p>
+        <div className="flex flex-col gap-3">
 
-        {/* Cores extraidas + seletor */}
-        {form.colors.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-              Cor principal {form.logoUrl ? '(extraida da logo)' : ''}
-            </label>
-            <div className="flex items-center gap-2 flex-wrap">
-              {form.colors.map(c=>(
-                <button key={c} onClick={()=>setForm(f=>({...f,primaryColor:c}))}
-                  className="w-8 h-8 rounded-lg flex-shrink-0 transition-all"
-                  style={{
-                    background:c,
-                    border: form.primaryColor===c ? '3px solid #002f59' : '2px solid transparent',
-                    boxShadow: form.primaryColor===c ? '0 0 0 2px white inset' : 'none',
-                    transform: form.primaryColor===c ? 'scale(1.15)' : 'scale(1)',
-                  }}>
+          {/* Branding */}
+          <div className="rounded-2xl p-4 flex flex-col gap-3" style={{background:'#f8fafc'}}>
+            <Inp label="Nome da empresa" value={form.companyName}
+              onChange={e=>setForm(f=>({...f,companyName:e.target.value}))} placeholder="Ex: Padaria do João"/>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center border-2 border-dashed border-gray-200 overflow-hidden"
+                style={{background:form.primaryColor+'22'}}>
+                {form.logoUrl
+                  ? <img src={form.logoUrl} className="w-full h-full object-contain p-1"/>
+                  : <span className="text-xl">🏢</span>}
+              </div>
+              <div className="flex-1 flex flex-col gap-1.5">
+                <input ref={logoRef} type="file" accept="image/*" className="hidden"
+                  onChange={e=>uploadLogo(e.target.files[0])}/>
+                <button onClick={()=>logoRef.current.click()} disabled={uploading}
+                  className="border border-gray-200 rounded-xl py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50">
+                  {uploading?'Enviando...':'📁 Upload logo'}
                 </button>
-              ))}
-              <input type="color" value={form.primaryColor}
-                onChange={e=>setForm(f=>({  ...f,primaryColor:e.target.value,colors:[...new Set([e.target.value,...f.colors])].slice(0,5)}))}
-                className="w-8 h-8 rounded-lg border border-gray-200 cursor-pointer p-0.5"
-                title="Cor personalizada"/>
-              <span className="text-xs text-gray-400 font-mono">{form.primaryColor}</span>
+                {form.colors.length>0 && (
+                  <div className="flex items-center gap-1.5">
+                    {form.colors.map(c=>(
+                      <button key={c} onClick={()=>setForm(f=>({...f,primaryColor:c}))}
+                        className="w-6 h-6 rounded-md flex-shrink-0"
+                        style={{background:c,outline:form.primaryColor===c?'2px solid #002f59':'none',outlineOffset:'2px'}}/>
+                    ))}
+                    <input type="color" value={form.primaryColor}
+                      onChange={e=>setForm(f=>({...f,primaryColor:e.target.value,colors:[...new Set([e.target.value,...f.colors])].slice(0,5)}))}
+                      className="w-6 h-6 rounded-md border border-gray-200 cursor-pointer p-0"/>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Preview mini do APK */}
-        <div className="flex items-center gap-3 bg-white rounded-xl p-3 border border-gray-100">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
-            style={{background:form.primaryColor}}>
-            {form.logoUrl
-              ? <img src={form.logoUrl} className="w-full h-full object-contain p-1"/>
-              : <span className="text-lg">🏢</span>}
-          </div>
-          <div>
-            <p className="text-sm font-bold text-gray-800">{form.companyName || 'Nome da empresa'}</p>
-            <p className="text-xs text-gray-400">Preview do icone no celular</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Credenciais */}
-      <div className="flex flex-col gap-3">
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Acesso</p>
-        <Inp label="E-mail" type="email" value={form.email} onChange={e=>setForm(f=>({  ...f,email:e.target.value}))} placeholder="cliente@email.com"/>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Senha</label>
+          {/* Credenciais */}
+          <Inp label="E-mail" type="email" value={form.email}
+            onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="cliente@email.com"/>
           <div className="flex gap-2">
-            <input type="text" value={form.password} onChange={e=>setForm(f=>({  ...f,password:e.target.value}))}
-              placeholder="Minimo 8 caracteres"
-              className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition flex-1"/>
-            <button onClick={()=>setForm(f=>({  ...f,password:genPwd()}))}
-              className="px-3 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 flex-shrink-0">Gerar</button>
+            <Inp label="Senha" value={form.password}
+              onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="Mínimo 8 chars"/>
+            <button onClick={()=>setForm(f=>({...f,password:genPwd()}))}
+              className="border border-gray-200 rounded-xl px-3 text-xs font-semibold text-gray-600 hover:bg-gray-50 flex-shrink-0 mt-6">Gerar</button>
           </div>
+
+          <button onClick={create} disabled={creating||building||!form.email||!form.password}
+            className="w-full text-white rounded-xl py-3 text-sm font-bold hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
+            style={{background:'#002f59'}}>
+            {(creating||building)?<><Spin white/>{creating?'Criando...':'Gerando APK...'}</>:'Criar cliente + APK'}
+          </button>
+
+          {done && (
+            <div className="rounded-2xl p-4 flex flex-col gap-3" style={{background:'#f0fdf4',border:'1px solid #bbf7d0'}}>
+              <p className="text-sm font-bold text-gray-800">✓ {done.companyName||'Cliente'} criado!</p>
+              <div className="bg-white rounded-xl p-3 font-mono text-xs flex flex-col gap-1 border border-gray-100">
+                <p><span className="text-gray-400">E-mail: </span><b>{done.email}</b></p>
+                <p><span className="text-gray-400">Senha:  </span><b>{done.password}</b></p>
+                {done.buildOk && <p><span className="text-gray-400">APK:    </span>
+                  <a href={'https://github.com/'+GH_REPO+'/actions'} target="_blank" className="text-blue-500 underline">github.com/...actions</a></p>}
+              </div>
+              <button onClick={()=>copyWpp(done.email,done.password,done.companyName,done.buildOk)}
+                className="w-full text-white rounded-xl py-2.5 text-sm font-bold hover:opacity-90"
+                style={{background:'#002f59'}}>
+                {copied===done.email?'✓ Copiado!':'Copiar para WhatsApp'}
+              </button>
+              <button onClick={()=>setDone(null)} className="text-xs text-gray-400 text-center hover:text-gray-600">
+                Criar outro
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      <button onClick={create} disabled={creating||building||!form.email||!form.password}
-        className="w-full text-white rounded-xl py-3.5 text-sm font-bold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40 transition-all"
-        style={{background:'#002f59'}}>
-        {(creating||building) ? <><Spin white/> {creating?'Criando conta...':'Gerando APK...'}</> : 'Criar cliente + gerar APK'}
-      </button>
-
-      {created && (
-        <div className="rounded-2xl border p-4 flex flex-col gap-3" style={{background:'#f0fdf4',borderColor:'#bbf7d0'}}>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style={{background:'#dcfce7',color:'#16a34a'}}>✓</div>
-            <div>
-              <p className="text-sm font-bold text-gray-800">{created.companyName || 'Cliente'} criado!</p>
-              <p className="text-xs text-gray-500">{created.buildOk ? 'APK sendo gerado (~2min)' : 'Conta criada. Dispare o build manualmente.'}</p>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-3 font-mono text-xs flex flex-col gap-1.5 border border-gray-100">
-            <p><span className="text-gray-400">E-mail: </span><span className="font-semibold">{created.email}</span></p>
-            <p><span className="text-gray-400">Senha:  </span><span className="font-semibold">{created.password}</span></p>
-            {created.buildOk && <p><span className="text-gray-400">APK:    </span><a href="https://github.com/AsafeTork/gestao-financeira/actions" target="_blank" className="text-blue-500 underline font-semibold">github.com/.../actions</a></p>}
-          </div>
-          <button onClick={copyMsg}
-            className="w-full flex items-center justify-center gap-2 text-white rounded-xl py-2.5 text-sm font-bold hover:opacity-90"
-            style={{background:'#002f59'}}>
-            {copied ? '✓ Copiado!' : 'Copiar para WhatsApp'}
-          </button>
-          <button onClick={()=>setCreated(null)} className="text-xs text-gray-400 hover:text-gray-600 text-center">Criar outro cliente</button>
-        </div>
-      )}
     </div>
   );
 };
@@ -1288,28 +1296,49 @@ const toLocal = (row, extra = {}) => ({
 });
 
 // Sincronização bidirecional por tabela
-const syncTable = async (uid, table, ldbTable, mapLocal, mapRemote) => {
+const TX_FIELDS  = ['id','type','description','amount','date','method','category','items','user_id','registered_by','updated_at'];
+const PRD_FIELDS = ['id','name','category','price','cost','stock','user_id','registered_by','updated_at'];
+const LSS_FIELDS = ['id','description','qty','reason','date','user_id','registered_by','updated_at'];
+
+const pickFields = (obj, fields) => {
+  const out = {};
+  fields.forEach(k => { if (obj[k] !== undefined) out[k] = obj[k]; });
+  return out;
+};
+
+const FIELD_MAP = {
+  transactions: TX_FIELDS,
+  products:     PRD_FIELDS,
+  losses:       LSS_FIELDS,
+};
+
+const syncTable = async (uid, table, ldbTable, mapLocal) => {
   if (!navigator.onLine) return;
   const lastSync = await getLastSync();
+  const fields = FIELD_MAP[table] || [];
 
-  // Push: locais não sincronizados
   const unsynced = await ldbTable.where('user_id').equals(uid).and(r=>r._synced===0).toArray();
   for (const row of unsynced) {
-    const { _synced, _deleted, _updated_at, ...clean } = row;
-    if (_deleted) {
-      await sb.from(table).delete().eq('id', row.id);
-    } else {
-      await sb.from(table).upsert(mapRemote(clean));
-    }
-    await ldbTable.update(row.id, { _synced: 1 });
+    try {
+      if (row._deleted) {
+        await sb.from(table).delete().eq('id', row.id);
+        await ldbTable.delete(row.id);
+      } else {
+        const sbRow = pickFields(
+          { ...row, description: row.description || row.desc, category: row.category || row.cat },
+          fields
+        );
+        const { error } = await sb.from(table).upsert(sbRow);
+        if (!error) await ldbTable.update(row.id, { _synced: 1 });
+      }
+    } catch(e) { /* continua para o próximo */ }
   }
 
-  // Pull: remotos alterados desde o último sync
-  const { data } = await sb.from(table).select('*')
+  const { data: remote } = await sb.from(table).select('*')
     .eq('user_id', uid)
     .gte('updated_at', lastSync)
-    .limit(1000);
-  for (const row of data || []) {
+    .limit(500);
+  for (const row of remote || []) {
     const existing = await ldbTable.get(row.id);
     if (!existing || existing._synced === 1) {
       await ldbTable.put(toLocal(row, mapLocal(row)));
@@ -1333,21 +1362,19 @@ const syncAll = async uid => {
   if (!uid || !navigator.onLine) return false;
   try {
     const ts = now();
-    await Promise.all([
-      syncTable(uid, 'transactions', ldb.transactions,
-        r => ({ desc: r.description, cat: r.category }),
-        r => ({ ...r, description: r.desc||r.description, category: r.cat||r.category })
-      ),
-      syncTable(uid, 'products', ldb.products, ()=>{}, r=>r),
-      syncTable(uid, 'losses', ldb.losses,
-        r => ({ desc: r.description }),
-        r => ({ ...r, description: r.desc||r.description })
-      ),
-      syncProfiles(uid),
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000));
+    await Promise.race([
+      Promise.all([
+        syncTable(uid, 'transactions', ldb.transactions, r => ({ desc: r.description, cat: r.category })),
+        syncTable(uid, 'products',     ldb.products,     () => ({})),
+        syncTable(uid, 'losses',       ldb.losses,       r => ({ desc: r.description })),
+        syncProfiles(uid),
+      ]),
+      timeout,
     ]);
     await setLastSync(ts);
     return true;
-  } catch(e) { return false; }
+  } catch(e) { console.warn('syncAll:', e.message); return false; }
 };
 
 const SyncBadge = ({ status }) => {
