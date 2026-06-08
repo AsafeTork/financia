@@ -14,7 +14,7 @@ on:
         required: false
         default: ''
       primary_color:
-        description: 'Cor HEX ex: 002f59'
+        description: 'Cor HEX sem # (ex: 002f59)'
         required: false
         default: '002f59'
 
@@ -44,60 +44,28 @@ jobs:
       - name: Instalar Pillow
         run: pip install Pillow --break-system-packages --quiet
 
-      - name: Aplicar branding do cliente
+      - name: Aplicar nome do app
         env:
           CLIENT_NAME: ${{ github.event.inputs.client_name || 'Nancia' }}
-          LOGO_URL: ${{ github.event.inputs.logo_url || '' }}
-          HEX_COLOR: ${{ github.event.inputs.primary_color || '002f59' }}
         run: |
-          echo "=== Branding: $CLIENT_NAME / #$HEX_COLOR ==="
-
           sed -i "s|<string name=\"app_name\">.*</string>|<string name=\"app_name\">$CLIENT_NAME</string>|" \
             android/app/src/main/res/values/strings.xml
+          echo "App name: $CLIENT_NAME"
 
-          [ -n "$LOGO_URL" ] && curl -fsSL "$LOGO_URL" -o /tmp/logo --max-time 20 || true
+      - name: Baixar logo do cliente
+        env:
+          LOGO_URL: ${{ github.event.inputs.logo_url || '' }}
+        run: |
+          if [ -n "$LOGO_URL" ]; then
+            curl -fsSL "$LOGO_URL" -o /tmp/logo --max-time 20 && echo "Logo baixado" || echo "Sem logo"
+          else
+            echo "Sem logo URL"
+          fi
 
-          python3 - << 'PY'
-import os, struct, zlib
-hex_c = os.environ.get('HEX_COLOR','002f59').lstrip('#')
-r,g,b = int(hex_c[0:2],16),int(hex_c[2:4],16),int(hex_c[4:6],16)
-sizes = {'mdpi':48,'hdpi':72,'xhdpi':96,'xxhdpi':144,'xxxhdpi':192}
-has_logo = os.path.exists('/tmp/logo') and os.path.getsize('/tmp/logo')>100
-try:
-    from PIL import Image
-    for d,s in sizes.items():
-        bg = Image.new('RGBA',(s,s),(r,g,b,255))
-        if has_logo:
-            try:
-                logo = Image.open('/tmp/logo').convert('RGBA')
-                pad = int(s*0.14)
-                inner = s - pad*2
-                logo = logo.resize((inner,inner),Image.LANCZOS)
-                bg.paste(logo,(pad,pad),logo)
-            except: pass
-        out = f'android/app/src/main/res/mipmap-{d}/ic_launcher.png'
-        os.makedirs(os.path.dirname(out),exist_ok=True)
-        bg.save(out)
-        print(f'{d} {s}x{s} OK')
-except Exception as e:
-    print(f'Pillow error: {e} - usando PNG basico')
-    def chunk(t,d):
-        c=struct.pack('>I',len(d))+t+d
-        return c+struct.pack('>I',zlib.crc32(t+d)&0xffffffff)
-    def mkpng(sz):
-        raw=b''.join(b'\x00'+bytes([r,g,b]*sz) for _ in range(sz))
-        return (b'\x89PNG\r\n\x1a\n'
-                +chunk(b'IHDR',struct.pack('>IIBBBBB',sz,sz,8,2,0,0,0))
-                +chunk(b'IDAT',zlib.compress(raw))
-                +chunk(b'IEND',b''))
-    for d,sz in sizes.items():
-        out=f'android/app/src/main/res/mipmap-{d}/ic_launcher.png'
-        os.makedirs(os.path.dirname(out),exist_ok=True)
-        with open(out,'wb') as f: f.write(mkpng(sz))
-        print(f'{d} {sz}x{sz} fallback')
-PY
-          echo "Icones gerados."
-          find android -name "*.png" | head -6 | xargs ls -lh
+      - name: Gerar icones PNG
+        env:
+          HEX_COLOR: ${{ github.event.inputs.primary_color || '002f59' }}
+        run: python3 scripts/gen_icons.py
 
       - name: Gerar keystore
         run: |
@@ -108,11 +76,11 @@ PY
 
       - name: Build APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon 2>&1 | tail -20
+        run: ./gradlew assembleDebug --no-daemon 2>&1 | tail -30
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
-      - name: Preparar e Upload APK
+      - name: Upload APK
         env:
           CLIENT_NAME: ${{ github.event.inputs.client_name || 'nancia' }}
         run: |
