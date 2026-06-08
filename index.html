@@ -1432,7 +1432,7 @@ function App() {
     setProducts(prods);
     setTx(txs.map(t => ({ ...t, desc:t.description||t.desc, cat:t.category||t.cat })));
     setLosses(lss.map(l => ({ ...l, desc:l.description||l.desc })));
-    setIsAdminDB(roleRes?.data && data.role ? data.role : null === 'admin');
+    setIsAdminDB((roleRes && roleRes.data ? roleRes.data.role : null) === 'admin');
   };
 
   const fetchRole = async uid => {
@@ -1477,7 +1477,7 @@ function App() {
           if(pdr.data){ setProducts(pdr.data); await ldb.products.bulkPut(pdr.data.map(r=>toLocal(r,{user_id:uid}))); }
           if(txr.data){ const mapped=txr.data.map(t=>({...t,desc:t.description,cat:t.category})); setTx(mapped); await ldb.transactions.bulkPut(txr.data.map(r=>toLocal(r,{user_id:uid,desc:r.description,cat:r.category}))); }
           if(lr.data){ const mapped=lr.data.map(l=>({...l,desc:l.description})); setLosses(mapped); await ldb.losses.bulkPut(lr.data.map(r=>toLocal(r,{user_id:uid,desc:r.description}))); }
-          setIsAdminDB(roleRes?.data && data.role ? data.role : null==='admin');
+          setIsAdminDB((roleRes && roleRes.data ? roleRes.data.role : null)==='admin');
           await setLastSync(now());
         } catch(e2){ setDataError('Erro ao carregar dados.'); setDataLoading(false); }
       } else {
@@ -1513,7 +1513,7 @@ function App() {
 
   const addTx = async t => {
     const uid = session.user.id;
-    const rb = session.user.user_metadata?.name || session.user.email;
+    const rb = (session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email);
     const row = { id:t.id, type:t.type, description:t.desc, amount:t.amount, date:t.date, method:t.method||null, category:t.cat||null, items:t.items||null, user_id:uid, registered_by:rb, updated_at:now(), _synced:0, _deleted:0, _updated_at:now(), desc:t.desc, cat:t.cat||null };
     await ldb.transactions.put(row);
     setTx(p=>[row,...p]);
@@ -1533,7 +1533,7 @@ function App() {
 
   const addProduct = async p => {
     const uid = session.user.id;
-    const rb = session.user.user_metadata?.name || session.user.email;
+    const rb = (session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email);
     const row = { ...p, user_id:uid, registered_by:rb, updated_at:now(), _synced:0, _deleted:0, _updated_at:now() };
     await ldb.products.put(row);
     setProducts(prev=>[...prev,row]);
@@ -1561,7 +1561,7 @@ function App() {
 
   const addLoss = async l => {
     const uid = session.user.id;
-    const rb = session.user.user_metadata?.name || session.user.email;
+    const rb = (session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email);
     const row = { id:l.id, description:l.desc, qty:l.qty, reason:l.reason||null, date:l.date, user_id:uid, registered_by:rb, updated_at:now(), _synced:0, _deleted:0, _updated_at:now(), desc:l.desc };
     await ldb.losses.put(row);
     setLosses(p=>[row,...p]);
