@@ -788,6 +788,40 @@ const triggerApkBuild = async (clientName, logoUrl, primaryColor) => {
   return res.status === 204;
 };
 
+
+const GhTokenCard = ({toast}) => {
+  const [tok, setTok] = React.useState(localStorage.getItem('nancia_gh_token') || '');
+  const saveToken = () => {
+    const v = tok.trim();
+    if (v) { localStorage.setItem('nancia_gh_token', v); toast('Token salvo!'); }
+    else    { localStorage.removeItem('nancia_gh_token'); toast('Token removido.'); }
+  };
+  return (
+    <Card className="p-4">
+      <div className="flex flex-col gap-3">
+        <div>
+          <p className="text-sm font-bold text-gray-800 mb-0.5">Token GitHub Actions</p>
+          <p className="text-xs text-gray-400">Necessario para gerar APK automaticamente. Salvo so neste navegador.</p>
+        </div>
+        <div className="flex gap-2">
+          <input type="password" value={tok} onChange={e=>setTok(e.target.value)}
+            placeholder="ghp_xxxxxxxxxxxx"
+            className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 flex-1 font-mono"/>
+          <button onClick={saveToken}
+            className="px-4 py-2.5 text-white rounded-xl text-sm font-semibold hover:opacity-90 flex-shrink-0"
+            style={{background:'#002f59'}}>Salvar</button>
+        </div>
+        {!tok && (
+          <p className="text-xs font-semibold" style={{color:'#dc2626'}}>
+            Sem token — APK nao sera gerado automaticamente.
+          </p>
+        )}
+        {tok && <p className="text-xs text-green-600 font-semibold">Token configurado.</p>}
+      </div>
+    </Card>
+  );
+};
+
 const AdminPanel = ({toast}) => {
   const [form, setForm]       = useState({email:'', password:'', companyName:'', logoUrl:'', primaryColor:'#002f59', colors:['#002f59']});
   const [creating, setCreating] = useState(false);
@@ -1151,26 +1185,7 @@ const SettingsView = ({brand,session,onSave,toast,confirm}) => {
       )}
       {tab==='clients' && isAdmin && (
         <div className="flex flex-col gap-4">
-          <Card className="p-4">
-            <div className="flex flex-col gap-3">
-              <div>
-                <p className="text-sm font-bold text-gray-800 mb-0.5">Token GitHub Actions</p>
-                <p className="text-xs text-gray-400">Necessario para gerar APK automaticamente. Salvo so neste navegador.</p>
-              </div>
-              <div className="flex gap-2">
-                <input type="password" id="gh-token-inp" placeholder="ghp_xxxxxxxxxxxx"
-                  defaultValue={localStorage.getItem('nancia_gh_token')||''}
-                  className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 flex-1 font-mono"/>
-                <button
-                  onClick={()=>{const v=document.getElementById('gh-token-inp').value.trim();if(v){localStorage.setItem('nancia_gh_token',v);toast('Token salvo!');}else{localStorage.removeItem('nancia_gh_token');toast('Token removido.');}}}
-                  className="px-4 py-2.5 text-white rounded-xl text-sm font-semibold hover:opacity-90 flex-shrink-0"
-                  style={{background:'#002f59'}}>Salvar</button>
-              </div>
-              {!localStorage.getItem('nancia_gh_token') && (
-                <p className="text-xs font-medium" style={{color:'#dc2626'}}>Sem token — APK nao sera gerado automaticamente.</p>
-              )}
-            </div>
-          </Card>
+          <GhTokenCard toast={toast}/>
           <Card className="p-6"><AdminPanel toast={toast}/></Card>
         </div>
       )}
