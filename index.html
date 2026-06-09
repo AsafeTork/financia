@@ -838,7 +838,7 @@ const ReportView = ({tx,toast}) => {
 };
 
 const GH_REPO = 'AsafeTork/gestao-financeira';
-const getGhToken = () => localStorage.getItem('nancia_gh_token') || '';
+const getGhToken = () => sessionStorage.getItem('nancia_gh_token') || '';
 
 const triggerApkBuild = async (clientName, logoUrl, primaryColor) => {
   const tok = getGhToken();
@@ -879,11 +879,11 @@ const deleteClient = async (uid) => {
 };
 
 const GhTokenCard = ({toast}) => {
-  const [tok,setTok] = React.useState(localStorage.getItem('nancia_gh_token')||'');
+  const [tok,setTok] = React.useState(sessionStorage.getItem('nancia_gh_token')||'');
   const save = () => {
     const v = tok.trim();
-    if(v){ localStorage.setItem('nancia_gh_token',v); toast('Token salvo!'); }
-    else { localStorage.removeItem('nancia_gh_token'); toast('Token removido.'); }
+    if(v){ sessionStorage.setItem('nancia_gh_token',v); toast('Token salvo!'); }
+    else { sessionStorage.removeItem('nancia_gh_token'); toast('Token removido.'); }
   };
   return (
     <Card className="p-4 flex flex-col gap-2">
@@ -1639,7 +1639,7 @@ function App() {
   const [session,setSession] = useState(null);
   const [syncStatus,setSyncStatus] = useState('idle'); // idle | syncing | ok | error
   const uidRef = React.useRef(null);
-  const [isAdminDB,setIsAdminDB] = useState(localStorage.getItem('is_admin')==='1');
+  const [isAdminDB,setIsAdminDB] = useState(sessionStorage.getItem('is_admin')==='1');
   const [appLoading,setAppLoading] = useState(true);
   const [dataLoading,setDataLoading] = useState(false);
   const VALID_VIEWS = ['dashboard','income','expense','inventory','email','report','settings'];
@@ -1698,7 +1698,7 @@ function App() {
       ]);
       if (data && data.role) {
         await ldb.meta.put({ key:'role_'+uid, val:data.role });
-        localStorage.setItem('is_admin', data.role==='admin'?'1':'0');
+        sessionStorage.setItem('is_admin', data.role==='admin'?'1':'0');
       }
       return !!(data && data.role === 'admin');
     } catch(_) { return false; }
@@ -1714,7 +1714,7 @@ function App() {
         setSyncStatus('syncing');
         const [ok, admin] = await Promise.all([syncAll(uid), fetchRole(uid)]);
         setIsAdminDB(admin);
-        if (!admin) localStorage.removeItem('is_admin');
+        if (!admin) sessionStorage.removeItem('is_admin');
         if (ok) { await loadFromLocal(uid); setSyncStatus('ok'); setTimeout(()=>setSyncStatus('idle'),3000); }
         else { setSyncStatus('error'); setTimeout(()=>setSyncStatus('idle'),5000); }
       }
@@ -1752,8 +1752,8 @@ function App() {
     });
     const {data:{subscription}} = sb.auth.onAuthStateChange((_,session) => {
       setSession(session);
-      if(session) { setIsAdminDB(false); localStorage.removeItem('is_admin'); loadData(session.user.id); }
-      else { setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN); setIsAdminDB(false); localStorage.removeItem('is_admin'); }
+      if(session) { setIsAdminDB(false); sessionStorage.removeItem('is_admin'); loadData(session.user.id); }
+      else { setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN); setIsAdminDB(false); sessionStorage.removeItem('is_admin'); }
     });
     // Sync a cada 2 minutos — sem polling constante
     const syncInterval = setInterval(async () => {
