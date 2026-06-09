@@ -791,33 +791,10 @@ const triggerApkBuild = async (clientName, logoUrl, primaryColor) => {
   return res.status === 204;
 };
 
-const SB_SERVICE = 'sb_secret_KKz1RdMM9rLnJepan3IhpQ_'+'-cW7GqIo';
-const SB_URL = 'https://kxeqhorxhlgwcgywovqr.supabase.co';
-
 const fetchClients = async () => {
   try {
-    const [authRes, profRes] = await Promise.all([
-      fetch(SB_URL+'/auth/v1/admin/users?per_page=100', {
-        headers: {apikey:SB_SERVICE, Authorization:'Bearer '+SB_SERVICE}
-      }),
-      sb.from('company_profiles').select('*'),
-    ]);
-    const authJson = await authRes.json();
-    const authUsers = authJson.users || [];
-    const profiles  = profRes.data || [];
-    const profMap   = {};
-    profiles.forEach(p => { profMap[p.user_id] = p; });
-    return authUsers.map(u => {
-      const prof = profMap[u.id];
-      return {
-        user_id:  u.id,
-        email:    u.email,
-        name:     prof ? prof.name     : u.email.split('@')[0],
-        color:    prof ? prof.color    : '#002f59',
-        logo_url: prof ? prof.logo_url : null,
-        logo:     prof ? prof.logo     : 'G',
-      };
-    });
+    const { data } = await sb.from('company_profiles').select('*').order('user_id');
+    return data || [];
   } catch(_) { return []; }
 };
 
