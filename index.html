@@ -1519,7 +1519,8 @@ function App() {
       if (navigator.onLine) {
         setSyncStatus('syncing');
         const [ok, admin] = await Promise.all([syncAll(uid), fetchRole(uid)]);
-        if (admin) setIsAdminDB(true);
+        setIsAdminDB(admin);
+        if (!admin) localStorage.removeItem('is_admin');
         if (ok) { await loadFromLocal(uid); setSyncStatus('ok'); setTimeout(()=>setSyncStatus('idle'),3000); }
         else { setSyncStatus('error'); setTimeout(()=>setSyncStatus('idle'),5000); }
       }
@@ -1557,7 +1558,7 @@ function App() {
     });
     const {data:{subscription}} = sb.auth.onAuthStateChange((_,session) => {
       setSession(session);
-      if(session) loadData(session.user.id);
+      if(session) { setIsAdminDB(false); localStorage.removeItem('is_admin'); loadData(session.user.id); }
       else { setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setIsAdminDB(false); localStorage.removeItem('is_admin'); }
     });
     // Sync a cada 2 minutos — sem polling constante
