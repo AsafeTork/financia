@@ -323,6 +323,22 @@ const Sidebar = ({view,onNav,brand,open,onClose,isAdmin}) => (
   </>
 );
 
+const UsageBar = ({label, used, limit}) => {
+  var pct = Math.min(Math.round((used / limit) * 100), 100);
+  var warn = pct >= 80;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex justify-between items-center">
+        <span className="text-xs text-gray-500">{label}</span>
+        <span className={'text-xs font-semibold ' + (warn ? 'text-amber-600' : 'text-gray-400')}>{used}/{limit}</span>
+      </div>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{background:'#e5e7eb'}}>
+        <div className="h-full rounded-full" style={{width: pct + '%', background: warn ? '#f59e0b' : '#1a6b5c', transition:'width 0.3s'}}/>
+      </div>
+    </div>
+  );
+};
+
 const KpiCard = ({label,value,sub,color}) => (
   <Card className="p-5 overflow-hidden relative">
     <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl" style={{background:color}}/>
@@ -351,7 +367,7 @@ const BarChartSVG = ({data}) => {
   );
 };
 
-const Dashboard = ({tx,products,brand,onNav}) => {
+const Dashboard = ({tx,products,brand,onNav,planInfo,lossesCount}) => {
   const cm = today().slice(0,7);
   const mtx = tx.filter(t=>t.date.startsWith(cm));
   const ti = mtx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
@@ -384,6 +400,15 @@ const Dashboard = ({tx,products,brand,onNav}) => {
             </div>
           ))}
         </div>
+      )}
+      {effectivePlan(planInfo) === 'free' && (
+        <Card className="px-5 py-4 flex flex-col gap-3">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Uso do plano gratuito</p>
+          <UsageBar label="Transacoes" used={tx.length} limit={PLAN_LIMITS.free.transactions}/>
+          <UsageBar label="Produtos" used={products.length} limit={PLAN_LIMITS.free.products}/>
+          <UsageBar label="Perdas" used={lossesCount || 0} limit={PLAN_LIMITS.free.losses}/>
+          <p className="text-xs text-gray-400">Faca upgrade para o Plano Pro e tenha tudo ilimitado.</p>
+        </Card>
       )}
       <div className="grid grid-cols-2 gap-3">
         <KpiCard label="Entradas (mes)" value={fmt(ti)} color="#1a6b5c"/>
@@ -884,20 +909,33 @@ const ClientEditModal = ({client, adminEmail, onSave, onClose, toast}) => {
 
   const save = async () => {
     setSaving(true);
-    const planChanged = plan !== (client.plan || 'free');
-    const payload = { name, color };
-    if (planChanged) {
-      payload.plan = plan;
-      payload.plan_expires_at = null; // ativacao indefinida ate revogar
-      payload.plan_activated_by = plan === 'pro' ? (adminEmail || 'admin') : null;
+    try {
+      const planChanged = plan !== (client.plan || 'free');
+      const { error: profileErr } = await sb.from('company_profiles')
+        .update({ name: name, color: color })
+        .eq('user_id', client.user_id);
+      if (profileErr) { toast('Erro ao salvar perfil.', 'error'); return; }
+      if (planChanged) {
+        const { error: planErr } = await sb.rpc('set_client_plan', {
+          target: client.user_id,
+          new_plan: plan,
+          actor: adminEmail || 'admin',
+        });
+        if (planErr) { toast('Erro ao alterar plano: ' + planErr.message, 'error'); return; }
+      }
+      toast(planChanged ? ('Plano alterado para ' + plan.toUpperCase()) : 'Atualizado!');
+      var updated = Object.assign({}, client, { name: name, color: color });
+      if (planChanged) {
+        updated.plan = plan;
+        updated.plan_expires_at = null;
+        updated.plan_activated_by = plan === 'pro' ? (adminEmail || 'admin') : null;
+      }
+      onSave(updated);
+    } catch(e) {
+      toast('Erro inesperado.', 'error');
+    } finally {
+      setSaving(false);
     }
-    const { error } = await sb.from('company_profiles')
-      .update(payload)
-      .eq('user_id', client.user_id);
-    setSaving(false);
-    if (error) { toast('Erro ao salvar.', 'error'); return; }
-    toast(planChanged ? ('Plano alterado para '+plan.toUpperCase()) : 'Atualizado!');
-    onSave({ ...client, ...payload });
   };
 
   return (
@@ -1836,7 +1874,7 @@ function App() {
 
   const p = {brand,toast,confirm};
   const views = {
-    dashboard: <Dashboard tx={tx} products={products} brand={brand} onNav={navTo}/>,
+    dashboard: <Dashboard tx={tx} products={products} brand={brand} onNav={navTo} planInfo={planInfo} lossesCount={losses.length}/>,
     income: <TxView type="income" tx={tx} products={products} onAdd={addTx} onEdit={editTx} onDelete={deleteTx} onDeductStock={(id,qty)=>adjustStock(id,-qty)} {...p}/>,
     expense: <TxView type="expense" tx={tx} products={products} onAdd={addTx} onEdit={editTx} onDelete={deleteTx} onDeductStock={()=>{}} {...p}/>,
     inventory: <InventoryView products={products} losses={losses} onAddProduct={addProduct} onEditProduct={editProduct} onDeleteProduct={deleteProduct} onAddLoss={addLoss} onEditLoss={editLoss} onDeleteLoss={deleteLoss} onAdjustStock={adjustStock} {...p}/>,
