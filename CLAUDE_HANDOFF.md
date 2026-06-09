@@ -89,6 +89,25 @@ O que funciona:
 - syncProfiles e syncTable: verificam erro antes de marcar _synced=1
 - nancia_gh_token e is_admin em sessionStorage (nao persistem entre sessoes)
 
+## Migracao Vite (branch refactor/vite)
+
+**NUNCA mergear no main sem aprovacao explicita de Asafe.**
+
+Ultimo commit: `2510d6c`
+
+| Step | Status | Commit | Descricao |
+|------|--------|--------|-----------|
+| 1 | DONE | 3282b27 | Vite setup, index.html, package.json, configs, src/index.css, src/main.jsx |
+| 2 | DONE | 9af4e0f | src/lib/utils.js, constants.js, supabase.js |
+| 3 | DONE | 2510d6c | src/lib/db.js (Dexie schema v1/v2, syncAll, syncTable, syncProfiles, fetchClients, deleteClient, triggerApkBuild) |
+| 4 | pendente | — | src/components/ (Card, Inp, Sel, Textarea, Spin, Empty, Toast, Offline, Confirm, UpgradeModal, Modal, EditBtn, DelBtn, LogoImg, SyncBadge, UsageBar, KpiCard, BarChartSVG, PSearch, CartRow, SaleForm, Sidebar) |
+| 5 | pendente | — | src/views/ Dashboard, TxView, InventoryView, ReportView, EmailView |
+| 6 | pendente | — | src/admin/ AdminPanel, ClientEditModal, GhTokenCard |
+| 7 | pendente | — | src/views/ SettingsView, Login |
+| 8 | pendente | — | src/App.jsx + src/main.jsx (App completo, auth, CRUDs) |
+| 9 | pendente | — | Render: serve dist/ |
+| 10 | pendente | — | npm run build final, teste completo |
+
 ## Proximas tarefas (em ordem de prioridade)
 
 1. **Fase 3 Stripe** — so quando Asafe pedir.
