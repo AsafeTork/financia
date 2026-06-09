@@ -1148,7 +1148,26 @@ const SettingsView = ({brand,session,onSave,toast,confirm,isAdmin}) => {
     const {error} = await sb.storage.from('logos').upload(path,file,{upsert:true});
     if(error){toast('Erro no upload.','error');setUploading(false);return;}
     const {data:{publicUrl}} = sb.storage.from('logos').getPublicUrl(path);
-    setForm(f=>({...f,logo_url:publicUrl+'?t='+Date.now()}));
+    const url = publicUrl+'?t='+Date.now();
+    setForm(f=>({...f,logo_url:url}));
+    const imgEl=new Image(); imgEl.crossOrigin='anonymous';
+    imgEl.onload=()=>{
+      try{
+        const cv=document.createElement('canvas'); cv.width=50;cv.height=50;
+        const ctx=cv.getContext('2d'); ctx.drawImage(imgEl,0,0,50,50);
+        const px=ctx.getImageData(0,0,50,50).data; const bk={};
+        for(let i=0;i<px.length;i+=4){
+          if(px[i+3]<128) continue;
+          const r=Math.round(px[i]/32)*32,g=Math.round(px[i+1]/32)*32,b=Math.round(px[i+2]/32)*32;
+          if(r>230&&g>230&&b>230) continue;
+          const k=r+','+g+','+b; bk[k]=(bk[k]||0)+1;
+        }
+        const hexes=Object.entries(bk).sort((a,b2)=>b2[1]-a[1]).slice(0,6)
+          .map(([k])=>{const[r,g,b]=k.split(',').map(Number);return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');});
+        if(hexes.length){setExtractedColors(hexes);setForm(f=>({...f,color:hexes[0]}));}
+      }catch(_){}
+    };
+    imgEl.src=url;
     toast('Logo enviada!'); setUploading(false);
   };
   const allTabs = [{key:'brand',label:'Branding'},{key:'security',label:'Seguranca'},{key:'account',label:'Conta'},{key:'clients',label:'Clientes',adminOnly:true}];
