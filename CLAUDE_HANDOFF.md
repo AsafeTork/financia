@@ -47,7 +47,7 @@ RLS pendente (nao confirmada):
   O front usa sb.rpc('set_client_plan') agora, entao o risco diminuiu, mas a policy de
   UPDATE ainda deve existir para defesa em profundidade.
 
-## Estado do codigo (main, ultimo commit 5f9c880)
+## Estado do codigo (main, ultimo commit a133c3c)
 
 O que funciona:
 - Gating de planos: enforceLimit bloqueia addTx/addProduct/addLoss quando Free bate limite
@@ -60,6 +60,12 @@ O que funciona:
 - fetchClients usa RLS policy "select_own_or_admin" — sem service_role no front
 - fetchRole retorna boolean correto para isAdmin
 - handleSaveBrand com try/finally — botao nao trava em caso de erro
+- Todos os CRUDs (addTx..saveBrand): try/catch em writes Dexie; estado so atualiza apos confirmacao
+- addTx/addProduct/addLoss: validacoes de input (desc obrigatoria, valor>0, qty>0)
+- addProduct usa campos explicitos (sem spread ...p)
+- editTx/editProduct/editLoss maps: Object.assign em vez de spread
+- syncProfiles: so marca _synced=1 se upsert Supabase nao retornar erro
+- syncTable pull: retorna cedo se query Supabase retornar erro (nao corrompe dados locais)
 
 ## Proximas tarefas (em ordem de prioridade)
 
