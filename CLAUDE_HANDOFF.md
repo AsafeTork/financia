@@ -2,65 +2,87 @@
 
 Audience: next Claude session. Asafe is not a coder. Tom: tecnico direto.
 
-## Session 2026-06-09 — Plans rollout Phase 1+2
+## Decisoes permanentes
 
-### Decisoes que ja foram tomadas
-- Pricing: Freemium. Free = offline-only no cliente. Pro = R$ 70/mes.
-- Limites Free: 50 transactions / 20 products / 10 losses (totais, nao mensais).
-- Pro ativado MANUALMENTE pelo admin no painel — sem Stripe nesta fase.
-- Migration Vite esta APROVADA mas POSPOSTA. Branch dedicada `refactor/vite`, NUNCA no main, e so depois que plans estiver estavel. Nao iniciar Vite ate Asafe pedir.
-- Stripe = Phase 3, posterga ate Asafe confirmar.
+- Pricing: Freemium. Free (offline, limites) + Pro R$ 70/mes (online, ilimitado).
+- Limites Free: 50 tx / 20 produtos / 10 perdas (totais, nao por mes).
+- Pro ativado manualmente pelo admin no painel — sem Stripe nesta fase.
+- Migração Vite: APROVADA mas POSTERGADA. Branch `refactor/vite`, nunca no main, so quando Asafe pedir.
+- Stripe (Phase 3): postergado ate Asafe confirmar.
+- Token GitHub no localStorage: risco alto, conhecido, nao urgente pois nao ha clientes em producao.
 
-### O que foi feito nesta sessao
-Branch: `feat/plans-gating` (criada a partir de main em 6a9c868).
+## Regras de codigo (nao violar)
 
-Arquivos novos:
-- `supabase/migrations/20260609_add_plan_to_company_profiles.sql` — ALTER TABLE para adicionar 3 colunas (plan, plan_expires_at, plan_activated_by) + check constraint + index + bloco de comentarios explicando como configurar RLS.
-- `CLAUDE_HANDOFF.md` — este arquivo.
+- Sem optional chaining (?.) — Babel CDN nao suporta
+- Sem arrow spreads iniciais (`=> {...spread}`) — causa parse error
+- Sem emoji em strings JS
+- Script tag: `<script type="text/babel" data-presets="react">`
+- Deploy sempre via git push main; Render auto-deploya
+- Nunca service_role key no front — tudo via RLS + sb.rpc() SECURITY DEFINER
+- Checklist pre-commit obrigatorio (ver abaixo)
 
-Arquivos modificados:
-- `index.html` — gating completo de planos (no JSX inline):
-  - Helpers globais: `INIT_PLAN`, `PLAN_LIMITS`, `effectivePlan(p)`, `limitFor`, `atLimit`, `PLAN_KIND_LABEL`.
-  - Componente `UpgradeModal` (mostra limite atingido + CTA "fale com suporte"). Nenhum botao de checkout — manual por enquanto.
-  - State no `App()`: `planInfo` + `setPlanInfo`, `upgradeNotice` + `setUpgradeNotice`, `enforceLimit(kind, count)`.
-  - `loadFromLocal` e fallback do `loadData` carregam `plan/plan_expires_at/plan_activated_by` do profile.
-  - Logout reseta planInfo para INIT_PLAN.
-  - `addTx`, `addProduct`, `addLoss` chamam `enforceLimit` antes de inserir; bloqueia e abre UpgradeModal.
-  - `syncProfiles` agora usa whitelist `PROFILE_WRITE_FIELDS = ['user_id','name','logo','color','logo_url']`. Front nunca envia campos de plan para o servidor.
-  - `ClientEditModal` ganhou seletor Free/Pro. Quando admin altera para Pro, envia `plan='pro', plan_expires_at=null, plan_activated_by=<email do admin>`.
-  - `AdminPanel` recebe `session`, expoe `adminEmail`, passa para o modal.
-  - Lista de clientes do AdminPanel mostra badge FREE/PRO (calculado via `effectivePlan(c)`).
+### Checklist pre-commit (rodar com node no diretorio do repo)
 
-Sintaxe validada com `@babel/parser` (PARSE OK, 1844 linhas no bloco babel).
+```js
+const fs=require('fs'),parser=require('@babel/parser');
+const js=fs.readFileSync('index.html','utf8').match(/<script type="text\/babel"[^>]*>([\s\S]*?)<\/script>/)[1];
+parser.parse(js,{sourceType:'script',plugins:['jsx']});
+console.assert((js.match(/=>\{?\s*\.\.\./g)||[]).length===0,'arrow spreads');
+console.assert((js.match(/\?\.[a-zA-Z_]/g)||[]).length===0,'optional chain');
+console.assert(js.includes('const fmt'),'const fmt');
+console.assert(js.includes('const today'),'const today');
+console.log('OK');
+```
 
-Commits: ver `git log feat/plans-gating ^main`.
+## Estado do banco (Supabase kxeqhorxhlgwcgywovqr)
 
-### Estado do app
-- Codigo: completo e parseavel, mas DEPENDE da migration ter sido aplicada no Supabase para funcionar em prod.
-- Se a migration NAO rodou: as colunas nao existem, `pr.data.plan` vira `undefined`, `effectivePlan` retorna 'free' por default, e o gating funciona com limite Free para TODOS (inclusive contas que deveriam ser Pro). Comportamento aceitavel mas indesejado — rodar a migration assim que Asafe puder.
-- Front nunca quebra se as colunas faltarem.
+Migrations ja aplicadas:
+- `20260609_add_plan_to_company_profiles.sql` — colunas plan/plan_expires_at/plan_activated_by
+- `20260609_rls_admin_read_profiles.sql` — policy select_own_or_admin em company_profiles
+- `20260609_rls_admin_delete_client.sql` — policies DELETE para admin em todas as tabelas
+- `set_client_plan` SECURITY DEFINER function — criada por Asafe (nao ha migration file, foi rodada manualmente)
 
-### O QUE ASAFE PRECISA FAZER (bloqueio externo)
-1. Abrir Supabase Studio do projeto `kxeqhorxhlgwcgywovqr`.
-2. SQL Editor > colar conteudo de `supabase/migrations/20260609_add_plan_to_company_profiles.sql` > Run.
-3. **CRITICO**: configurar RLS para que usuarios comuns NAO possam UPDATE em `plan`, `plan_expires_at`, `plan_activated_by`. Ver bloco de comentarios na migration para opcoes. Sem isso, qualquer cliente vira Pro via devtools com 1 linha de JS no console.
+RLS pendente (nao confirmada):
+- Policy UPDATE em company_profiles que bloqueia cliente de alterar plan diretamente.
+  O front usa sb.rpc('set_client_plan') agora, entao o risco diminuiu, mas a policy de
+  UPDATE ainda deve existir para defesa em profundidade.
 
-### Proxima tarefa (depois da migration + RLS)
-Em ordem:
-1. **Auditar RLS de company_profiles** — confirmar que mesmo apos a migration, somente admin altera colunas de plan. Tentar do front (sb.from('company_profiles').update({plan:'pro'}).eq('user_id', <self>)) com conta nao-admin e confirmar erro.
-2. **Indicador de uso no Dashboard** para quem e Free: barra "Voce usou X/50 transacoes". Componente nao foi criado nesta sessao.
-3. **Email/notificacao** quando admin promove cliente para Pro — fora de escopo desta sessao.
-4. **Phase 3 (Stripe)** — so quando Asafe pedir. Edge Function para checkout, webhook que atualiza `plan` via SECURITY DEFINER function. NAO usar PAT/admin keys no client.
+## Estado do codigo (main, ultimo commit 5f9c880)
 
-### Problemas conhecidos / divida tecnica
-- Token GitHub ainda no localStorage do front (linha ~798) — risco ALTO, herdado, fora do escopo desta sessao. Asafe ja foi alertado em 2026-06-09.
-- index.html monolitico — migration Vite POSPOSTA por decisao explicita do Asafe.
-- Limites Free sao TOTAIS, nao por mes. Se isso for confuso para o usuario, ajustar `PLAN_LIMITS` e os call sites (count seria de tx do mes vigente).
-- Cliente promovido para Pro precisa fazer logout/login OU esperar 2min (intervalo do syncProfiles) para o front pegar o novo plan. Aceitavel por enquanto.
+O que funciona:
+- Gating de planos: enforceLimit bloqueia addTx/addProduct/addLoss quando Free bate limite
+- UpgradeModal aparece quando limite atingido
+- AdminPanel: lista clientes com badge FREE/PRO, botao Editar abre ClientEditModal
+- ClientEditModal: altera name/color via update direto; altera plan via sb.rpc('set_client_plan')
+- Dashboard: card "Uso do plano gratuito" visivel so para Free, com barras de progresso
+  (fica amarelo quando passa 80% do limite)
+- Navegacao persistida no hash da URL (#dashboard, #inventory, etc.)
+- fetchClients usa RLS policy "select_own_or_admin" — sem service_role no front
+- fetchRole retorna boolean correto para isAdmin
+- handleSaveBrand com try/finally — botao nao trava em caso de erro
 
-### Como rodar local (Asafe)
-Servico esta no Render: `https://gestao-financeira-7heu.onrender.com`. Render auto-deploya a partir do main. Branch feat/plans-gating NAO sera deployada ate fazer merge.
+## Proximas tarefas (em ordem de prioridade)
 
-### Branch e PR
-Branch: feat/plans-gating, baseada em main (6a9c868).
-PR sera aberto ao final desta sessao. Aguardar Asafe revisar e fazer merge.
+1. **Verificar RLS UPDATE em company_profiles**
+   Confirmar que cliente nao pode alterar plan diretamente via devtools mesmo com rpc bloqueado.
+   Teste: logar como conta nao-admin, rodar no console:
+   `sb.from('company_profiles').update({plan:'pro'}).eq('user_id','<self_uid>').then(console.log)`
+   Deve retornar erro de RLS ou sucesso sem efeito. Se alterar, criar policy UPDATE.
+
+2. **Mover token GitHub do localStorage para sessionStorage**
+   Linha ~870: `localStorage.getItem('nancia_gh_token')`.
+   sessionStorage limpa ao fechar o browser — reduz janela de exposicao.
+   Baixa prioridade enquanto nao houver clientes em producao.
+
+3. **Fase 3 Stripe** — so quando Asafe pedir.
+   Arquitetura: Edge Function Supabase cria checkout session, webhook atualiza plan via
+   sb.rpc('set_client_plan'). Nunca chave Stripe no front.
+
+## Problemas conhecidos
+
+- Cliente promovido para Pro precisa fazer logout/login (ou esperar 2min de sync) para ver mudanca.
+  Aceitavel por enquanto.
+- Limites Free sao totais (nao por mes). Se Asafe quiser mudar para "por mes", ajustar
+  PLAN_LIMITS e os call sites (count seria de tx/produtos/perdas do mes vigente).
+- Babel no browser em producao: performance ruim em mobile antigo. Resolvido na migracao Vite.
+- index.html monolitico ~1960 linhas. Resolvido na migracao Vite.
