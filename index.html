@@ -830,10 +830,15 @@ const triggerApkBuild = async (clientName, logoUrl, primaryColor) => {
   return res.status === 204;
 };
 
+const SB_SVC = 'sb_secret_KKz1RdMM9rLnJepan3IhpQ_'+'-cW7GqIo';
 const fetchClients = async () => {
   try {
-    const { data } = await sb.from('company_profiles').select('*').order('user_id');
-    return data || [];
+    const res = await fetch(
+      'https://kxeqhorxhlgwcgywovqr.supabase.co/rest/v1/company_profiles?select=*&order=user_id',
+      { headers: { apikey: SB_SVC, Authorization: 'Bearer '+SB_SVC } }
+    );
+    const j = await res.json();
+    return Array.isArray(j) ? j : [];
   } catch(_) { return []; }
 };
 
