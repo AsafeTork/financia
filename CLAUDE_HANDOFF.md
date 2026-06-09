@@ -9,7 +9,7 @@ Audience: next Claude session. Asafe is not a coder. Tom: tecnico direto.
 - Pro ativado manualmente pelo admin no painel — sem Stripe nesta fase.
 - Migração Vite: APROVADA mas POSTERGADA. Branch `refactor/vite`, nunca no main, so quando Asafe pedir.
 - Stripe (Phase 3): postergado ate Asafe confirmar.
-- Token GitHub no localStorage: risco baixo por ora, sem clientes em producao.
+- Token GitHub e is_admin: migrados para sessionStorage (commit 6c33786).
 
 ## Regras de codigo (nao violar)
 
@@ -31,6 +31,7 @@ console.assert((js.match(/=>\{?\s*\.\.\./g)||[]).length===0,"arrow spreads");
 console.assert((js.match(/\?\.[a-zA-Z_]/g)||[]).length===0,"optional chain");
 console.assert(js.includes("const fmt"),"const fmt");
 console.assert(js.includes("const today"),"const today");
+console.assert(!js.includes("localStorage"),"localStorage direto — use sessionStorage ou Dexie");
 console.log("OK");
 ```
 
@@ -61,7 +62,20 @@ console.log("OK");
 - Admin set_client_plan pro: HTTP 204, plan vira pro
 - Admin set_client_plan free: HTTP 204, plan volta para free
 
-## Estado do codigo (main, ultimo commit ff77c05)
+## Estado do storage (auditado em 2026-06-09)
+
+| Dado | Storage | Status |
+|------|---------|--------|
+| nancia_gh_token | sessionStorage | OK — limpa ao fechar browser |
+| is_admin | sessionStorage | OK — limpa ao fechar browser |
+| role_<uid> | Dexie ldb.meta | OK — cache offline da role, ligado ao UID |
+| last_sync | Dexie ldb.meta | OK — timestamp tecnico de sync incremental |
+| tx/products/losses/profiles | Dexie | OK — offline-first por design |
+| JWT Supabase Auth | localStorage (SDK interno) | Fora do controle do app — comportamento padrao do @supabase/supabase-js, nao alterar |
+
+Zero usos de localStorage direto no codigo do app. Checklist pre-commit agora valida isso.
+
+## Estado do codigo (main, ultimo commit 6c33786)
 
 O que funciona:
 - Gating de planos: enforceLimit bloqueia addTx/addProduct/addLoss quando Free bate limite
@@ -73,15 +87,11 @@ O que funciona:
 - fetchClients usa RLS policy "select_own_or_admin" — sem service_role no front
 - Todos os CRUDs: try/catch em writes Dexie; validacoes de input
 - syncProfiles e syncTable: verificam erro antes de marcar _synced=1
+- nancia_gh_token e is_admin em sessionStorage (nao persistem entre sessoes)
 
 ## Proximas tarefas (em ordem de prioridade)
 
-1. **Mover token GitHub do localStorage para sessionStorage**
-   Linha ~870 do index.html: `localStorage.getItem("nancia_gh_token")`.
-   sessionStorage limpa ao fechar o browser — reduz janela de exposicao.
-   Baixa prioridade enquanto nao houver clientes em producao.
-
-2. **Fase 3 Stripe** — so quando Asafe pedir.
+1. **Fase 3 Stripe** — so quando Asafe pedir.
    Arquitetura: Edge Function Supabase cria checkout session, webhook atualiza plan via
    set_client_plan. Nunca chave Stripe no front.
 
@@ -91,4 +101,4 @@ O que funciona:
 - Limites Free sao totais (nao por mes).
 - Babel no browser: performance ruim em mobile antigo. Resolvido na migracao Vite.
 - index.html monolitico ~1960 linhas. Resolvido na migracao Vite.
-
+- Admin que usa sessionStorage para is_admin precisa re-logar ao abrir nova aba (comportamento esperado).
