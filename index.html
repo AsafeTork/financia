@@ -1389,7 +1389,7 @@ const SettingsView = ({brand,session,onSave,toast,confirm,isAdmin}) => {
       {tab==='clients' && (
         <div className="flex flex-col gap-4">
           <GhTokenCard toast={toast}/>
-          <Card className="p-6"><AdminPanel toast={toast} session={session}/></Card>
+          <Card className="p-6"><AdminPanel toast={toast} confirm={confirm} session={session}/></Card>
         </div>
       )}
     </div>
