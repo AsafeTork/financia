@@ -830,15 +830,12 @@ const triggerApkBuild = async (clientName, logoUrl, primaryColor) => {
   return res.status === 204;
 };
 
-const SB_SVC = 'sb_secret_KKz1RdMM9rLnJepan3IhpQ_'+'-cW7GqIo';
 const fetchClients = async () => {
   try {
-    const res = await fetch(
-      'https://kxeqhorxhlgwcgywovqr.supabase.co/rest/v1/company_profiles?select=*&order=user_id',
-      { headers: { apikey: SB_SVC, Authorization: 'Bearer '+SB_SVC } }
-    );
-    const j = await res.json();
-    return Array.isArray(j) ? j : [];
+    // A policy "admin_read_all_profiles" (migration 20260609_rls_admin_read_profiles.sql)
+    // permite que usuarios com role='admin' leiam todos os perfis via RLS normal.
+    const { data } = await sb.from('company_profiles').select('*').order('user_id');
+    return data || [];
   } catch(_) { return []; }
 };
 
