@@ -1601,7 +1601,10 @@ function App() {
   const [isAdminDB,setIsAdminDB] = useState(localStorage.getItem('is_admin')==='1');
   const [appLoading,setAppLoading] = useState(true);
   const [dataLoading,setDataLoading] = useState(false);
-  const [view,setView] = useState('dashboard');
+  const VALID_VIEWS = ['dashboard','income','expense','inventory','email','report','settings'];
+  const hashView = () => { const h = window.location.hash.replace('#',''); return VALID_VIEWS.includes(h) ? h : 'dashboard'; };
+  const [view,setView] = useState(hashView);
+  const navTo = useCallback(v => { setView(v); window.location.hash = v; }, []);
   const [brand,setBrand] = useState(INIT_BRAND);
   const [planInfo,setPlanInfo] = useState(INIT_PLAN);
   const [tx,setTx] = useState([]);
@@ -1718,7 +1721,9 @@ function App() {
       const ok = await syncAll(uid);
       if (ok) { await loadFromLocal(uid); setSyncStatus('ok'); setTimeout(()=>setSyncStatus('idle'),3000); }
     }, 120000);
-    return () => { subscription.unsubscribe(); clearInterval(syncInterval); };
+    const onHash = () => setView(hashView());
+    window.addEventListener('hashchange', onHash);
+    return () => { subscription.unsubscribe(); clearInterval(syncInterval); window.removeEventListener('hashchange', onHash); };
   },[]);
 
   const addTx = async t => {
@@ -1829,7 +1834,7 @@ function App() {
 
   const p = {brand,toast,confirm};
   const views = {
-    dashboard: <Dashboard tx={tx} products={products} brand={brand} onNav={setView}/>,
+    dashboard: <Dashboard tx={tx} products={products} brand={brand} onNav={navTo}/>,
     income: <TxView type="income" tx={tx} products={products} onAdd={addTx} onEdit={editTx} onDelete={deleteTx} onDeductStock={(id,qty)=>adjustStock(id,-qty)} {...p}/>,
     expense: <TxView type="expense" tx={tx} products={products} onAdd={addTx} onEdit={editTx} onDelete={deleteTx} onDeductStock={()=>{}} {...p}/>,
     inventory: <InventoryView products={products} losses={losses} onAddProduct={addProduct} onEditProduct={editProduct} onDeleteProduct={deleteProduct} onAddLoss={addLoss} onEditLoss={editLoss} onDeleteLoss={deleteLoss} onAdjustStock={adjustStock} {...p}/>,
@@ -1842,7 +1847,7 @@ function App() {
     <div className="min-h-screen flex" style={{background:'#f8fafc'}}>
       <Offline/>
       <SyncBadge status={syncStatus}/>
-      <Sidebar view={view} onNav={setView} brand={brand} open={sidebarOpen} isAdmin={isAdminDB} onClose={()=>setSidebarOpen(false)}/>
+      <Sidebar view={view} onNav={navTo} brand={brand} open={sidebarOpen} isAdmin={isAdminDB} onClose={()=>setSidebarOpen(false)}/>
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         <header className="sticky top-0 z-20 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 lg:hidden">
           <button onClick={()=>setSidebarOpen(true)} className="text-gray-400 p-1 rounded-lg hover:bg-gray-100">
