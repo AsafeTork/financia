@@ -39,6 +39,19 @@ const sb = createClient(
 );
 
 const INIT_BRAND = {name:'Financia', color:'#002f59', logo:'G', logo_url:null}
+const INIT_PLAN = {plan:'free', plan_expires_at:null, plan_activated_by:null};
+const PLAN_LIMITS = {
+  free: { transactions: 50, products: 20, losses: 10 },
+  pro:  { transactions: Infinity, products: Infinity, losses: Infinity },
+};
+const effectivePlan = p => {
+  if (!p || p.plan !== 'pro') return 'free';
+  if (!p.plan_expires_at) return 'pro';
+  return new Date(p.plan_expires_at) > new Date() ? 'pro' : 'free';
+};
+const limitFor = (p, kind) => PLAN_LIMITS[effectivePlan(p)][kind];
+const atLimit = (p, kind, count) => count >= limitFor(p, kind);
+const PLAN_KIND_LABEL = { transactions:'transacoes', products:'produtos', losses:'perdas' };
 const isUrl = s => !!(s && (s.startsWith('http') || s.startsWith('data:') || s.startsWith('/')));
 const LogoImg = ({logo,logoUrl,color,sz,rd}) => {
   const src = logoUrl||(isUrl(logo)?logo:null);
@@ -114,6 +127,32 @@ const Confirm = ({msg,onOk,onCancel}) => (
         <button onClick={onCancel} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Cancelar</button>
         <button onClick={onOk} className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90">Confirmar</button>
       </div>
+    </div>
+  </div>
+);
+
+const UpgradeModal = ({kind, limit, onClose}) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 anim-fade" style={{background:'rgba(0,0,0,0.5)'}}>
+    <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col gap-4" style={{boxShadow:'0 25px 60px rgba(0,0,0,0.2)'}}>
+      <div className="flex items-center gap-2">
+        <span className="text-2xl">{'✨'}</span>
+        <p className="font-bold text-gray-800">Limite do plano grátis</p>
+      </div>
+      <p className="text-sm text-gray-600 leading-relaxed">
+        Voce atingiu o limite de <b>{limit} {PLAN_KIND_LABEL[kind]}</b> do plano gratuito.
+      </p>
+      <div className="rounded-xl p-3 flex flex-col gap-1.5" style={{background:'#f0fdf4',border:'1px solid #bbf7d0'}}>
+        <p className="text-xs font-bold text-gray-700">Plano Pro - R$ 70/mes</p>
+        <p className="text-xs text-gray-600">- Transacoes, produtos e perdas ilimitados</p>
+        <p className="text-xs text-gray-600">- Sincronizacao entre aparelhos</p>
+        <p className="text-xs text-gray-600">- Backup automatico na nuvem</p>
+      </div>
+      <p className="text-xs text-gray-500 text-center">
+        Para liberar o Pro, entre em contato com o suporte.
+      </p>
+      <button onClick={onClose} className="w-full text-white rounded-xl py-2.5 text-sm font-semibold" style={{background:'#1a6b5c'}}>
+        Entendi
+      </button>
     </div>
   </div>
 );
@@ -833,20 +872,28 @@ const GhTokenCard = ({toast}) => {
   );
 };
 
-const ClientEditModal = ({client, onSave, onClose, toast}) => {
+const ClientEditModal = ({client, adminEmail, onSave, onClose, toast}) => {
   const [color, setColor] = React.useState(client.color || '#002f59');
   const [name,  setName]  = React.useState(client.name  || '');
+  const [plan,  setPlan]  = React.useState(client.plan  || 'free');
   const [saving,setSaving] = React.useState(false);
 
   const save = async () => {
     setSaving(true);
+    const planChanged = plan !== (client.plan || 'free');
+    const payload = { name, color };
+    if (planChanged) {
+      payload.plan = plan;
+      payload.plan_expires_at = null; // ativacao indefinida ate revogar
+      payload.plan_activated_by = plan === 'pro' ? (adminEmail || 'admin') : null;
+    }
     const { error } = await sb.from('company_profiles')
-      .update({ name, color })
+      .update(payload)
       .eq('user_id', client.user_id);
     setSaving(false);
     if (error) { toast('Erro ao salvar.', 'error'); return; }
-    toast('Atualizado!');
-    onSave({ ...client, name, color });
+    toast(planChanged ? ('Plano alterado para '+plan.toUpperCase()) : 'Atualizado!');
+    onSave({ ...client, ...payload });
   };
 
   return (
@@ -871,6 +918,24 @@ const ClientEditModal = ({client, onSave, onClose, toast}) => {
             <span className="text-sm font-mono text-gray-600">{color}</span>
           </div>
         </div>
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Plano</label>
+          <div className="flex gap-2">
+            <button type="button" onClick={()=>setPlan('free')}
+              className={'flex-1 py-2 rounded-xl text-sm font-semibold border '+(plan==='free'?'text-white':'text-gray-600 bg-white border-gray-200')}
+              style={plan==='free'?{background:'#6b7280',borderColor:'#6b7280'}:{}}>
+              Free
+            </button>
+            <button type="button" onClick={()=>setPlan('pro')}
+              className={'flex-1 py-2 rounded-xl text-sm font-semibold border '+(plan==='pro'?'text-white':'text-gray-600 bg-white border-gray-200')}
+              style={plan==='pro'?{background:'#1a6b5c',borderColor:'#1a6b5c'}:{}}>
+              Pro (R$ 70/mes)
+            </button>
+          </div>
+          {client.plan_activated_by && plan==='pro' && (
+            <p className="text-xs text-gray-400">Ativado por: {client.plan_activated_by}</p>
+          )}
+        </div>
         <div className="flex gap-2">
           <button onClick={onClose}
             className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600">
@@ -887,7 +952,8 @@ const ClientEditModal = ({client, onSave, onClose, toast}) => {
   );
 };
 
-const AdminPanel = ({toast,confirm}) => {
+const AdminPanel = ({toast,confirm,session}) => {
+  const adminEmail = session && session.user ? session.user.email : 'admin';
   const BLANK = {email:'',password:'',companyName:'',logoUrl:'',primaryColor:'#002f59',colors:['#002f59']};
   const [form,setForm]         = React.useState(BLANK);
   const [creating,setCreating] = React.useState(false);
@@ -991,7 +1057,13 @@ const AdminPanel = ({toast,confirm}) => {
                         : <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">{(c.name||'?')[0]}</div>}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{c.name||'Sem nome'}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{c.name||'Sem nome'}</p>
+                        <span className={'text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 '+(effectivePlan(c)==='pro'?'text-white':'text-gray-600 bg-gray-100')}
+                          style={effectivePlan(c)==='pro'?{background:'#1a6b5c'}:{}}>
+                          {effectivePlan(c)==='pro'?'PRO':'FREE'}
+                        </span>
+                      </div>
                       <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0,8)}...</p>
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
@@ -1104,6 +1176,7 @@ const AdminPanel = ({toast,confirm}) => {
       {editClient && (
         <ClientEditModal
           client={editClient}
+          adminEmail={adminEmail}
           onSave={updated=>{setClients(cs=>cs.map(c=>c.user_id===updated.user_id?updated:c));setEditClient(null);}}
           onClose={()=>setEditClient(null)}
           toast={toast}
@@ -1314,7 +1387,7 @@ const SettingsView = ({brand,session,onSave,toast,confirm,isAdmin}) => {
       {tab==='clients' && (
         <div className="flex flex-col gap-4">
           <GhTokenCard toast={toast}/>
-          <Card className="p-6"><AdminPanel toast={toast}/></Card>
+          <Card className="p-6"><AdminPanel toast={toast} session={session}/></Card>
         </div>
       )}
     </div>
@@ -1469,11 +1542,16 @@ const syncTable = async (uid, table, ldbTable, mapLocal) => {
   }
 };
 
+// Campos do company_profiles que o cliente comum pode escrever.
+// Plan/plan_expires_at/plan_activated_by sao read-only no front (so admin altera).
+const PROFILE_WRITE_FIELDS = ['user_id','name','logo','color','logo_url'];
+
 const syncProfiles = async uid => {
   if (!navigator.onLine) return;
   const unsynced = await ldb.profiles.where('user_id').equals(uid).and(r=>r._synced===0).toArray();
   for (const row of unsynced) {
-    const { _synced, _deleted, _updated_at, ...clean } = row;
+    const clean = {};
+    PROFILE_WRITE_FIELDS.forEach(k => { if (row[k] !== undefined) clean[k] = row[k]; });
     await sb.from('company_profiles').upsert(clean);
     await ldb.profiles.update(uid, { _synced: 1 });
   }
@@ -1523,6 +1601,7 @@ function App() {
   const [dataLoading,setDataLoading] = useState(false);
   const [view,setView] = useState('dashboard');
   const [brand,setBrand] = useState(INIT_BRAND);
+  const [planInfo,setPlanInfo] = useState(INIT_PLAN);
   const [tx,setTx] = useState([]);
   const [products,setProducts] = useState([]);
   const [losses,setLosses] = useState([]);
@@ -1530,6 +1609,15 @@ function App() {
   const [toastData,setToastData] = useState(null);
   const [confirmData,setConfirmData] = useState(null);
   const [dataError,setDataError] = useState(null);
+  const [upgradeNotice,setUpgradeNotice] = useState(null);
+
+  const enforceLimit = useCallback((kind, currentCount) => {
+    if (atLimit(planInfo, kind, currentCount)) {
+      setUpgradeNotice({ kind, limit: limitFor(planInfo, kind) });
+      return false;
+    }
+    return true;
+  }, [planInfo]);
 
   const toast = useCallback((msg,type='success') => {
     setToastData({msg,type});
@@ -1546,7 +1634,10 @@ function App() {
       ldb.meta.get('role_' + uid),
     ]);
     const roleRes = { data: roleMeta ? { role: roleMeta.val } : null };
-    if (profile) setBrand({ name:profile.name, logo:profile.logo, color:profile.color, logo_url:profile.logo_url||null });
+    if (profile) {
+      setBrand({ name:profile.name, logo:profile.logo, color:profile.color, logo_url:profile.logo_url||null });
+      setPlanInfo({ plan:profile.plan||'free', plan_expires_at:profile.plan_expires_at||null, plan_activated_by:profile.plan_activated_by||null });
+    }
     setProducts(prods);
     setTx(txs.map(t => ({ ...t, desc:t.description||t.desc, cat:t.category||t.cat })));
     setLosses(lss.map(l => ({ ...l, desc:l.description||l.desc })));
@@ -1592,7 +1683,7 @@ function App() {
             sb.from('losses').select('*').order('date',{ascending:false}).limit(500),
             sb.from('user_roles').select('role').eq('user_id',uid).maybeSingle(),
           ]);
-          if(pr.data){ const p=pr.data; setBrand({name:p.name,logo:p.logo,color:p.color,logo_url:p.logo_url||null}); await ldb.profiles.put(toLocal(p)); }
+          if(pr.data){ const p=pr.data; setBrand({name:p.name,logo:p.logo,color:p.color,logo_url:p.logo_url||null}); setPlanInfo({plan:p.plan||'free',plan_expires_at:p.plan_expires_at||null,plan_activated_by:p.plan_activated_by||null}); await ldb.profiles.put(toLocal(p)); }
           if(pdr.data){ setProducts(pdr.data); await ldb.products.bulkPut(pdr.data.map(r=>toLocal(r,{user_id:uid}))); }
           if(txr.data){ const mapped=txr.data.map(t=>({...t,desc:t.description,cat:t.category})); setTx(mapped); await ldb.transactions.bulkPut(txr.data.map(r=>toLocal(r,{user_id:uid,desc:r.description,cat:r.category}))); }
           if(lr.data){ const mapped=lr.data.map(l=>({...l,desc:l.description})); setLosses(mapped); await ldb.losses.bulkPut(lr.data.map(r=>toLocal(r,{user_id:uid,desc:r.description}))); }
@@ -1616,7 +1707,7 @@ function App() {
     const {data:{subscription}} = sb.auth.onAuthStateChange((_,session) => {
       setSession(session);
       if(session) { setIsAdminDB(false); localStorage.removeItem('is_admin'); loadData(session.user.id); }
-      else { setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setIsAdminDB(false); localStorage.removeItem('is_admin'); }
+      else { setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN); setIsAdminDB(false); localStorage.removeItem('is_admin'); }
     });
     // Sync a cada 2 minutos — sem polling constante
     const syncInterval = setInterval(async () => {
@@ -1629,6 +1720,7 @@ function App() {
   },[]);
 
   const addTx = async t => {
+    if (!enforceLimit('transactions', tx.length)) return;
     const uid = session.user.id;
     const rb = (session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email);
     const row = { id:t.id, type:t.type, description:t.desc, amount:t.amount, date:t.date, method:t.method||null, category:t.cat||null, items:t.items||null, user_id:uid, registered_by:rb, updated_at:now(), _synced:0, _deleted:0, _updated_at:now(), desc:t.desc, cat:t.cat||null };
@@ -1649,6 +1741,7 @@ function App() {
   };
 
   const addProduct = async p => {
+    if (!enforceLimit('products', products.length)) return;
     const uid = session.user.id;
     const rb = (session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email);
     const row = { ...p, user_id:uid, registered_by:rb, updated_at:now(), _synced:0, _deleted:0, _updated_at:now() };
@@ -1677,6 +1770,7 @@ function App() {
   };
 
   const addLoss = async l => {
+    if (!enforceLimit('losses', losses.length)) return;
     const uid = session.user.id;
     const rb = (session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email);
     const row = { id:l.id, description:l.desc, qty:l.qty, reason:l.reason||null, date:l.date, user_id:uid, registered_by:rb, updated_at:now(), _synced:0, _deleted:0, _updated_at:now(), desc:l.desc };
@@ -1764,6 +1858,7 @@ function App() {
       </div>
       <Toast toast={toastData}/>
       {confirmData && <Confirm msg={confirmData.msg} onOk={()=>{confirmData.onOk();setConfirmData(null);}} onCancel={()=>setConfirmData(null)}/>}
+      {upgradeNotice && <UpgradeModal kind={upgradeNotice.kind} limit={upgradeNotice.limit} onClose={()=>setUpgradeNotice(null)}/>}
     </div>
   );
 }
