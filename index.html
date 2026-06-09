@@ -39,6 +39,17 @@ const sb = createClient(
 );
 
 const INIT_BRAND = {name:'Financia', color:'#002f59', logo:'G', logo_url:null}
+const isUrl = s => !!(s && (s.startsWith('http') || s.startsWith('data:') || s.startsWith('/')));
+const LogoImg = ({logo,logoUrl,color,sz,rd}) => {
+  const src = logoUrl||(isUrl(logo)?logo:null);
+  const size = sz||'w-9 h-9'; const rnd = rd||'rounded-xl';
+  return (
+    <div className={size+' '+rnd+' overflow-hidden flex items-center justify-center flex-shrink-0'} style={{background:color||'#002f59'}}>
+      {src ? <img src={src} alt="" className="w-full h-full object-contain"/>
+           : <span className="text-white font-bold" style={{fontSize:'0.85em'}}>{(logo||'F')[0].toUpperCase()}</span>}
+    </div>
+  );
+};
 const fmt = n => 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtDate = s => new Date(s+'T12:00').toLocaleDateString('pt-BR');
 const monthLabel = s => { const [y,m]=s.split('-'); return new Date(+y,+m-1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}); };
@@ -252,7 +263,7 @@ const Sidebar = ({view,onNav,brand,open,onClose,isAdmin}) => (
       <div className="px-5 py-5 flex items-center gap-3" style={{borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
         {brand.logo_url
           ? <img src={brand.logo_url} alt="logo" className="w-9 h-9 rounded-xl object-cover flex-shrink-0"/>
-          : <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{background:brand.color}}><img src={brand.logo} alt="Financia" style={{width:'100%',height:'100%',objectFit:'contain',padding:'4px'}}/></div>
+          : <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{background:brand.color}}><span className="text-white font-bold">{(brand.logo||"F")[0]}</span></div>
         }
         <span className="font-bold text-white truncate">{brand.name}</span>
       </div>
@@ -1210,7 +1221,7 @@ const SettingsView = ({brand,session,onSave,toast,confirm,isAdmin}) => {
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Logo da empresa</label>
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden border border-gray-200 flex items-center justify-center" style={{background:form.color}}>
-                {form.logo_url ? <img src={form.logo_url} alt="logo" className="w-full h-full object-cover"/> : <img src={form.logo} alt="logo" style={{width:'100%',height:'100%',objectFit:'contain',padding:'4px'}}/> }
+                <LogoImg logo={form.logo} logoUrl={form.logo_url} color={form.color} sz="w-full h-full" rd=""/>
               </div>
               <div className="flex flex-col gap-2 flex-1">
                 <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e=>uploadLogo(e.target.files[0])}/>
@@ -1262,7 +1273,7 @@ const SettingsView = ({brand,session,onSave,toast,confirm,isAdmin}) => {
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Pre-visualizacao</p>
             <div className="flex items-center gap-3 p-3 rounded-xl w-fit" style={{background:'#002f59'}}>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden" style={{background:form.color}}>
-                {form.logo_url ? <img src={form.logo_url} alt="logo" className="w-full h-full object-cover"/> : <img src={form.logo} alt="logo" style={{width:'100%',height:'100%',objectFit:'contain',padding:'4px'}}/> }
+                <LogoImg logo={form.logo} logoUrl={form.logo_url} color={form.color} sz="w-full h-full" rd=""/>
               </div>
               <span className="font-bold text-white">{form.name||'Nome da empresa'}</span>
             </div>
@@ -1767,7 +1778,7 @@ function App() {
           <div className="flex items-center gap-2">
             {brand.logo_url
               ? <img src={brand.logo_url} alt="logo" className="w-7 h-7 rounded-lg object-cover"/>
-              : <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style={{background:brand.color}}><img src={brand.logo} alt="Financia" style={{width:'100%',height:'100%',objectFit:'contain',padding:'4px'}}/></div>
+              : <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style={{background:brand.color}}><span className="text-white font-bold">{(brand.logo||"F")[0]}</span></div>
             }
             <span className="font-bold text-gray-900 text-sm">{brand.name}</span>
           </div>
@@ -1780,6 +1791,15 @@ function App() {
   );
 }
 
+window.addEventListener('error', e => {
+  if(e.message && e.message !== 'ResizeObserver loop limit exceeded') {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;bottom:20px;left:20px;right:20px;background:#dc2626;color:#fff;padding:12px 16px;border-radius:12px;font-size:12px;font-family:monospace;z-index:99999;word-break:break-all';
+    d.textContent = 'ERRO: ' + e.message + ' (L' + e.lineno + ')';
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 8000);
+  }
+});
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
