@@ -41,13 +41,31 @@ Migrations ja aplicadas:
 - `20260609_rls_admin_read_profiles.sql` — policy select_own_or_admin em company_profiles
 - `20260609_rls_admin_delete_client.sql` — policies DELETE para admin em todas as tabelas
 - `set_client_plan` SECURITY DEFINER function — criada por Asafe (nao ha migration file, foi rodada manualmente)
+- `20260609_fix_plan_protection.sql` — **PENDENTE EXECUCAO NO STUDIO** (ver abaixo)
 
-RLS pendente (nao confirmada):
-- Policy UPDATE em company_profiles que bloqueia cliente de alterar plan diretamente.
-  O front usa sb.rpc('set_client_plan') agora, entao o risco diminuiu, mas a policy de
-  UPDATE ainda deve existir para defesa em profundidade.
+RLS UPDATE — VULNERABILIDADE CONFIRMADA E CORRECAO PRONTA:
+- Teste realizado (2026-06-09): cliente conseguiu fazer PATCH plan=pro via API REST (HTTP 200)
+- Causa: policy update_own_branding_only nao tinha WITH CHECK — so tinha USING
+- Trigger prevent_plan_change criado manualmente NAO estava bloqueando (motivo desconhecido)
+- Correcao: migration `20260609_fix_plan_protection.sql` ja no repo, precisa ser rodada no Studio
 
-## Estado do codigo (main, ultimo commit a133c3c)
+**ACAO NECESSARIA — rodar no Supabase SQL Editor:**
+```sql
+DROP POLICY IF EXISTS update_own_branding_only ON public.company_profiles;
+
+CREATE POLICY update_own_branding_only ON public.company_profiles
+  FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (
+    auth.uid() = user_id
+    AND plan = (SELECT plan FROM public.company_profiles WHERE user_id = auth.uid())
+    AND (plan_expires_at IS NOT DISTINCT FROM (SELECT plan_expires_at FROM public.company_profiles WHERE user_id = auth.uid()))
+    AND (plan_activated_by IS NOT DISTINCT FROM (SELECT plan_activated_by FROM public.company_profiles WHERE user_id = auth.uid()))
+  );
+```
+Apos rodar: repetir o teste abaixo para confirmar que retorna 403.
+
+## Estado do codigo (main, ultimo commit 48fad32)
 
 O que funciona:
 - Gating de planos: enforceLimit bloqueia addTx/addProduct/addLoss quando Free bate limite
@@ -69,11 +87,11 @@ O que funciona:
 
 ## Proximas tarefas (em ordem de prioridade)
 
-1. **Verificar RLS UPDATE em company_profiles**
-   Confirmar que cliente nao pode alterar plan diretamente via devtools mesmo com rpc bloqueado.
-   Teste: logar como conta nao-admin, rodar no console:
+1. **URGENTE: Aplicar migration fix_plan_protection no Studio**
+   Copiar o SQL acima e rodar no Supabase SQL Editor.
+   Depois testar: logar como teste@gestao.com, rodar no console do app:
    `sb.from('company_profiles').update({plan:'pro'}).eq('user_id','<self_uid>').then(console.log)`
-   Deve retornar erro de RLS ou sucesso sem efeito. Se alterar, criar policy UPDATE.
+   Deve retornar erro 403 (violacao de policy).
 
 2. **Mover token GitHub do localStorage para sessionStorage**
    Linha ~870: `localStorage.getItem('nancia_gh_token')`.
@@ -89,6 +107,7 @@ O que funciona:
 - Cliente promovido para Pro precisa fazer logout/login (ou esperar 2min de sync) para ver mudanca.
   Aceitavel por enquanto.
 - Limites Free sao totais (nao por mes). Se Asafe quiser mudar para "por mes", ajustar
-  PLAN_LIMITS e os call sites (count seria de tx/produtos/perdas do mes vigente).
+  PLAN_LIMITS e os call sites.
 - Babel no browser em producao: performance ruim em mobile antigo. Resolvido na migracao Vite.
 - index.html monolitico ~1960 linhas. Resolvido na migracao Vite.
+
