@@ -14,6 +14,11 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
   var [pwSaving, setPwSaving] = useState(false);
   var [uploading, setUploading] = useState(false);
   var fileRef = useRef();
+  React.useEffect(function() {
+    if (!isAdmin && (tab === 'brand' || tab === 'clients')) {
+      setTab('security');
+    }
+  }, [isAdmin]);
   const COLORS = ['#1a6b5c','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2','#be185d','#374151','#b45309','#0d9488'];
 
   const handleSaveBrand = async function() {
