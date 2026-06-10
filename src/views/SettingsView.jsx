@@ -89,7 +89,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
     setUploading(false);
   };
 
-  const allTabs = [{key:'brand',label:'Branding',adminOnly:true},{key:'security',label:'Seguranca'},{key:'account',label:'Conta'},{key:'clients',label:'Clientes',adminOnly:true}];
+  const allTabs = [{key:'security',label:'Seguranca'},{key:'account',label:'Conta'},{key:'clients',label:'Clientes',adminOnly:true}];
   const tabs = allTabs.filter(function(t) { return !t.adminOnly || isAdmin; });
 
   return (
