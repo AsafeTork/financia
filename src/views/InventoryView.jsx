@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Inp, Modal, EditBtn, DelBtn } from '../components/ui.jsx';
+import { Card, Inp, Modal, EditBtn, DelBtn, Badge } from '../components/ui.jsx';
 import { PSearch } from '../components/SaleForm.jsx';
 import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';
 
@@ -80,12 +80,17 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
 
   const sp = sm ? products.find(function(p) { return p.id === sm; }) : null;
 
+  var TABS = [
+    {key:'products', label:'Produtos', count: products.length},
+    {key:'losses',   label:'Perdas',   count: losses.length},
+  ];
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900" style={{letterSpacing:'-0.5px'}}>Estoque e Perdas</h2>
-          <p className="text-sm text-gray-400 mt-0.5">{products.length} produto{products.length !== 1 ? 's' : ''} . {losses.length} perda{losses.length !== 1 ? 's' : ''}</p>
+          <h2 className="page-header">Estoque e Perdas</h2>
+          <p className="page-sub">{products.length} produto{products.length !== 1 ? 's' : ''} . {losses.length} perda{losses.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex-shrink-0">
           {tab === 'products' && (
@@ -107,13 +112,17 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
       </div>
 
       <div className="flex border-b border-gray-100">
-        {[{key:'products', label:'Produtos e Servicos'}, {key:'losses', label:'Perdas'}].map(function(t) {
+        {TABS.map(function(t) {
           var active = tab === t.key;
           return (
             <button key={t.key} onClick={function() { setTab(t.key); }}
-              className={'flex-1 pb-3 text-sm font-medium transition-colors ' + (active ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600')}
+              className={'flex items-center gap-2 pb-3 px-1 mr-5 text-sm font-medium transition-colors ' + (active ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600')}
               style={active ? {borderBottom: '2px solid ' + brand.color} : {}}>
               {t.label}
+              <span className={'text-xs font-semibold px-1.5 py-0.5 rounded-md ' + (active ? 'text-white' : 'text-gray-400 bg-gray-100')}
+                style={active ? {background: brand.color} : {}}>
+                {t.count}
+              </span>
             </button>
           );
         })}
@@ -156,32 +165,40 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
                   {!collapsed.has(cat) && (
                     <div className="divide-y divide-gray-50">
                       {items.map(function(p) {
-                        var stockOk = p.stock != null && p.stock > 5;
-                        var stockLow = p.stock != null && p.stock > 0 && p.stock <= 5;
                         var stockOut = p.stock != null && p.stock <= 0;
+                        var stockLow = p.stock != null && p.stock > 0 && p.stock <= 5;
+                        var stockOk  = p.stock != null && p.stock > 5;
+                        var margin   = p.cost != null && p.price > 0 ? ((p.price - p.cost) / p.price) * 100 : null;
+                        var marginColor = margin === null ? '' : margin > 30 ? '#16a34a' : margin > 10 ? '#d97706' : '#dc2626';
                         return (
-                          <div key={p.id} className="px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50 transition-colors">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-gray-800">{p.name}</p>
-                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                <span className="text-xs font-medium" style={{color: brand.color}}>{fmt(p.price)}</span>
-                                {p.cost != null && (
-                                  <span className="text-xs text-green-600 font-medium">
-                                    {(((p.price - p.cost) / p.price) * 100).toFixed(0) + '% margem'}
-                                  </span>
-                                )}
-                                {p.registered_by && <span className="text-xs text-gray-400">{'por ' + p.registered_by}</span>}
+                          <div key={p.id} className="px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                                  {p.category && (
+                                    <Badge color="#6b7280" bg="#f3f4f6">{p.category}</Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <span className="text-xs font-semibold tabular" style={{color: brand.color}}>{fmt(p.price)}</span>
+                                  {p.cost != null && <span className="text-xs text-gray-400 tabular">Custo {fmt(p.cost)}</span>}
+                                  {margin !== null && (
+                                    <span className="text-xs font-semibold" style={{color: marginColor}}>{margin.toFixed(0)}% margem</span>
+                                  )}
+                                  {p.registered_by && <span className="text-xs text-gray-400">por {p.registered_by}</span>}
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              {p.stock != null && (
-                                <button onClick={function() { setSm(p.id); setSq('1'); }}
-                                  className={'text-xs font-semibold px-2.5 py-1 rounded-lg mr-1 transition ' + (stockOut ? 'bg-red-50 text-red-600' : stockLow ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700')}>
-                                  {stockOut ? 'Esgotado' : p.stock + ' un'}
-                                </button>
-                              )}
-                              <EditBtn onClick={function() { setEditP({id:p.id, name:p.name, category:p.category||'', price:String(p.price), cost:p.cost!=null?String(p.cost):'', stock:p.stock!=null?String(p.stock):''}); }}/>
-                              <DelBtn onClick={function() { confirm('Excluir "' + p.name + '"?', async function() { await onDeleteProduct(p.id); toast('Produto removido'); }); }}/>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                {p.stock != null && (
+                                  <button onClick={function() { setSm(p.id); setSq('1'); }}
+                                    className={'text-xs font-semibold px-2.5 py-1 rounded-lg mr-0.5 transition ' + (stockOut ? 'bg-red-50 text-red-600' : stockLow ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700')}>
+                                    {stockOut ? 'Esgotado' : p.stock + ' un'}
+                                  </button>
+                                )}
+                                <EditBtn onClick={function() { setEditP({id:p.id, name:p.name, category:p.category||'', price:String(p.price), cost:p.cost!=null?String(p.cost):'', stock:p.stock!=null?String(p.stock):''}); }}/>
+                                <DelBtn onClick={function() { confirm('Excluir "' + p.name + '"?', async function() { await onDeleteProduct(p.id); toast('Produto removido'); }); }}/>
+                              </div>
                             </div>
                           </div>
                         );
@@ -216,13 +233,13 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
                 return (
                   <div key={l.id} className="flex items-center justify-between px-4 py-3.5 gap-3 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
                         </svg>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-800">{l.qty + 'x ' + l.desc}</p>
+                        <p className="text-sm font-semibold text-gray-800">{l.qty + 'x ' + l.desc}</p>
                         <p className="text-xs text-gray-400">{fmtDate(l.date)}{l.reason ? ' . ' + l.reason : ''}</p>
                       </div>
                     </div>
@@ -278,7 +295,7 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
       )}
       {sm && sp && (
         <Modal title={'Repor estoque: ' + sp.name} onClose={function() { setSm(null); }} onSave={saveStock} saving={saving} saveLabel="Adicionar">
-          <div className="rounded-xl bg-gray-50 px-4 py-3 flex items-center justify-between"><span className="text-sm text-gray-600">Estoque atual</span><span className="text-lg font-bold">{sp.stock + ' un.'}</span></div>
+          <div className="rounded-xl bg-gray-50 px-4 py-3 flex items-center justify-between"><span className="text-sm text-gray-600">Estoque atual</span><span className="text-lg font-bold tabular">{sp.stock + ' un.'}</span></div>
           <Inp label="Quantidade a adicionar" type="number" min="1" value={sq} onChange={function(e) { setSq(e.target.value); }} placeholder="Ex: 10"/>
           {sq && Number(sq) > 0 && <p className="text-xs text-gray-400 text-center">{'Novo estoque: ' + ((sp.stock || 0) + Number(sq)) + ' un.'}</p>}
         </Modal>
