@@ -142,12 +142,14 @@ export default function App() {
   };
 
   useEffect(function() {
+    var _authTimer = setTimeout(function() { setAppLoading(false); }, 8000);
     sb.auth.getSession().then(function(res) {
+      clearTimeout(_authTimer);
       const s = res.data.session;
       setSession(s);
       if (s) loadData(s.user.id);
       setAppLoading(false);
-    });
+    }).catch(function() { clearTimeout(_authTimer); setAppLoading(false); });
     const authSub = sb.auth.onAuthStateChange(function(_, s) {
       setSession(s);
       if (s) { setIsAdminDB(false); sessionStorage.removeItem('is_admin'); loadData(s.user.id); }
@@ -345,7 +347,10 @@ export default function App() {
   };
 
   if (appLoading) return <Loader/>;
-  if (!session) return <Login/>;
+  if (!session) {
+    if (!window.location.hash || window.location.hash === '#') window.location.hash = 'login';
+    return <Login/>;
+  }
   if (dataLoading) return <Loader text="Carregando seus dados..."/>;
   if (dataError) return (
     <div className="min-h-screen flex items-center justify-center flex-col gap-4 p-6" style={{background:'#f8fafc'}}>
