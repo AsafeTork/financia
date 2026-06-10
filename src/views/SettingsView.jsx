@@ -6,7 +6,7 @@ import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
 
 export default function SettingsView({ brand, session, onSave, toast, confirm, isAdmin }) {
-  var [tab, setTab] = useState(isAdmin ? 'brand' : 'security');
+  var [tab, setTab] = useState('security');
   var [form, setForm] = useState(Object.assign({}, brand));
   var [extractedColors, setExtractedColors] = useState([]);
   var [saving, setSaving] = useState(false);
