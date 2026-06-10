@@ -79,7 +79,7 @@ Colunas adicionadas:
 
 localStorage direto: apenas nancia_gh_token (GhTokenCard.jsx + db.js triggerApkBuild).
 
-## Estado do codigo (main, commit 99f5329 — 2026-06-10)
+## Estado do codigo (main, commit 85a7d09 — 2026-06-10)
 
 Stack: Vite 5 + React 18 + Tailwind CSS v3 + Supabase JS v2 + Dexie v3
 
@@ -97,8 +97,8 @@ O que funciona:
 - InventoryView: tabs underline; badges de estoque coloridos
 - Gating de planos: enforceLimit bloqueia addTx/addProduct/addLoss quando Free bate limite
 - AdminPanel: lista clientes com badge FREE/PRO, botao Editar abre ClientEditModal
-- SettingsView: aba Branding so aparece para isAdmin; onSave passa apenas {name,logo,logo_url,color}
-- ClientEditModal: extracao de 3 cores por grupo de luminancia (dark<0.15/mid 0.15-0.5/light>0.5), buckets de 48, filtro near-white>240, deduplicacao por distancia<30, UI com labels Primaria/Secundaria/Acento + Aplicar individual + Aplicar todas
+- SettingsView: abas Branding e Clientes filtradas por isAdmin via allTabs.filter; tab inicial = isAdmin?'brand':'security'; onSave passa apenas {name,logo,logo_url,color}
+- ClientEditModal: save tem console.log temporario para diagnostico; extracao de 3 cores por grupo de luminancia (dark<0.15/mid 0.15-0.5/light>0.5), buckets de 48, filtro near-white>240, deduplicacao por distancia<30, UI com labels Primaria/Secundaria/Acento + Aplicar individual + Aplicar todas
 - Navegacao persistida no hash da URL (#dashboard, #inventory, etc.)
 - fetchClients usa RLS policy "select_own_or_admin" — sem service_role no front
 - Todos os CRUDs: try/catch em writes Dexie E em blocos Supabase (navigator.onLine)
