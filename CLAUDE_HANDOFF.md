@@ -94,11 +94,27 @@ Stack: **Vite 5 + React 18 + Tailwind CSS v3 + Supabase JS v2 + Dexie v3**
 | Branch | Status |
 |--------|--------|
 | `main` | Producao — deploy automatico via Render |
+| `feat/ui-final` | **Em progresso** — redesign visual completo (6 commits, aguarda aprovacao) |
 | `feat/visual-redesign` | Mergeado em main em 2026-06-10 |
 | `feat/color-palette` | Mergeado em main em 2026-06-10 |
 | `refactor/vite` | Mergeado em main em 2026-06-09 — mantida como backup |
 
-### O que funciona
+### feat/ui-final — estado atual (commit 5e11f06, aguarda aprovacao para merge)
+
+Branch com redesign visual completo, direcao "Corporativo Confiavel" (QuickBooks/Monday style).
+**NAO mergear no main sem aprovacao de Asafe.**
+
+6 commits feitos:
+1. `e3695c4` — index.css + ui.jsx: Inter font, CSS vars, classes `.tabular`/`.page-header`/`.page-sub`, componentes `Btn`/`Badge`/`Divider`, `Card` com variantes
+2. `1b0a17d` — Header + Sidebar + BottomNav: h-14, sync status dot, active sidebar indicator, 5 itens diretos no BottomNav
+3. `2ab7372` — Dashboard + UsageBar: `greeting()`, KpiCard com variacao %, BarChartSVG com Y-axis grid
+4. `ffae687` — TxView: `page-header`/`page-sub`, `w-9/h-9` icon circles, `.tabular` em valores
+5. `cf5191e` — InventoryView + ReportView: tabs com Badge counter, margin% color-coded, month pills scrollaveis, 4 KPI cards
+6. `5e11f06` — Login: split layout desktop (painel esquerdo brand-colored + SVG decorativo), mobile centered, error alert, "Esqueceu a senha?"
+
+Todos os 6 commits passaram `npm run build` limpo.
+
+### O que funciona (main)
 
 **App geral**
 - Offline-first: Dexie primeiro, sync Supabase em background a cada 2min
@@ -145,9 +161,10 @@ Stack: **Vite 5 + React 18 + Tailwind CSS v3 + Supabase JS v2 + Dexie v3**
 
 ## Proximas tarefas (em ordem de prioridade)
 
-1. **Rodar migration SQL no Supabase Studio** — Asafe deve executar o ALTER TABLE acima para que paleta persista
-2. **Remover console.log temporario** no ClientEditModal.jsx apos confirmar que o save funciona
-3. **Fase 3 Stripe** — so quando Asafe pedir
+1. **Aprovar e mergear feat/ui-final** — Asafe deve revisar o redesign e confirmar merge para main
+2. **Rodar migration SQL no Supabase Studio** — Asafe deve executar o ALTER TABLE acima para que paleta persista
+3. **Remover console.log temporario** no ClientEditModal.jsx apos confirmar que o save funciona
+4. **Fase 3 Stripe** — so quando Asafe pedir
    - Arquitetura: Edge Function Supabase cria checkout session, webhook atualiza plan via `set_client_plan`
    - Nunca chave Stripe no front
 
