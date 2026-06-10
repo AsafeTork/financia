@@ -1,4 +1,12 @@
 export const fmt = n => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const hexToRgb = function(hex) {
+  var h = (hex || '#002f59').replace('#', '');
+  return { r: parseInt(h.substring(0, 2), 16), g: parseInt(h.substring(2, 4), 16), b: parseInt(h.substring(4, 6), 16) };
+};
+export const brandAlpha = function(hex, a) {
+  var c = hexToRgb(hex);
+  return 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + a + ')';
+};
 export const fmtDate = s => new Date(s + 'T12:00').toLocaleDateString('pt-BR');
 export const monthLabel = s => { const [y, m] = s.split('-'); return new Date(+y, +m - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); };
 export const now = () => new Date().toISOString();

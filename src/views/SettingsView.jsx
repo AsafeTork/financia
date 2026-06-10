@@ -6,14 +6,14 @@ import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
 
 export default function SettingsView({ brand, session, onSave, toast, confirm, isAdmin }) {
-  const [tab, setTab] = useState('brand');
-  const [form, setForm] = useState(Object.assign({}, brand));
-  const [extractedColors, setExtractedColors] = useState([]);
-  const [saving, setSaving] = useState(false);
-  const [pwForm, setPwForm] = useState({newPw:'', confirm:''});
-  const [pwSaving, setPwSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef();
+  var [tab, setTab] = useState('brand');
+  var [form, setForm] = useState(Object.assign({}, brand));
+  var [extractedColors, setExtractedColors] = useState([]);
+  var [saving, setSaving] = useState(false);
+  var [pwForm, setPwForm] = useState({newPw:'', confirm:''});
+  var [pwSaving, setPwSaving] = useState(false);
+  var [uploading, setUploading] = useState(false);
+  var fileRef = useRef();
   const COLORS = ['#1a6b5c','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2','#be185d','#374151','#b45309','#0d9488'];
 
   const handleSaveBrand = async function() {
@@ -90,9 +90,16 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
   return (
     <div className="flex flex-col gap-6">
       <div><h2 className="text-2xl font-bold text-gray-900">Configuracoes</h2><p className="text-sm text-gray-400 mt-0.5">Aparencia, seguranca e conta</p></div>
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 flex-wrap">
+      <div className="flex border-b border-gray-200">
         {tabs.map(function(t) {
-          return <button key={t.key} onClick={function() { setTab(t.key); }} className={'flex-1 py-2 text-sm font-medium rounded-lg transition whitespace-nowrap ' + (tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500')}>{t.label}</button>;
+          var active = tab === t.key;
+          return (
+            <button key={t.key} onClick={function() { setTab(t.key); }}
+              className={'px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px ' + (active ? 'text-gray-900' : 'text-gray-400 border-transparent hover:text-gray-600')}
+              style={active ? {borderColor: form.color, color: form.color} : {}}>
+              {t.label}
+            </button>
+          );
         })}
       </div>
 
@@ -123,7 +130,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
                   <p className="text-xs text-gray-400 mb-1.5">Cores extraidas do logo:</p>
                   <div className="flex gap-2 flex-wrap">
                     {extractedColors.map(function(c) {
-                      return <button key={c} onClick={function() { setForm(function(f) { return Object.assign({}, f, {color:c}); }); }} className="w-8 h-8 rounded-xl transition-transform hover:scale-110" style={{background:c, outline:form.color === c ? '3px solid #1a6b5c' : 'none', outlineOffset:'2px'}}/>;
+                      return <button key={c} onClick={function() { setForm(function(f) { return Object.assign({}, f, {color:c}); }); }} className="w-8 h-8 rounded-xl transition-transform hover:scale-110" style={{background:c, outline:form.color === c ? ('3px solid ' + form.color) : 'none', outlineOffset:'2px'}}/>;
                     })}
                   </div>
                 </div>
@@ -133,8 +140,8 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
                 <div className="flex gap-2 flex-wrap">
                   {COLORS.map(function(c) {
                     return (
-                      <button key={c} onClick={function() { setForm(function(f) { return Object.assign({}, f, {color:c}); }); }} className="w-8 h-8 rounded-xl hover:scale-110 transition-transform flex items-center justify-center" style={{background:c, outline:form.color === c ? '3px solid #1a6b5c' : 'none', outlineOffset:'2px'}}>
-                        {form.color === c && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
+                      <button key={c} onClick={function() { setForm(function(f) { return Object.assign({}, f, {color:c}); }); }} className="w-8 h-8 rounded-xl hover:scale-110 transition-transform flex items-center justify-center" style={{background:c, outline:form.color === c ? ('3px solid ' + form.color) : 'none', outlineOffset:'2px'}}>
+                        {form.color === c && <svg className="w-3.5 h-3.5" fill="none" stroke="white" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
                       </button>
                     );
                   })}
@@ -169,7 +176,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
             <div className="flex flex-col gap-3">
               <Inp label="Nova senha" type="password" value={pwForm.newPw} onChange={function(e) { setPwForm(function(f) { return Object.assign({}, f, {newPw:e.target.value}); }); }} placeholder="Minimo 8 caracteres" hint={pwForm.newPw.length > 0 && pwForm.newPw.length < 8 ? 'Muito curta' : ''}/>
               <Inp label="Confirmar senha" type="password" value={pwForm.confirm} onChange={function(e) { setPwForm(function(f) { return Object.assign({}, f, {confirm:e.target.value}); }); }} placeholder="Repita a senha" hint={pwForm.confirm && pwForm.newPw !== pwForm.confirm ? 'Senhas diferentes' : ''}/>
-              <button onClick={changePw} disabled={pwSaving || !pwForm.newPw || !pwForm.confirm} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40" style={{background:'#374151'}}>
+              <button onClick={changePw} disabled={pwSaving || !pwForm.newPw || !pwForm.confirm} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40" style={{background:brand.color}}>
                 {pwSaving ? <Spin white/> : 'Alterar senha'}
               </button>
             </div>
@@ -177,7 +184,14 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
           <div className="border-t border-gray-100 pt-4">
             <p className="text-sm font-semibold text-gray-800 mb-2">Seguranca do sistema</p>
             {['Dados criptografados no Supabase','Cada usuario acessa apenas seus dados (RLS)','Conexao sempre via HTTPS','Sessao expira automaticamente','Nunca compartilhe sua senha'].map(function(s, i) {
-              return <div key={i} className="flex items-start gap-2 mb-1.5"><span className="text-green-500 text-sm">OK</span><p className="text-sm text-gray-600">{s}</p></div>;
+              return (
+                <div key={i} className="flex items-center gap-2.5 mb-2">
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{background:'#dcfce7'}}>
+                    <svg className="w-3 h-3" fill="none" stroke="#16a34a" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
+                  </div>
+                  <p className="text-sm text-gray-600">{s}</p>
+                </div>
+              );
             })}
           </div>
         </Card>

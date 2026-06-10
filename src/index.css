@@ -11,3 +11,11 @@ body { margin: 0; background: #f8fafc; }
 
 .anim-up   { animation: slideUp .2s ease; }
 .anim-fade { animation: fadeIn .15s ease; }
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--brand, #1a6b5c) !important;
+  box-shadow: 0 0 0 3px var(--brand-soft, rgba(26,107,92,0.08)) !important;
+  outline: none !important;
+}
+.card-hover { transition: box-shadow .15s ease, transform .15s ease; }
+.card-hover:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-1px); }
