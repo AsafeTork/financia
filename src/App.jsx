@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { sb } from './lib/supabase.js';
 import { ldb, syncAll, toLocal, setLastSync } from './lib/db.js';
-import { now, today, safe, uid } from './lib/utils.js';
+import { now, today, safe, uid, brandAlpha } from './lib/utils.js';
 import { INIT_BRAND, INIT_PLAN, atLimit, limitFor } from './lib/constants.js';
 import Sidebar from './components/Sidebar.jsx';
+import BottomNav from './components/BottomNav.jsx';
 import Toast from './components/Toast.jsx';
 import Offline from './components/Offline.jsx';
 import Confirm from './components/Confirm.jsx';
@@ -39,6 +40,11 @@ export default function App() {
   const [view, setView] = useState(hashView);
   const navTo = useCallback(function(v) { setView(v); window.location.hash = v; }, []);
   const [brand, setBrand] = useState(INIT_BRAND);
+  useEffect(function() {
+    var c = brand.color || '#002f59';
+    document.documentElement.style.setProperty('--brand', c);
+    document.documentElement.style.setProperty('--brand-soft', brandAlpha(c, 0.08));
+  }, [brand.color]);
   const [planInfo, setPlanInfo] = useState(INIT_PLAN);
   const [tx, setTx] = useState([]);
   const [products, setProducts] = useState([]);
