@@ -43,8 +43,9 @@ input:focus, select:focus, textarea:focus {
   --text-main: #f1f5f9;
   --text-sub:  #94a3b8;
   --text-muted:#64748b;
-  --border:    #334155;
-  --border-md: #334155;
+  --border:        #334155;
+  --border-md:     #334155;
+  --border-color:  #334155;
 }
 [data-theme="dark"] body { background: #0f172a; }
 [data-theme="dark"] .bg-white   { background-color: #1e293b !important; }

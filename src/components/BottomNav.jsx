@@ -13,7 +13,7 @@ var OVERFLOW_KEYS = ['settings', 'email', 'report'];
 export default function BottomNav({ view, onNav, brand }) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 lg:hidden"
-      style={{background:'white', borderTop:'1px solid #f1f5f9', paddingBottom:'env(safe-area-inset-bottom, 0px)'}}>
+      style={{background:'var(--bg-page)', borderTop:'1px solid var(--border-color, #f1f5f9)', paddingBottom:'env(safe-area-inset-bottom, 0px)'}}>
       <div className="flex">
         {ITEMS.map(function(item) {
           var isOverflow = OVERFLOW_KEYS.indexOf(item.key) !== -1;

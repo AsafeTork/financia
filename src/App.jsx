@@ -130,6 +130,7 @@ export default function App() {
         else { setSyncStatus('error'); setTimeout(function() { setSyncStatus('idle'); }, 5000); }
       }
     } catch(e) {
+      setDataLoading(false);
       setSyncStatus('error'); setTimeout(function() { setSyncStatus('idle'); }, 5000);
       if (navigator.onLine) {
         try {
