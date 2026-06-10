@@ -14,10 +14,7 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
       const profileRes = await sb.from('company_profiles').update({name:name, color:color}).eq('user_id', client.user_id);
       if (profileRes.error) { toast('Erro ao salvar perfil.', 'error'); return; }
       if (planChanged) {
-        const sess = await sb.auth.getSession();
-        const adminId = sess.data.session ? sess.data.session.user.id : null;
-        if (!adminId) { toast('Erro: sessao expirada.', 'error'); return; }
-        const planRes = await sb.rpc('set_client_plan', {target:client.user_id, new_plan:plan, actor:adminId});
+        const planRes = await sb.rpc('set_client_plan', {a_target:client.user_id, b_plan:plan, c_actor:adminEmail || 'admin'});
         if (planRes.error) { toast('Erro ao alterar plano: ' + planRes.error.message, 'error'); return; }
       }
       toast(planChanged ? ('Plano alterado para ' + plan.toUpperCase()) : 'Atualizado!');
