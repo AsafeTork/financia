@@ -212,18 +212,29 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
               <div className="rounded-xl bg-gray-50 p-3 flex flex-col gap-2">
                 <p className="text-xs text-gray-500 font-medium">Cores extraidas da logo — clique para aplicar:</p>
                 <div className="flex gap-2 flex-wrap">
-                  {extractedColors.map(function(c) {
+                  {[
+                    {label:'Primaria',   hex:extractedColors[0], set:setColorRaw,  active:color},
+                    {label:'Secundaria', hex:extractedColors[1], set:setSecondary, active:colorSecondary},
+                    {label:'Acento',     hex:extractedColors[2], set:setAccent,    active:colorAccent},
+                  ].filter(function(row){return !!row.hex;}).map(function(row) {
                     return (
-                      <button key={c} onClick={function() { setColorRaw(c); }}
-                        className="w-8 h-8 rounded-xl border-2 transition-transform hover:scale-110"
-                        style={{background: c, borderColor: color === c ? color : 'transparent'}}
-                        title={c}/>
+                      <div key={row.label} className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg flex-shrink-0 border border-gray-200"
+                          style={{background:row.hex}}/>
+                        <span className="text-xs text-gray-500 w-20">{row.label}</span>
+                        <span className="text-xs font-mono text-gray-400 flex-1">{row.hex}</span>
+                        <button onClick={function(){row.set(row.hex);}}
+                          className="text-xs font-semibold px-2.5 py-1 rounded-lg border text-white flex-shrink-0"
+                          style={{background: row.active===row.hex ? '#16a34a' : 'var(--brand,#002f59)'}}>
+                          {row.active===row.hex ? 'Aplicado' : 'Aplicar'}
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
                 <button onClick={function() { applySuggestion(extractedColors); }}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-white self-start">
-                  Aplicar sugestao automatica (escura/media/clara)
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 self-start">
+                  Aplicar todas de uma vez
                 </button>
               </div>
             )}
