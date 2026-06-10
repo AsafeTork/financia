@@ -126,6 +126,7 @@ export const fetchClients = async () => {
   } catch (_) { return []; }
 };
 
+/* v2 — usa RPC SECURITY DEFINER */
 export const deleteClient = async uid => {
   try {
     const { error } = await sb.rpc('admin_delete_client', { target_uid: uid });
