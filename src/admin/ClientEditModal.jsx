@@ -138,6 +138,15 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
     if (hexes[2]) setAccent(hexes[2]);
   };
 
+    var React_useEffect = React.useEffect || (typeof useEffect !== 'undefined' ? useEffect : null);
+  if (React_useEffect) {
+    React_useEffect(function() {
+      if (client.logo_url && extractedColors.length === 0) {
+        extractColorsFromImage(client.logo_url);
+      }
+    }, []);
+  }
+
   var save = async function() {
     setSaving(true);
     try {
