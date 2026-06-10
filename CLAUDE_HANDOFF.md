@@ -89,11 +89,41 @@ O que funciona:
 - syncProfiles e syncTable: verificam erro antes de marcar _synced=1
 - nancia_gh_token e is_admin em sessionStorage (nao persistem entre sessoes)
 
+## Migracao Vite (branch refactor/vite)
+
+**NUNCA mergear no main sem aprovacao explicita de Asafe.**
+
+Ultimo commit: `0260943`
+
+| Step | Status | Commit | Descricao |
+|------|--------|--------|-----------|
+| 1 | DONE | 3282b27 | Vite setup, index.html, package.json, configs, src/index.css, src/main.jsx |
+| 2 | DONE | 9af4e0f | src/lib/utils.js, constants.js, supabase.js |
+| 3 | DONE | 2510d6c | src/lib/db.js (Dexie schema v1/v2, syncAll, syncTable, syncProfiles, fetchClients, deleteClient, triggerApkBuild) |
+| 4 | DONE | 87837a9 | src/components/ (ui, Toast, Offline, Confirm, UpgradeModal, LogoImg, SyncBadge, UsageBar, SaleForm, Sidebar) |
+| 5 | DONE | 87837a9 | src/views/ Dashboard, TxView, InventoryView, ReportView, EmailView |
+| 6 | DONE | 87837a9 | src/admin/ GhTokenCard, ClientEditModal, AdminPanel |
+| 7 | DONE | 87837a9 | src/views/ SettingsView, Login |
+| 8 | DONE | 87837a9 | src/App.jsx + src/main.jsx (App completo, auth, todos os CRUDs) |
+| 9 | DONE | 4aca538 | render.yaml — static site, buildCommand: npm install && npm run build, serve dist/ |
+| 10 | DONE | — | npm run build passou limpo (97 modulos, 534 kB JS / 150 kB gzip) |
+| 11 | DONE | 0260943 | Bug fixes pre-merge: 11 try/catch em CRUD Supabase (App.jsx) + fmtDate import/uso em InventoryView.jsx |
+
+Branch `refactor/vite` foi pushed para GitHub. Para deploy em producao: **Asafe precisa aprovar o merge no main** e re-apontar o servico Render para usar render.yaml (ou configurar manualmente Build Command = `npm install && npm run build`, Publish Dir = `dist`).
+
 ## Proximas tarefas (em ordem de prioridade)
 
 1. **Fase 3 Stripe** — so quando Asafe pedir.
    Arquitetura: Edge Function Supabase cria checkout session, webhook atualiza plan via
    set_client_plan. Nunca chave Stripe no front.
+
+## Correccoes aplicadas (commit 0260943)
+
+- App.jsx: todos os 11 blocos `if (navigator.onLine) { sb... }` agora tem try/catch
+  (addTx, editTx, deleteTx, addProduct, editProduct, deleteProduct, adjustStock,
+  addLoss, editLoss, deleteLoss, saveBrand)
+- InventoryView.jsx: `fmtDate` adicionado ao import e substituiu `new Date()` inline
+  na aba de perdas — corrige ReferenceError em runtime
 
 ## Problemas conhecidos
 
