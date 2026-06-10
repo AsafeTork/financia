@@ -29,7 +29,7 @@ Audience: next Claude session. Asafe is not a coder. Tom: tecnico direto.
 - `20260609_rls_admin_delete_client.sql` — policies DELETE para admin em todas as tabelas
 - `20260609_fix_plan_protection.sql` — policy UPDATE com WITH CHECK (obsoleta, trigger eh a solucao)
 
-### PENDENTE — rodar no Studio antes de mergear feat/color-palette
+### PENDENTE — rodar no Studio (feat/color-palette ja mergeado em main)
 
 ```sql
 -- Migration: paleta multi-tom + tema por cliente
@@ -79,23 +79,33 @@ Colunas adicionadas:
 
 localStorage direto: apenas nancia_gh_token (GhTokenCard.jsx + db.js triggerApkBuild).
 
-## Estado do codigo (main, ultimo commit b2b126d — 2026-06-10)
+## Estado do codigo (main, commit bd94983 — 2026-06-10)
 
 Stack: Vite 5 + React 18 + Tailwind CSS v3 + Supabase JS v2 + Dexie v3
 
+Branches mergeadas em main:
+- feat/visual-redesign (redesign UI completo)
+- feat/color-palette (paleta multi-tom + tema escuro + editor admin)
+
 O que funciona:
+- White-label real: brand.color aplicado em toda UI; BottomNav mobile; Header mobile
+- Paleta 3 cores: primary/secondary/accent; derivadas automaticamente se null
+- Tema escuro/claro via data-theme no root + CSS vars
+- ClientEditModal: editor de paleta completo, extracao de cores da logo, preview ao vivo
+- Dashboard: KPIs com variacao % vs mes anterior; grafico 7 dias com brand.color
+- TxView: transacoes agrupadas por data; empty states SVG
+- InventoryView: tabs underline; badges de estoque coloridos
 - Gating de planos: enforceLimit bloqueia addTx/addProduct/addLoss quando Free bate limite
-- UpgradeModal aparece quando limite atingido
 - AdminPanel: lista clientes com badge FREE/PRO, botao Editar abre ClientEditModal
-- ClientEditModal: altera name/color via update direto; altera plan via sb.rpc("set_client_plan", {a_target, b_plan, c_actor:adminEmail})
-- Dashboard: card "Uso do plano gratuito" visivel so para Free, com barras de progresso
 - Navegacao persistida no hash da URL (#dashboard, #inventory, etc.)
 - fetchClients usa RLS policy "select_own_or_admin" — sem service_role no front
 - Todos os CRUDs: try/catch em writes Dexie E em blocos Supabase (navigator.onLine)
-- syncProfiles e syncTable: verificam erro antes de marcar _synced=1
 - nancia_gh_token em localStorage (persiste); is_admin em sessionStorage (limpa ao fechar)
 - Offline-first: Dexie primeiro, sync Supabase em background a cada 2min
 - render.yaml configurado: static site, build npm install && npm run build, serve dist/
+
+IMPORTANTE: Asafe precisa rodar o SQL da migration no Studio (ver secao acima) antes de
+usar o editor de paleta — sem isso color_secondary/color_accent/theme nao persistem.
 
 ## Deploy (Render)
 
