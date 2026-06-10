@@ -9,7 +9,7 @@ import { effectivePlan } from '../lib/constants.js';
 
 export default function AdminPanel({ toast, confirm, session }) {
   const adminEmail = session && session.user ? session.user.email : 'admin';
-  const BLANK = {email:'', password:'', companyName:'', logoUrl:'', primaryColor:'#002f59', colors:['#002f59']};
+  const BLANK = {email:'', password:'', companyName:'', logoUrl:'', primaryColor:'#002f59', secondaryColor:'', accentColor:'', theme:'light', colors:[]};
   const [form, setForm] = useState(BLANK);
   const [creating, setCreating] = useState(false);
   const [building, setBuilding] = useState(false);
@@ -24,21 +24,29 @@ export default function AdminPanel({ toast, confirm, session }) {
   const reload = function() { fetchClients().then(function(c) { setClients(c); setLoadingCli(false); }); };
   useEffect(function() { reload(); }, [done]);
 
+  const luminance = function(r,g,b) { const [rs,gs,bs]=[r,g,b].map(function(c){c=c/255;return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);}); return 0.2126*rs+0.7152*gs+0.0722*bs; };
   const extractColors = function(img) {
     try {
-      const c = document.createElement('canvas'); c.width = 50; c.height = 50;
-      const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, 50, 50);
+      const cv = document.createElement('canvas'); cv.width = 50; cv.height = 50;
+      const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, 50, 50);
       const d = ctx.getImageData(0, 0, 50, 50).data;
       const buckets = {};
       for (let i = 0; i < d.length; i += 4) {
         if (d[i+3] < 128) continue;
-        const r = Math.round(d[i]/32)*32, g = Math.round(d[i+1]/32)*32, b = Math.round(d[i+2]/32)*32;
-        if (r > 230 && g > 230 && b > 230) continue;
-        const k = r + ',' + g + ',' + b; buckets[k] = (buckets[k] || 0) + 1;
+        const r = Math.round(d[i]/48)*48, g = Math.round(d[i+1]/48)*48, b = Math.round(d[i+2]/48)*48;
+        if (r > 220 && g > 220 && b > 220) continue;
+        const k = r+','+g+','+b; buckets[k] = (buckets[k]||0)+1;
       }
       const sorted = Object.entries(buckets).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 5);
       const hexes = sorted.map(function(pair) { const parts = pair[0].split(',').map(Number); return '#' + parts.map(function(v) { return v.toString(16).padStart(2, '0'); }).join(''); });
-      if (hexes.length) setForm(function(f) { return Object.assign({}, f, {colors:hexes, primaryColor:hexes[0]}); });
+      if (hexes.length) const toHex2 = function(k) { const [r2,g2,b2]=k.split(',').map(Number); return '#'+[r2,g2,b2].map(function(v){return v.toString(16).padStart(2,'0');}).join(''); };
+        const sorted2 = Object.entries(buckets).sort(function(a,b2){return b2[1]-a[1];});
+        const dark2=[],mid2=[],light2=[];
+        sorted2.forEach(function(entry){const k=entry[0]; const [r2,g2,b2]=k.split(',').map(Number); const l2=luminance(r2,g2,b2); const hex=toHex2(k); if(l2<0.15)dark2.push(hex); else if(l2<0.5)mid2.push(hex); else light2.push(hex);});
+        const prim = dark2[0]||mid2[0]||light2[0]||'#002f59';
+        const sec  = mid2[0]||(dark2[1]||light2[0])||'';
+        const acc  = light2[0]||(mid2[1]||dark2[1])||'';
+        setForm(function(f) { return Object.assign({}, f, {colors:[prim,sec,acc].filter(Boolean), primaryColor:prim, secondaryColor:sec, accentColor:acc}); });
     } catch(_) {}
   };
 
@@ -163,17 +171,42 @@ export default function AdminPanel({ toast, confirm, session }) {
                   {uploading ? 'Enviando...' : '[Upload] Logo'}
                 </button>
                 {form.colors.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    {form.colors.map(function(c) {
+                  <div className="flex flex-col gap-2">
+                    {[
+                      {label:'Primaria',   val:form.primaryColor,   key:'primaryColor'},
+                      {label:'Secundaria', val:form.secondaryColor, key:'secondaryColor'},
+                      {label:'Acento',     val:form.accentColor,    key:'accentColor'},
+                    ].map(function(slot, idx) {
+                      const suggested = form.colors[idx] || '';
                       return (
-                        <button key={c} onClick={function() { setForm(function(f) { return Object.assign({}, f, {primaryColor:c}); }); }}
-                          className="w-6 h-6 rounded-md flex-shrink-0"
-                          style={{background:c, outline:form.primaryColor === c ? '2px solid #002f59' : 'none', outlineOffset:'2px'}}/>
+                        <div key={slot.key} className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 w-20 flex-shrink-0">{slot.label}</span>
+                          {suggested && <div className="w-6 h-6 rounded-md flex-shrink-0 border border-gray-200" style={{background:suggested}} title={'Sugestao: '+suggested}/>}
+                          <input type="color" value={slot.val || suggested || '#002f59'}
+                            onChange={function(e) { const v=e.target.value; setForm(function(f){const u={};u[slot.key]=v;return Object.assign({},f,u);}); }}
+                            className="w-7 h-7 rounded-lg border border-gray-200 cursor-pointer p-0.5 flex-shrink-0"/>
+                          <span className="text-xs font-mono text-gray-400 flex-1">{slot.val || suggested || '#002f59'}</span>
+                          {suggested && suggested !== slot.val && (
+                            <button onClick={function(){setForm(function(f){const u={};u[slot.key]=suggested;return Object.assign({},f,u);});}}
+                              className="text-xs px-2 py-1 rounded-lg border border-gray-200 text-gray-600 flex-shrink-0">
+                              Aplicar
+                            </button>
+                          )}
+                        </div>
                       );
                     })}
-                    <input type="color" value={form.primaryColor}
-                      onChange={function(e) { const v = e.target.value; setForm(function(f) { return Object.assign({}, f, {primaryColor:v, colors:Array.from(new Set([v].concat(f.colors))).slice(0,5)}); }); }}
-                      className="w-6 h-6 rounded-md border border-gray-200 cursor-pointer"/>
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-xs text-gray-500 w-20 flex-shrink-0">Tema</span>
+                      {['light','dark'].map(function(t) {
+                        return (
+                          <button key={t} onClick={function(){setForm(function(f){return Object.assign({},f,{theme:t});});}}
+                            className="text-xs px-3 py-1 rounded-lg border font-semibold"
+                            style={{background:form.theme===t?'var(--brand,#002f59)':'transparent', color:form.theme===t?'#fff':'#6b7280', borderColor: form.theme===t?'transparent':'#e5e7eb'}}>
+                            {t === 'light' ? 'Claro' : 'Escuro'}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
