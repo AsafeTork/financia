@@ -1,32 +1,33 @@
 import React, { useState, useMemo } from 'react';
-import { Card, Sel, Empty } from '../components/ui.jsx';
-import { fmt, today, monthLabel } from '../lib/utils.js';
+import { Card, Sel } from '../components/ui.jsx';
+import { fmt, today, monthLabel, brandAlpha } from '../lib/utils.js';
 
-export default function ReportView({ tx, toast }) {
-  const months = useMemo(function() {
+export default function ReportView({ tx, brand, toast }) {
+  var months = useMemo(function() {
     return Array.from(new Set(tx.map(function(t) { return t.date.slice(0, 7); }))).sort(function(a, b) { return b.localeCompare(a); });
   }, [tx]);
-  const [month, setMonth] = useState(today().slice(0, 7));
+  var [month, setMonth] = useState(today().slice(0, 7));
+  var accentColor = (brand && brand.color) || '#1a6b5c';
 
-  const filtered = tx.filter(function(t) { return t.date.startsWith(month); });
-  const income = filtered.filter(function(t) { return t.type === 'income'; }).reduce(function(s, t) { return s + t.amount; }, 0);
-  const expense = filtered.filter(function(t) { return t.type === 'expense'; }).reduce(function(s, t) { return s + t.amount; }, 0);
-  const bycat = filtered.filter(function(t) { return t.type === 'expense'; }).reduce(function(a, t) { const k = t.category || 'Outro'; a[k] = (a[k] || 0) + t.amount; return a; }, {});
+  var filtered = tx.filter(function(t) { return t.date.startsWith(month); });
+  var income = filtered.filter(function(t) { return t.type === 'income'; }).reduce(function(s, t) { return s + t.amount; }, 0);
+  var expense = filtered.filter(function(t) { return t.type === 'expense'; }).reduce(function(s, t) { return s + t.amount; }, 0);
+  var bycat = filtered.filter(function(t) { return t.type === 'expense'; }).reduce(function(a, t) { var k = t.category || 'Outro'; a[k] = (a[k] || 0) + t.amount; return a; }, {});
 
-  const exportCSV = function() {
-    const rows = filtered.map(function(t) { return t.date + ',"' + t.desc + '",' + t.amount.toFixed(2) + ',' + (t.type === 'income' ? 'Entrada' : 'Saida') + ',' + (t.method || t.category || ''); });
-    const csv = 'Data,Descricao,Valor,Tipo,Metodo/Cat\n' + rows.join('\n');
-    const a = document.createElement('a');
+  var exportCSV = function() {
+    var rows = filtered.map(function(t) { return t.date + ',"' + t.desc + '",' + t.amount.toFixed(2) + ',' + (t.type === 'income' ? 'Entrada' : 'Saida') + ',' + (t.method || t.category || ''); });
+    var csv = 'Data,Descricao,Valor,Tipo,Metodo/Cat\n' + rows.join('\n');
+    var a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
     a.download = 'relatorio-' + month + '.csv';
     a.click();
     toast('CSV exportado!');
   };
 
-  const kpis = [
-    {l:'Entradas', v:income, c:'#1a6b5c'},
+  var kpis = [
+    {l:'Entradas', v:income, c:accentColor},
     {l:'Saidas', v:expense, c:'#ef4444'},
-    {l:'Lucro', v:income - expense, c:income - expense >= 0 ? '#1a6b5c' : '#ef4444'},
+    {l:'Lucro', v:income - expense, c:income - expense >= 0 ? accentColor : '#ef4444'},
   ];
 
   return (
@@ -41,7 +42,19 @@ export default function ReportView({ tx, toast }) {
       </div>
 
       {months.length === 0
-        ? <Card><Empty icon="[A]" title="Nenhum dado" sub="Registre vendas e despesas para gerar relatorios."/></Card>
+        ? (
+          <Card>
+            <div className="py-14 flex flex-col items-center gap-3 text-center px-6">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{background: brandAlpha(accentColor, 0.08)}}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 17v-2m3 2v-4m3 4v-6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Nenhum dado disponivel</p>
+              <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Registre vendas e despesas para gerar relatorios mensais.</p>
+            </div>
+          </Card>
+        )
         : (
           <>
             <Sel label="Periodo" value={month} onChange={function(e) { setMonth(e.target.value); }}>
@@ -67,7 +80,7 @@ export default function ReportView({ tx, toast }) {
                     return (
                       <div key={cat} className="flex items-center gap-3">
                         <span className="text-xs text-gray-500 w-20 flex-shrink-0 truncate">{cat}</span>
-                        <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden"><div className="h-full bg-red-400 rounded-full" style={{width:(val/expense*100).toFixed(0)+'%'}}/></div>
+                        <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden"><div className="h-full rounded-full" style={{width:(val/expense*100).toFixed(0)+'%', background:'#ef4444'}}/></div>
                         <span className="text-xs font-semibold text-gray-600 w-20 text-right">{fmt(val)}</span>
                       </div>
                     );
@@ -88,10 +101,14 @@ export default function ReportView({ tx, toast }) {
                       return (
                         <div key={t.id} className="flex items-center justify-between px-5 py-3">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className={'w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ' + (t.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500')}>{t.type === 'income' ? 'UP' : 'DOWN'}</div>
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{background: t.type === 'income' ? brandAlpha(accentColor, 0.1) : 'rgba(239,68,68,0.08)'}}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={t.type === 'income' ? accentColor : '#ef4444'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d={t.type === 'income' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'}/>
+                              </svg>
+                            </div>
                             <div className="min-w-0"><p className="text-sm font-medium text-gray-800 truncate">{t.desc}</p><p className="text-xs text-gray-400">{new Date(t.date + 'T12:00').toLocaleDateString('pt-BR') + ' . ' + (t.method || t.category || '') + (t.registered_by ? ' . ' + t.registered_by : '')}</p></div>
                           </div>
-                          <span className={'text-sm font-semibold flex-shrink-0 ml-3 ' + (t.type === 'income' ? 'text-green-600' : 'text-red-500')}>{(t.type === 'income' ? '+' : '-') + fmt(t.amount)}</span>
+                          <span className="text-sm font-semibold flex-shrink-0 ml-3" style={{color: t.type === 'income' ? accentColor : '#ef4444'}}>{(t.type === 'income' ? '+' : '-') + fmt(t.amount)}</span>
                         </div>
                       );
                     })}
