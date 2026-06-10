@@ -55,7 +55,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
       </div>
 
       {lowStock.length > 0 && (
-        <div className="rounded-2xl border border-amber-200 px-4 py-3.5 flex flex-col gap-2" style={{background:'#fffbeb'}}>
+        <div className="rounded-2xl border border-amber-200 px-4 py-3.5 flex flex-col gap-2" style={{background:'var(--bg-subtle)'}}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-amber-500"/>
