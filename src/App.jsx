@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { sb } from './lib/supabase.js';
 import { ldb, syncAll, toLocal, setLastSync } from './lib/db.js';
-import { now, today, safe, uid } from './lib/utils.js';
+import { now, today, safe, uid, deriveCores } from './lib/utils.js';
 import { INIT_BRAND, INIT_PLAN, atLimit, limitFor } from './lib/constants.js';
 import Sidebar from './components/Sidebar.jsx';
 import Toast from './components/Toast.jsx';
@@ -39,6 +39,18 @@ export default function App() {
   const [view, setView] = useState(hashView);
   const navTo = useCallback(function(v) { setView(v); window.location.hash = v; }, []);
   const [brand, setBrand] = useState(INIT_BRAND);
+  const applyBrandVars = useCallback(function(b) {
+    var primary   = b.color || '#002f59';
+    var derived   = deriveCores(primary);
+    var secondary = b.color_secondary || derived.secondary;
+    var accent    = b.color_accent    || derived.accent;
+    var el = document.documentElement;
+    el.style.setProperty('--brand', primary);
+    el.style.setProperty('--brand-secondary', secondary);
+    el.style.setProperty('--brand-accent', accent);
+    el.setAttribute('data-theme', b.theme || 'light');
+  }, []);
+  useEffect(function() { applyBrandVars(brand); }, [brand]);
   const [planInfo, setPlanInfo] = useState(INIT_PLAN);
   const [tx, setTx] = useState([]);
   const [products, setProducts] = useState([]);
@@ -75,7 +87,7 @@ export default function App() {
     ]);
     const profile = results[0], prods = results[1], txs = results[2], lss = results[3], roleMeta = results[4];
     if (profile) {
-      setBrand({name:profile.name, logo:profile.logo, color:profile.color, logo_url:profile.logo_url||null});
+      setBrand({name:profile.name, logo:profile.logo, color:profile.color, color_secondary:profile.color_secondary||null, color_accent:profile.color_accent||null, theme:profile.theme||'light', logo_url:profile.logo_url||null});
       setPlanInfo({plan:profile.plan||'free', plan_expires_at:profile.plan_expires_at||null, plan_activated_by:profile.plan_activated_by||null});
     }
     setProducts(prods);
@@ -126,7 +138,7 @@ export default function App() {
             sb.from('user_roles').select('role').eq('user_id', userId).maybeSingle(),
           ]);
           const pr = allRes[0], pdr = allRes[1], txr = allRes[2], lr = allRes[3], roleRes = allRes[4];
-          if (pr.data) { const p = pr.data; setBrand({name:p.name, logo:p.logo, color:p.color, logo_url:p.logo_url||null}); setPlanInfo({plan:p.plan||'free', plan_expires_at:p.plan_expires_at||null, plan_activated_by:p.plan_activated_by||null}); await ldb.profiles.put(toLocal(p)); }
+          if (pr.data) { const p = pr.data; setBrand({name:p.name, logo:p.logo, color:p.color, color_secondary:p.color_secondary||null, color_accent:p.color_accent||null, theme:p.theme||'light', logo_url:p.logo_url||null}); setPlanInfo({plan:p.plan||'free', plan_expires_at:p.plan_expires_at||null, plan_activated_by:p.plan_activated_by||null}); await ldb.profiles.put(toLocal(p)); }
           if (pdr.data) { setProducts(pdr.data); await ldb.products.bulkPut(pdr.data.map(function(r) { return toLocal(r, {user_id:userId}); })); }
           if (txr.data) { const mapped = txr.data.map(function(t) { return Object.assign({}, t, {desc:t.description, cat:t.category}); }); setTx(mapped); await ldb.transactions.bulkPut(txr.data.map(function(r) { return toLocal(r, {user_id:userId, desc:r.description, cat:r.category}); })); }
           if (lr.data) { const mapped = lr.data.map(function(l) { return Object.assign({}, l, {desc:l.description}); }); setLosses(mapped); await ldb.losses.bulkPut(lr.data.map(function(r) { return toLocal(r, {user_id:userId, desc:r.description}); })); }
@@ -333,7 +345,7 @@ export default function App() {
 
   const saveBrand = async function(nb) {
     const userId = session.user.id;
-    const row = {user_id:userId, name:nb.name, logo:nb.logo, color:nb.color, logo_url:nb.logo_url||null, updated_at:now(), _synced:0, _updated_at:now()};
+    const row = {user_id:userId, name:nb.name, logo:nb.logo, color:nb.color, color_secondary:nb.color_secondary||null, color_accent:nb.color_accent||null, theme:nb.theme||'light', logo_url:nb.logo_url||null, updated_at:now(), _synced:0, _updated_at:now()};
     try { await ldb.profiles.put(row); }
     catch(e) { toast('Erro ao salvar configuracoes: ' + (e.message || 'tente novamente'), 'error'); return; }
     setBrand(nb);
@@ -342,7 +354,7 @@ export default function App() {
     }
     if (navigator.onLine) {
       try {
-        const res = await sb.from('company_profiles').upsert({user_id:userId, name:nb.name, logo:nb.logo, color:nb.color, logo_url:nb.logo_url||null});
+        const res = await sb.from('company_profiles').upsert({user_id:userId, name:nb.name, logo:nb.logo, color:nb.color, color_secondary:nb.color_secondary||null, color_accent:nb.color_accent||null, theme:nb.theme||'light', logo_url:nb.logo_url||null});
         if (!res.error) await ldb.profiles.update(userId, {_synced:1});
         else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
       } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
