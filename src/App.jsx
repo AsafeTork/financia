@@ -24,7 +24,7 @@ const hashView = function() { const h = window.location.hash.replace('#',''); re
 
 function Loader({ text }) {
   return (
-    <div className="min-h-screen flex items-center justify-center flex-col gap-3" style={{background:'#f8fafc'}}>
+    <div className="min-h-screen flex items-center justify-center flex-col gap-3" style={{background:'var(--bg-page)'}}>
       <div className="w-10 h-10 border-2 border-gray-200 rounded-full animate-spin" style={{borderTopColor:'#1a6b5c'}}/>
       {text && <p className="text-sm text-gray-400">{text}</p>}
     </div>
@@ -371,7 +371,7 @@ export default function App() {
   }
   if (dataLoading) return <Loader text="Carregando seus dados..."/>;
   if (dataError) return (
-    <div className="min-h-screen flex items-center justify-center flex-col gap-4 p-6" style={{background:'#f8fafc'}}>
+    <div className="min-h-screen flex items-center justify-center flex-col gap-4 p-6" style={{background:'var(--bg-page)'}}>
       <span className="text-4xl">(!)</span>
       <p className="text-sm font-semibold text-gray-700">{dataError}</p>
       <button onClick={function() { loadData(session.user.id); }} className="px-6 py-2.5 text-white rounded-xl text-sm font-semibold bg-green-600">Tentar novamente</button>
@@ -390,7 +390,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex" style={{background:'#f8fafc'}}>
+    <div className="min-h-screen flex" style={{background:'var(--bg-page)'}}>
       <Offline/>
       <SyncBadge status={syncStatus}/>
       <Sidebar view={view} onNav={navTo} brand={brand} open={sidebarOpen} isAdmin={isAdminDB} onClose={function() { setSidebarOpen(false); }}/>
