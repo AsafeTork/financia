@@ -20,7 +20,7 @@ export default function BottomNav({ view, onNav, brand }) {
           var active = view === item.key || (isOverflow && OVERFLOW_KEYS.indexOf(view) !== -1);
           return (
             <button key={item.key} onClick={function() { onNav(item.key); }}
-              className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-colors min-w-0"
+              className="relative flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-colors min-w-0"
               style={{color: active ? brand.color : '#94a3b8'}}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">

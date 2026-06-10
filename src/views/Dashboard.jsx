@@ -83,15 +83,18 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
         <KpiCard label="Entradas do mes"
           value={fmt(ti)}
           color="#22c55e"
-          variation={inVar}/>
+          variation={inVar}
+          sub={inVar === null ? 'Sem dados anteriores' : undefined}/>
         <KpiCard label="Saidas do mes"
           value={fmt(to)}
           color="#ef4444"
-          variation={outVar !== null ? -outVar : null}/>
+          variation={outVar !== null ? -outVar : null}
+          sub={outVar === null ? 'Sem dados anteriores' : undefined}/>
         <KpiCard label="Resultado"
           value={fmt(profitCurr)}
           color={brand.color}
-          variation={profVar}/>
+          variation={profVar}
+          sub={profVar === null ? 'Sem dados anteriores' : undefined}/>
         <KpiCard label="Saldo hoje"
           value={fmt(di - dout)}
           color="#3b82f6"
