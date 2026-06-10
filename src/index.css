@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 * { font-family: 'DM Sans', system-ui, sans-serif; box-sizing: border-box; }
-body { margin: 0; background: #f8fafc; }
+body { margin: 0; background: var(--bg-page, #f8fafc); color: var(--text-main, #111827); }
 
 @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
@@ -11,3 +11,52 @@ body { margin: 0; background: #f8fafc; }
 
 .anim-up   { animation: slideUp .2s ease; }
 .anim-fade { animation: fadeIn .15s ease; }
+
+/* CSS vars defaults (light) */
+:root {
+  --bg-page:   #f8fafc;
+  --bg-card:   #ffffff;
+  --bg-input:  #ffffff;
+  --bg-subtle: #f9fafb;
+  --text-main: #111827;
+  --text-sub:  #6b7280;
+  --text-muted:#9ca3af;
+  --border:    #f3f4f6;
+  --border-md: #e5e7eb;
+}
+
+/* Dark theme overrides */
+[data-theme="dark"] {
+  --bg-page:   #0f172a;
+  --bg-card:   #1e293b;
+  --bg-input:  #1e293b;
+  --bg-subtle: #162032;
+  --text-main: #f1f5f9;
+  --text-sub:  #94a3b8;
+  --text-muted:#64748b;
+  --border:    #334155;
+  --border-md: #334155;
+}
+[data-theme="dark"] body { background: #0f172a; }
+[data-theme="dark"] .bg-white   { background-color: #1e293b !important; }
+[data-theme="dark"] .bg-gray-50 { background-color: #162032 !important; }
+[data-theme="dark"] .bg-gray-100{ background-color: #0f172a !important; }
+[data-theme="dark"] .border-gray-100,
+[data-theme="dark"] .border-gray-200 { border-color: #334155 !important; }
+[data-theme="dark"] .divide-gray-50 > * + * { border-color: #334155 !important; }
+[data-theme="dark"] .text-gray-900 { color: #f1f5f9 !important; }
+[data-theme="dark"] .text-gray-800 { color: #e2e8f0 !important; }
+[data-theme="dark"] .text-gray-700 { color: #cbd5e1 !important; }
+[data-theme="dark"] .text-gray-600 { color: #94a3b8 !important; }
+[data-theme="dark"] .text-gray-500 { color: #64748b !important; }
+[data-theme="dark"] .text-gray-400 { color: #475569 !important; }
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+[data-theme="dark"] .hover\:bg-gray-50:hover,
+[data-theme="dark"] .hover\:bg-gray-100:hover { background-color: #162032 !important; }
+[data-theme="dark"] .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important; }

@@ -55,15 +55,15 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
       {effectivePlan(planInfo) === 'free' && (
         <Card className="px-5 py-4 flex flex-col gap-3">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Uso do plano gratuito</p>
-          <UsageBar label="Transacoes" used={tx.length} limit={PLAN_LIMITS.free.transactions}/>
-          <UsageBar label="Produtos" used={products.length} limit={PLAN_LIMITS.free.products}/>
-          <UsageBar label="Perdas" used={lossesCount || 0} limit={PLAN_LIMITS.free.losses}/>
+          <UsageBar label="Transacoes" used={tx.length} limit={PLAN_LIMITS.free.transactions} color={brand.color} accentColor={brand.color_accent}/>
+          <UsageBar label="Produtos" used={products.length} limit={PLAN_LIMITS.free.products} color={brand.color} accentColor={brand.color_accent}/>
+          <UsageBar label="Perdas" used={lossesCount || 0} limit={PLAN_LIMITS.free.losses} color={brand.color} accentColor={brand.color_accent}/>
           <p className="text-xs text-gray-400">Faca upgrade para o Plano Pro e tenha tudo ilimitado.</p>
         </Card>
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <KpiCard label="Entradas (mes)" value={fmt(ti)} color="#1a6b5c"/>
+        <KpiCard label="Entradas (mes)" value={fmt(ti)} color={brand.color}/>
         <KpiCard label="Saidas (mes)" value={fmt(to)} color="#ef4444"/>
         <KpiCard label="Lucro liquido" value={fmt(ti - to)} color={brand.color} sub="Este mes"/>
         <KpiCard label="Saldo hoje" value={fmt(di - dout)} color="#3b82f6" sub={'+' + fmt(di) + ' / -' + fmt(dout)}/>
@@ -79,7 +79,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
         </div>
         {tx.length === 0
           ? <div className="flex flex-col items-center py-8 gap-2"><p className="text-sm text-gray-300">Nenhuma movimentacao ainda</p><button onClick={function() { onNav('income'); }} className="text-xs font-semibold text-green-600 hover:underline">Registrar primeira venda</button></div>
-          : <BarChartSVG data={chartData}/>
+          : <BarChartSVG data={chartData} color={brand.color}/>
         }
       </Card>
 
