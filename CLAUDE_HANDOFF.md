@@ -29,6 +29,21 @@ Audience: next Claude session. Asafe is not a coder. Tom: tecnico direto.
 - `20260609_rls_admin_delete_client.sql` — policies DELETE para admin em todas as tabelas
 - `20260609_fix_plan_protection.sql` — policy UPDATE com WITH CHECK (obsoleta, trigger eh a solucao)
 
+### PENDENTE — rodar no Studio antes de mergear feat/color-palette
+
+```sql
+-- Migration: paleta multi-tom + tema por cliente
+ALTER TABLE company_profiles
+  ADD COLUMN IF NOT EXISTS color_secondary text,
+  ADD COLUMN IF NOT EXISTS color_accent    text,
+  ADD COLUMN IF NOT EXISTS theme           text DEFAULT 'light';
+```
+
+Colunas adicionadas:
+- `color_secondary` (text, nullable) — cor secundaria; se null, o app deriva automaticamente via lightenHex(primary, 0.78)
+- `color_accent`    (text, nullable) — cor de acento; se null, deriva via lightenHex(primary, 0.92)
+- `theme`           (text, default 'light') — valores: 'light' | 'dark'
+
 ### Funcoes e triggers (criados manualmente no Studio, sem migration file)
 
 - `set_client_plan(a_target uuid, b_plan text, c_actor text)` SECURITY DEFINER

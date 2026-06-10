@@ -85,7 +85,7 @@ export const syncTable = async (uid, table, ldbTable, mapLocal) => {
   }
 };
 
-const PROFILE_WRITE_FIELDS = ['user_id','name','logo','color','logo_url'];
+const PROFILE_WRITE_FIELDS = ['user_id','name','logo','color','color_secondary','color_accent','theme','logo_url'];
 
 export const syncProfiles = async uid => {
   if (!navigator.onLine) return;
