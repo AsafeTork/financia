@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Card, Inp, Modal, EditBtn, DelBtn, Empty } from '../components/ui.jsx';
+import { Card, Inp, Modal, EditBtn, DelBtn } from '../components/ui.jsx';
 import { PSearch } from '../components/SaleForm.jsx';
-import { fmt, fmtDate, today, safe, uid } from '../lib/utils.js';
+import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';
 
 export default function InventoryView({ products, losses, onAddProduct, onEditProduct, onDeleteProduct, onAddLoss, onEditLoss, onDeleteLoss, onAdjustStock, brand, toast, confirm }) {
   const [tab, setTab] = useState('products');
@@ -81,97 +81,160 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
   const sp = sm ? products.find(function(p) { return p.id === sm; }) : null;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between">
-        <div><h2 className="text-2xl font-bold text-gray-900">Estoque</h2><p className="text-sm text-gray-400 mt-0.5">{products.length + ' item' + (products.length !== 1 ? 's' : '')}</p></div>
-        <div className="flex gap-2">
-          {tab === 'products' && <button onClick={function() { setPm(true); }} className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90" style={{background:brand.color}}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Adicionar</button>}
-          {tab === 'losses' && <button onClick={function() { setLm(true); }} className="flex items-center gap-2 bg-red-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Perda</button>}
+    <div className="flex flex-col gap-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900" style={{letterSpacing:'-0.5px'}}>Estoque e Perdas</h2>
+          <p className="text-sm text-gray-400 mt-0.5">{products.length} produto{products.length !== 1 ? 's' : ''} . {losses.length} perda{losses.length !== 1 ? 's' : ''}</p>
+        </div>
+        <div className="flex-shrink-0">
+          {tab === 'products' && (
+            <button onClick={function() { setPm(true); }}
+              className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition"
+              style={{background: brand.color}}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/></svg>
+              Adicionar
+            </button>
+          )}
+          {tab === 'losses' && (
+            <button onClick={function() { setLm(true); }}
+              className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition bg-red-500">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/></svg>
+              Registrar perda
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-        {[{key:'products',label:'Produtos e Servicos'},{key:'losses',label:'Perdas'}].map(function(t) {
-          return <button key={t.key} onClick={function() { setTab(t.key); }} className={'flex-1 py-2 text-sm font-medium rounded-lg transition ' + (tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500')}>{t.label}</button>;
+      <div className="flex border-b border-gray-100">
+        {[{key:'products', label:'Produtos e Servicos'}, {key:'losses', label:'Perdas'}].map(function(t) {
+          var active = tab === t.key;
+          return (
+            <button key={t.key} onClick={function() { setTab(t.key); }}
+              className={'flex-1 pb-3 text-sm font-medium transition-colors ' + (active ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600')}
+              style={active ? {borderBottom: '2px solid ' + brand.color} : {}}>
+              {t.label}
+            </button>
+          );
         })}
       </div>
 
       {tab === 'products' && (
         <Card>
-          <div className="px-5 py-3 border-b border-gray-50">
-            <div className="relative"><svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="Buscar por nome ou categoria..." className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:border-gray-300"/></div>
+          <div className="px-4 py-3 border-b border-gray-50">
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="Buscar por nome ou categoria..." className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-100 rounded-xl"/>
+            </div>
           </div>
-          {disp.length === 0
-            ? <Empty icon="[APK]" title="Nenhum item" sub="Adicione produtos ou servicos com categoria, custo e estoque."/>
-            : grouped.map(function(pair) {
-                const cat = pair[0], items = pair[1];
-                return (
-                  <div key={cat}>
-                    <button onClick={function() { toggleCat(cat); }} className="w-full flex items-center justify-between px-5 py-2.5 bg-gray-50 hover:bg-gray-100 transition border-b border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <svg className={'w-3.5 h-3.5 text-gray-400 transition-transform ' + (collapsed.has(cat) ? '-rotate-90' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{cat}</span>
-                      </div>
-                      <span className="text-xs text-gray-400">{items.length + ' ' + (items.length === 1 ? 'item' : 'itens')}</span>
-                    </button>
-                    {!collapsed.has(cat) && (
-                      <div className="divide-y divide-gray-50">
-                        {items.map(function(p) {
-                          return (
-                            <div key={p.id} className="px-4 py-3.5 flex items-center justify-between gap-3">
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-800">{p.name}</p>
-                                <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                                  <span className="text-xs text-gray-400">{'Venda: ' + fmt(p.price)}</span>
-                                  {p.registered_by && <span className="text-xs text-gray-400">{'. por ' + p.registered_by}</span>}
-                                  {p.cost != null && (
-                                    <>
-                                      <span className="text-xs text-gray-400">{'Custo: ' + fmt(p.cost)}</span>
-                                      <span className="text-xs text-green-600 font-medium">{'Margem: ' + (((p.price - p.cost) / p.price) * 100).toFixed(0) + '%'}</span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1 flex-shrink-0">
-                                {p.stock != null && <button onClick={function() { setSm(p.id); setSq('1'); }} className={'text-xs font-semibold px-2.5 py-1 rounded-lg mr-1 ' + (p.stock <= 0 ? 'bg-red-50 text-red-600' : p.stock <= 5 ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700')}>{p.stock <= 0 ? 'Esgotado' : p.stock + ' un'}</button>}
-                                <EditBtn onClick={function() { setEditP({id:p.id, name:p.name, category:p.category||'', price:String(p.price), cost:p.cost!=null?String(p.cost):'', stock:p.stock!=null?String(p.stock):''}); }}/>
-                                <DelBtn onClick={function() { confirm('Excluir "' + p.name + '"?', async function() { await onDeleteProduct(p.id); toast('Produto removido'); }); }}/>
+          {disp.length === 0 ? (
+            <div className="py-14 flex flex-col items-center gap-3 text-center px-6">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{background: brandAlpha(brand.color, 0.08)}}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={brand.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Nenhum produto cadastrado</p>
+              <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Adicione produtos ou servicos com preco, custo e controle de estoque.</p>
+              <button onClick={function() { setPm(true); }} className="mt-1 text-xs font-semibold px-5 py-2.5 rounded-xl text-white hover:opacity-90 transition" style={{background: brand.color}}>
+                + Adicionar produto
+              </button>
+            </div>
+          ) : (
+            grouped.map(function(pair) {
+              var cat = pair[0], items = pair[1];
+              return (
+                <div key={cat}>
+                  <button onClick={function() { toggleCat(cat); }}
+                    className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition border-b border-t border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <svg className={'w-3.5 h-3.5 text-gray-400 transition-transform ' + (collapsed.has(cat) ? '-rotate-90' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{cat}</span>
+                    </div>
+                    <span className="text-xs text-gray-400">{items.length} {items.length === 1 ? 'item' : 'itens'}</span>
+                  </button>
+                  {!collapsed.has(cat) && (
+                    <div className="divide-y divide-gray-50">
+                      {items.map(function(p) {
+                        var stockOk = p.stock != null && p.stock > 5;
+                        var stockLow = p.stock != null && p.stock > 0 && p.stock <= 5;
+                        var stockOut = p.stock != null && p.stock <= 0;
+                        return (
+                          <div key={p.id} className="px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50 transition-colors">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <span className="text-xs font-medium" style={{color: brand.color}}>{fmt(p.price)}</span>
+                                {p.cost != null && (
+                                  <span className="text-xs text-green-600 font-medium">
+                                    {(((p.price - p.cost) / p.price) * 100).toFixed(0) + '% margem'}
+                                  </span>
+                                )}
+                                {p.registered_by && <span className="text-xs text-gray-400">{'por ' + p.registered_by}</span>}
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-          }
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {p.stock != null && (
+                                <button onClick={function() { setSm(p.id); setSq('1'); }}
+                                  className={'text-xs font-semibold px-2.5 py-1 rounded-lg mr-1 transition ' + (stockOut ? 'bg-red-50 text-red-600' : stockLow ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700')}>
+                                  {stockOut ? 'Esgotado' : p.stock + ' un'}
+                                </button>
+                              )}
+                              <EditBtn onClick={function() { setEditP({id:p.id, name:p.name, category:p.category||'', price:String(p.price), cost:p.cost!=null?String(p.cost):'', stock:p.stock!=null?String(p.stock):''}); }}/>
+                              <DelBtn onClick={function() { confirm('Excluir "' + p.name + '"?', async function() { await onDeleteProduct(p.id); toast('Produto removido'); }); }}/>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </Card>
       )}
 
       {tab === 'losses' && (
         <Card>
-          {losses.length === 0
-            ? <Empty icon="(!)" title="Nenhuma perda" sub="Registre produtos vencidos, cancelados ou danificados."/>
-            : (
-              <div className="divide-y divide-gray-50">
-                {losses.slice().sort(function(a, b) { return b.date.localeCompare(a.date); }).map(function(l) {
-                  return (
-                    <div key={l.id} className="flex items-center justify-between px-4 py-3.5 gap-3">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm flex-shrink-0">!</div>
-                        <div className="min-w-0"><p className="text-sm font-medium text-gray-800">{l.qty + 'x ' + l.desc}</p><p className="text-xs text-gray-400">{fmtDate(l.date) + (l.reason ? ' . ' + l.reason : '')}</p></div>
+          {losses.length === 0 ? (
+            <div className="py-14 flex flex-col items-center gap-3 text-center px-6">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-amber-50">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Nenhuma perda registrada</p>
+              <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Registre produtos vencidos, cancelados ou danificados.</p>
+              <button onClick={function() { setLm(true); }} className="mt-1 text-xs font-semibold px-5 py-2.5 rounded-xl text-white bg-red-500 hover:opacity-90 transition">
+                + Registrar perda
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {losses.slice().sort(function(a, b) { return b.date.localeCompare(a.date); }).map(function(l) {
+                return (
+                  <div key={l.id} className="flex items-center justify-between px-4 py-3.5 gap-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <EditBtn onClick={function() { setEditL({id:l.id, desc:l.desc, qty:String(l.qty), reason:l.reason||'', date:l.date}); }}/>
-                        <DelBtn onClick={function() { confirm('Excluir esta perda?', async function() { await onDeleteLoss(l.id); toast('Perda removida'); }); }}/>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-800">{l.qty + 'x ' + l.desc}</p>
+                        <p className="text-xs text-gray-400">{fmtDate(l.date)}{l.reason ? ' . ' + l.reason : ''}</p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )
-          }
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <EditBtn onClick={function() { setEditL({id:l.id, desc:l.desc, qty:String(l.qty), reason:l.reason||'', date:l.date}); }}/>
+                      <DelBtn onClick={function() { confirm('Excluir esta perda?', async function() { await onDeleteLoss(l.id); toast('Perda removida'); }); }}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
       )}
 

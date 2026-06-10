@@ -1,9 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { sb } from './lib/supabase.js';
 import { ldb, syncAll, toLocal, setLastSync } from './lib/db.js';
-import { now, today, safe, uid, deriveCores } from './lib/utils.js';
+import { now, today, safe, uid, brandAlpha, deriveCores } from './lib/utils.js';
 import { INIT_BRAND, INIT_PLAN, atLimit, limitFor } from './lib/constants.js';
 import Sidebar from './components/Sidebar.jsx';
+import BottomNav from './components/BottomNav.jsx';
+import Header from './components/Header.jsx';
 import Toast from './components/Toast.jsx';
 import Offline from './components/Offline.jsx';
 import Confirm from './components/Confirm.jsx';
@@ -46,6 +48,7 @@ export default function App() {
     var accent    = b.color_accent    || derived.accent;
     var el = document.documentElement;
     el.style.setProperty('--brand', primary);
+    el.style.setProperty('--brand-soft', brandAlpha(primary, 0.08));
     el.style.setProperty('--brand-secondary', secondary);
     el.style.setProperty('--brand-accent', accent);
     el.setAttribute('data-theme', b.theme || 'light');
@@ -382,7 +385,7 @@ export default function App() {
     expense:   React.createElement(TxView, Object.assign({type:'expense', tx:tx, products:products, onAdd:addTx, onEdit:editTx, onDelete:deleteTx, onDeductStock:function(){}}, p)),
     inventory: React.createElement(InventoryView, Object.assign({products:products, losses:losses, onAddProduct:addProduct, onEditProduct:editProduct, onDeleteProduct:deleteProduct, onAddLoss:addLoss, onEditLoss:editLoss, onDeleteLoss:deleteLoss, onAdjustStock:adjustStock}, p)),
     email:     React.createElement(EmailView, {brand:brand, toast:toast}),
-    report:    React.createElement(ReportView, {tx:tx, toast:toast}),
+    report:    React.createElement(ReportView, {tx:tx, brand:brand, toast:toast}),
     settings:  React.createElement(SettingsView, {brand:brand, session:session, onSave:saveBrand, toast:toast, confirm:confirm, isAdmin:isAdminDB}),
   };
 
@@ -392,20 +395,10 @@ export default function App() {
       <SyncBadge status={syncStatus}/>
       <Sidebar view={view} onNav={navTo} brand={brand} open={sidebarOpen} isAdmin={isAdminDB} onClose={function() { setSidebarOpen(false); }}/>
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-20 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 lg:hidden">
-          <button onClick={function() { setSidebarOpen(true); }} className="text-gray-400 p-1 rounded-lg hover:bg-gray-100">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
-          </button>
-          <div className="flex items-center gap-2">
-            {brand.logo_url
-              ? <img src={brand.logo_url} alt="logo" className="w-7 h-7 rounded-lg object-cover"/>
-              : <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style={{background:brand.color}}><span className="text-white font-bold">{((brand.logo||'F')[0])}</span></div>
-            }
-            <span className="font-bold text-gray-900 text-sm">{brand.name}</span>
-          </div>
-        </header>
-        <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto">{views[view]}</main>
+        <Header brand={brand} onMenuOpen={function() { setSidebarOpen(true); }}/>
+        <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto pb-24 lg:pb-8">{views[view]}</main>
       </div>
+      <BottomNav view={view} onNav={navTo} brand={brand}/>
       <Toast toast={toastData}/>
       {confirmData && <Confirm msg={confirmData.msg} onOk={function() { confirmData.onOk(); setConfirmData(null); }} onCancel={function() { setConfirmData(null); }}/>}
       {upgradeNotice && <UpgradeModal kind={upgradeNotice.kind} limit={upgradeNotice.limit} onClose={function() { setUpgradeNotice(null); }}/>}

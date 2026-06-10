@@ -121,9 +121,31 @@ Branch `refactor/vite` mantida como backup.
 | fix | 0260943 | 11 try/catch CRUD Supabase + fmtDate InventoryView |
 | merge | 2d3b83f | Merge refactor/vite → main |
 
+## Redesign visual (branch feat/visual-redesign — NAO mergeado em main)
+
+5 commits concluidos em 2026-06-10. Aguardando aprovacao de Asafe para merge.
+
+| Commit | Hash | Descricao |
+|--------|------|-----------|
+| 1 | (base) | hexToRgb/brandAlpha utils, CSS vars --brand, ui.jsx, BottomNav.jsx |
+| 2 | (layout) | Header.jsx mobile, Sidebar atualizado, constants labels, App.jsx |
+| 3 | (dashboard) | KPI cards com variacao vs mes anterior, BarChartSVG colorido |
+| 4 | (listas) | TxView agrupado por data, InventoryView tabs underline, empty states SVG |
+| 5 | 817da74 | SettingsView tabs underline, color picker dinamico, SVG checkmarks; ReportView brand |
+
+Principais mudancas do redesign:
+- White-label real: brand.color aplicado em header, botoes, KPIs, tabs, badges
+- `brandAlpha(hex, a)` para fundos suaves sem dependencias extras
+- CSS var `--brand` no :root para focus rings globais
+- Bottom nav mobile 5 itens (lg:hidden); Sidebar desktop-only
+- KPIs com % variacao vs mes anterior
+- Listas agrupadas por data com subtotal do dia
+- Empty states com SVG e CTA em brand.color
+
 ## Proximas tarefas (em ordem de prioridade)
 
-1. **Fase 3 Stripe** — so quando Asafe pedir.
+1. **Aprovar e mergear feat/visual-redesign** — Asafe precisa revisar e aprovar.
+2. **Fase 3 Stripe** — so quando Asafe pedir.
    Arquitetura: Edge Function Supabase cria checkout session, webhook atualiza plan via
    set_client_plan. Nunca chave Stripe no front.
 

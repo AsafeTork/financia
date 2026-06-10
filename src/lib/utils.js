@@ -1,4 +1,12 @@
 export const fmt = n => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const hexToRgb = function(hex) {
+  var h = (hex || '#002f59').replace('#', '');
+  return { r: parseInt(h.substring(0, 2), 16), g: parseInt(h.substring(2, 4), 16), b: parseInt(h.substring(4, 6), 16) };
+};
+export const brandAlpha = function(hex, a) {
+  var c = hexToRgb(hex);
+  return 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + a + ')';
+};
 export const fmtDate = s => new Date(s + 'T12:00').toLocaleDateString('pt-BR');
 export const monthLabel = s => { const [y, m] = s.split('-'); return new Date(+y, +m - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); };
 export const now = () => new Date().toISOString();
@@ -10,14 +18,6 @@ export const genPwd = () => { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqr
 let _id = 1;
 export const uid = () => String(Date.now()) + String(++_id);
 
-export const hexToRgb = function(hex) {
-  var h = (hex || '#002f59').replace('#', '');
-  return { r: parseInt(h.substring(0, 2), 16), g: parseInt(h.substring(2, 4), 16), b: parseInt(h.substring(4, 6), 16) };
-};
-export const brandAlpha = function(hex, a) {
-  var c = hexToRgb(hex);
-  return 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + a + ')';
-};
 export const luminance = function(hex) {
   var c = hexToRgb(hex);
   var toLinear = function(v) { v = v / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
