@@ -87,9 +87,17 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
     setUploading(false);
   };
 
-  const tabs = isAdmin
-    ? [{key:'brand',label:'Branding'},{key:'security',label:'Seguranca'},{key:'account',label:'Conta'},{key:'clients',label:'Clientes'}]
-    : [{key:'security',label:'Seguranca'},{key:'account',label:'Conta'}];
+  var allTabs = [
+    {key:'brand',    label:'Branding'},
+    {key:'security', label:'Seguranca'},
+    {key:'account',  label:'Conta'},
+    {key:'clients',  label:'Clientes'},
+  ];
+  var tabs = allTabs.filter(function(t) {
+    if (t.key === 'brand')   return isAdmin;
+    if (t.key === 'clients') return isAdmin;
+    return true;
+  });
 
   return (
     <div className="flex flex-col gap-6">

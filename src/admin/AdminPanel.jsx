@@ -128,7 +128,14 @@ export default function AdminPanel({ toast, confirm, session }) {
                       <div className="flex gap-1 flex-shrink-0">
                         <button onClick={function() { setEditClient(c); }} className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Editar</button>
                         <button onClick={function() { triggerApkBuild(c.name, c.logo_url, c.color).then(function(ok) { toast(ok ? 'APK iniciado!' : 'Sem token.', ok ? 'success' : 'error'); }); }} className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">APK</button>
-                        <button onClick={function() { handleDelete(c); }} className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-red-200 text-red-500 hover:bg-red-50">Del</button>
+                        <button onClick={function() { handleDelete(c); }} className="p-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3,6 5,6 21,6"/>
+                            <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
+                            <path d="M10,11v6M14,11v6"/>
+                            <path d="M9,6V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1v2"/>
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   );
@@ -223,7 +230,7 @@ export default function AdminPanel({ toast, confirm, session }) {
         <ClientEditModal
           client={editClient}
           adminEmail={adminEmail}
-          onSave={function(updated) { setClients(function(cs) { return cs.map(function(c) { return c.user_id === updated.user_id ? updated : c; }); }); setEditClient(null); }}
+          onSave={function(updated) { setClients(function(cs) { return cs.map(function(c) { return c.user_id === updated.user_id ? updated : c; }); }); setEditClient(null); reload(); }}
           onClose={function() { setEditClient(null); }}
           toast={toast}
         />
