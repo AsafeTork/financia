@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { sb } from '../lib/supabase.js';
-import { hexToRgb, luminance, deriveCores } from '../lib/utils.js';
+import { hexToRgb, luminance, deriveCores, lightenHex } from '../lib/utils.js';
 
 function PreviewPaleta({ primary, secondary, accent }) {
   var lum = luminance(primary || '#002f59');
@@ -84,6 +84,11 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
     if (!colorSecondary) {/* auto-derive — shown via effectiveSecondary */}
   };
 
+  var colorDistance = function(h1, h2) {
+    var a = hexToRgb(h1); var b2 = hexToRgb(h2);
+    return Math.sqrt(Math.pow(a.r - b2.r, 2) + Math.pow(a.g - b2.g, 2) + Math.pow(a.b - b2.b, 2));
+  };
+
   var extractColorsFromImage = function(url) {
     var img = new Image();
     img.crossOrigin = 'anonymous';
@@ -95,22 +100,38 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
         var buckets = {};
         for (var i = 0; i < px.length; i += 4) {
           if (px[i + 3] < 128) continue;
-          var r = Math.round(px[i] / 32) * 32;
-          var g = Math.round(px[i + 1] / 32) * 32;
-          var b = Math.round(px[i + 2] / 32) * 32;
-          if (r > 220 && g > 220 && b > 220) continue;
+          var r = Math.round(px[i] / 48) * 48;
+          var g = Math.round(px[i + 1] / 48) * 48;
+          var b = Math.round(px[i + 2] / 48) * 48;
+          if (r > 240 && g > 240 && b > 240) continue;
           var k = r + ',' + g + ',' + b;
           buckets[k] = (buckets[k] || 0) + 1;
         }
-        var hexes = Object.entries(buckets)
+        var sorted = Object.entries(buckets)
           .sort(function(a, b2) { return b2[1] - a[1]; })
-          .slice(0, 6)
           .map(function(pair) {
             var parts = pair[0].split(',').map(Number);
             return '#' + parts.map(function(v) { return v.toString(16).padStart(2, '0'); }).join('');
           });
-        hexes.sort(function(a, b2) { return luminance(a) - luminance(b2); });
-        if (hexes.length) setExtractedColors(hexes);
+        var deduped = [];
+        for (var j = 0; j < sorted.length; j++) {
+          var ok = true;
+          for (var k2 = 0; k2 < deduped.length; k2++) {
+            if (colorDistance(sorted[j], deduped[k2]) < 30) { ok = false; break; }
+          }
+          if (ok) deduped.push(sorted[j]);
+        }
+        var dark = null; var mid = null; var light = null;
+        for (var m = 0; m < deduped.length; m++) {
+          var lum = luminance(deduped[m]);
+          if (!dark && lum < 0.15) { dark = deduped[m]; }
+          else if (!mid && lum >= 0.15 && lum <= 0.5) { mid = deduped[m]; }
+          else if (!light && lum > 0.5) { light = deduped[m]; }
+        }
+        var primary = dark || deduped[0] || '#002f59';
+        var secondary = mid || lightenHex(primary, 0.78);
+        var accent = light || lightenHex(primary, 0.92);
+        setExtractedColors([primary, secondary, accent]);
       } catch (_) {}
     };
     img.src = url;
@@ -209,21 +230,30 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
               </div>
             </div>
             {extractedColors.length > 0 && (
-              <div className="rounded-xl bg-gray-50 p-3 flex flex-col gap-2">
-                <p className="text-xs text-gray-500 font-medium">Cores extraidas da logo — clique para aplicar:</p>
-                <div className="flex gap-2 flex-wrap">
-                  {extractedColors.map(function(c) {
-                    return (
-                      <button key={c} onClick={function() { setColorRaw(c); }}
-                        className="w-8 h-8 rounded-xl border-2 transition-transform hover:scale-110"
-                        style={{background: c, borderColor: color === c ? color : 'transparent'}}
-                        title={c}/>
-                    );
-                  })}
-                </div>
+              <div className="rounded-xl bg-gray-50 p-3 flex flex-col gap-2.5">
+                <p className="text-xs text-gray-500 font-medium">Cores extraidas da logo:</p>
+                {[['Primaria', 0, function() { setColorRaw(extractedColors[0]); }],
+                  ['Secundaria', 1, function() { setSecondary(extractedColors[1]); }],
+                  ['Acento', 2, function() { setAccent(extractedColors[2]); }]
+                ].map(function(row) {
+                  var label = row[0]; var idx = row[1]; var apply = row[2];
+                  var c = extractedColors[idx];
+                  if (!c) return null;
+                  return (
+                    <div key={label} className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg flex-shrink-0" style={{background: c}}/>
+                      <span className="text-xs text-gray-500 w-16 flex-shrink-0">{label}</span>
+                      <span className="text-xs font-mono text-gray-400 flex-1">{c}</span>
+                      <button onClick={apply}
+                        className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-white flex-shrink-0">
+                        Aplicar
+                      </button>
+                    </div>
+                  );
+                })}
                 <button onClick={function() { applySuggestion(extractedColors); }}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-white self-start">
-                  Aplicar sugestao automatica (escura/media/clara)
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-white self-start mt-1">
+                  Aplicar todas de uma vez
                 </button>
               </div>
             )}

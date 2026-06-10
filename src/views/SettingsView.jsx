@@ -6,7 +6,7 @@ import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
 
 export default function SettingsView({ brand, session, onSave, toast, confirm, isAdmin }) {
-  var [tab, setTab] = useState('brand');
+  var [tab, setTab] = useState(isAdmin ? 'brand' : 'security');
   var [form, setForm] = useState(Object.assign({}, brand));
   var [extractedColors, setExtractedColors] = useState([]);
   var [saving, setSaving] = useState(false);
@@ -18,7 +18,10 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
 
   const handleSaveBrand = async function() {
     setSaving(true);
-    try { await onSave(form); toast('Configuracoes salvas!'); }
+    try {
+      await onSave({name: form.name, logo: form.logo, logo_url: form.logo_url, color: form.color});
+      toast('Configuracoes salvas!');
+    }
     catch(_) { toast('Erro ao salvar.', 'error'); }
     finally { setSaving(false); }
   };
@@ -84,8 +87,9 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
     setUploading(false);
   };
 
-  const allTabs = [{key:'brand',label:'Branding'},{key:'security',label:'Seguranca'},{key:'account',label:'Conta'},{key:'clients',label:'Clientes',adminOnly:true}];
-  const tabs = allTabs.filter(function(t) { return !t.adminOnly || isAdmin; });
+  const tabs = isAdmin
+    ? [{key:'brand',label:'Branding'},{key:'security',label:'Seguranca'},{key:'account',label:'Conta'},{key:'clients',label:'Clientes'}]
+    : [{key:'security',label:'Seguranca'},{key:'account',label:'Conta'}];
 
   return (
     <div className="flex flex-col gap-6">
