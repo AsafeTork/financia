@@ -32,8 +32,8 @@ export default function AdminPanel({ toast, confirm, session }) {
       const buckets = {};
       for (let i = 0; i < d.length; i += 4) {
         if (d[i+3] < 128) continue;
-        const r = Math.round(d[i]/32)*32, g = Math.round(d[i+1]/32)*32, b = Math.round(d[i+2]/32)*32;
-        if (r > 230 && g > 230 && b > 230) continue;
+        const r = Math.round(d[i]/32)*32, g = Math.round(d[i+1]/48)*48, b = Math.round(d[i+2]/48)*48;
+        if (r > 220 && g > 220 && b > 220) continue;
         const k = r + ',' + g + ',' + b; buckets[k] = (buckets[k] || 0) + 1;
       }
       const sorted = Object.entries(buckets).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 5);
@@ -67,7 +67,7 @@ export default function AdminPanel({ toast, confirm, session }) {
     if (authRes.error) { toast(authRes.error.message.includes('already') ? 'Email ja cadastrado.' : 'Erro: ' + authRes.error.message, 'error'); setCreating(false); return; }
     const newUid = authRes.data && authRes.data.user ? authRes.data.user.id : null;
     if (newUid) {
-      await sb.from('company_profiles').upsert({user_id:newUid, name:form.companyName, color:form.primaryColor||'#002f59', logo:'G', logo_url:form.logoUrl||null});
+      await sb.from('company_profiles').upsert({user_id:newUid, name:form.companyName, color:form.primaryColor||'#002f59', color_secondary:form.secondaryColor||null, color_accent:form.accentColor||null, theme:form.theme||'light', logo:'G', logo_url:form.logoUrl||null});
     }
     const tok = sessionStorage.getItem('nancia_gh_token') || '';
     if (!tok) { toast('Cliente criado! Configure token GitHub.', 'error'); setDone(Object.assign({}, form, {buildOk:false, newUid:newUid})); setForm(BLANK); setCreating(false); return; }

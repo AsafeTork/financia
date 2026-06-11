@@ -8,7 +8,6 @@ import GhTokenCard from '../admin/GhTokenCard.jsx';
 export default function SettingsView({ brand, session, onSave, toast, confirm, isAdmin }) {
   var [tab, setTab] = useState(isAdmin ? 'clients' : 'security');
   var [form, setForm] = useState(Object.assign({}, brand));
-  var [extractedColors, setExtractedColors] = useState([]);
   var [saving, setSaving] = useState(false);
   var [pwForm, setPwForm] = useState({newPw:'', confirm:''});
   var [pwSaving, setPwSaving] = useState(false);
@@ -19,16 +18,8 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
       setTab('security');
     }
   }, [isAdmin]);
-  const COLORS = ['#1a6b5c','#2563eb','#7c3aed','#dc2626','#ea580c','#0891b2','#be185d','#374151','#b45309','#0d9488'];
-
-  const handleSaveBrand = async function() {
-    setSaving(true);
-    try { await onSave(form); toast('Configuracoes salvas!'); }
-    catch(_) { toast('Erro ao salvar.', 'error'); }
-    finally { setSaving(false); }
-  };
-
-  const changePw = async function() {
+  
+    const changePw = async function() {
     if (pwForm.newPw !== pwForm.confirm) { toast('As senhas nao coincidem.', 'error'); return; }
     if (pwForm.newPw.length < 8) { toast('Senha deve ter ao menos 8 caracteres.', 'error'); return; }
     setPwSaving(true);
@@ -107,73 +98,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
           );
         })}
       </div>
-
-      {tab === 'brand' && (
-        <Card className="p-6 flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Logo da empresa</label>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden border border-gray-200 flex items-center justify-center" style={{background:form.color}}>
-                <LogoImg logo={form.logo} logoUrl={form.logo_url} color={form.color} sz="w-full h-full" rd=""/>
-              </div>
-              <div className="flex flex-col gap-2 flex-1">
-                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={function(e) { uploadLogo(e.target.files[0]); }}/>
-                <button onClick={function() { fileRef.current.click(); }} disabled={uploading} className="flex items-center justify-center gap-2 border border-gray-200 text-gray-600 rounded-xl py-2 text-sm font-medium hover:bg-gray-50">
-                  {uploading ? 'Enviando...' : 'Upload de logo'}
-                </button>
-                {form.logo_url && <button onClick={function() { setForm(function(f) { return Object.assign({}, f, {logo_url:null}); }); }} className="text-xs text-red-400 hover:text-red-600 text-center">Remover logo</button>}
-                <p className="text-xs text-gray-400 text-center">PNG, JPG . Max 2MB</p>
-              </div>
-            </div>
-          </div>
-          <Inp label="Nome da empresa" value={form.name} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {name:e.target.value}); }); }} placeholder="Nome da empresa"/>
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cor principal</label>
-            <div className="flex flex-col gap-2">
-              {extractedColors.length > 0 && (
-                <div>
-                  <p className="text-xs text-gray-400 mb-1.5">Cores extraidas do logo:</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {extractedColors.map(function(c) {
-                      return <button key={c} onClick={function() { setForm(function(f) { return Object.assign({}, f, {color:c}); }); }} className="w-8 h-8 rounded-xl transition-transform hover:scale-110" style={{background:c, outline:form.color === c ? ('3px solid ' + form.color) : 'none', outlineOffset:'2px'}}/>;
-                    })}
-                  </div>
-                </div>
-              )}
-              <div>
-                <p className="text-xs text-gray-400 mb-1.5">Paleta predefinida:</p>
-                <div className="flex gap-2 flex-wrap">
-                  {COLORS.map(function(c) {
-                    return (
-                      <button key={c} onClick={function() { setForm(function(f) { return Object.assign({}, f, {color:c}); }); }} className="w-8 h-8 rounded-xl hover:scale-110 transition-transform flex items-center justify-center" style={{background:c, outline:form.color === c ? ('3px solid ' + form.color) : 'none', outlineOffset:'2px'}}>
-                        {form.color === c && <svg className="w-3.5 h-3.5" fill="none" stroke="white" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="color" value={form.color} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {color:e.target.value}); }); }} className="w-9 h-9 rounded-xl border border-gray-200 cursor-pointer p-0.5 flex-shrink-0"/>
-                <input value={form.color} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {color:e.target.value}); }); }} placeholder="#1a6b5c" maxLength={7} className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-mono flex-1 focus:outline-none focus:border-gray-400"/>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-xl p-4 bg-gray-50 border border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Pre-visualizacao</p>
-            <div className="flex items-center gap-3 p-3 rounded-xl w-fit" style={{background:'#002f59'}}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden" style={{background:form.color}}>
-                <LogoImg logo={form.logo} logoUrl={form.logo_url} color={form.color} sz="w-full h-full" rd=""/>
-              </div>
-              <span className="font-bold text-white">{form.name || 'Nome da empresa'}</span>
-            </div>
-          </div>
-          <button onClick={handleSaveBrand} disabled={saving} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{background:form.color}}>
-            {saving ? <Spin white/> : 'Salvar e aplicar'}
-          </button>
-        </Card>
-      )}
-
-      {tab === 'security' && (
+{tab === 'security' && (
         <Card className="p-6 flex flex-col gap-5">
           <div>
             <p className="text-sm font-semibold text-gray-800 mb-1">Alterar senha</p>

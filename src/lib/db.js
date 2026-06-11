@@ -29,13 +29,11 @@ ldb.version(2).stores({
   meta:         'key',
 });
 
-export const toLocal = (row, extra = {}) => ({
-  ...row,
-  _synced: 1,
-  _deleted: 0,
-  _updated_at: row.updated_at || row.created_at || now(),
-  ...extra,
-});
+export const toLocal = function(row, extra) {
+  if (!extra) extra = {};
+  var base = { _synced: 1, _deleted: 0, _updated_at: row.updated_at || row.created_at || now() };
+  return Object.assign({}, row, base, extra);
+};
 
 const TX_FIELDS  = ['id','type','description','amount','date','method','category','items','user_id','registered_by','updated_at'];
 const PRD_FIELDS = ['id','name','category','price','cost','stock','user_id','registered_by','updated_at'];
@@ -47,20 +45,20 @@ const FIELD_MAP = {
   losses:       LSS_FIELDS,
 };
 
-const pickFields = (obj, fields) => {
+const pickFields = function(obj, fields) {
   const out = {};
-  fields.forEach(k => { if (obj[k] !== undefined) out[k] = obj[k]; });
+  fields.forEach(function(k) { if (obj[k] !== undefined) out[k] = obj[k]; });
   return out;
 };
 
-const getLastSync = async () => {
+const getLastSync = async function() {
   const r = await ldb.meta.get('last_sync');
   return r ? r.val : '1970-01-01T00:00:00Z';
 };
 
-export const setLastSync = ts => ldb.meta.put({ key: 'last_sync', val: ts });
+export const setLastSync = function(ts) { return ldb.meta.put({ key: 'last_sync', val: ts }); };
 
-export const syncTable = async (uid, table, ldbTable, mapLocal) => {
+export const syncTable = async function(uid, table, ldbTable, mapLocal) {
   if (!navigator.onLine) return;
   const lastSync = await getLastSync();
   const fields = FIELD_MAP[table] || [];
@@ -97,12 +95,12 @@ export const syncTable = async (uid, table, ldbTable, mapLocal) => {
 
 const PROFILE_WRITE_FIELDS = ['user_id','name','logo','color','color_secondary','color_accent','theme','logo_url'];
 
-export const syncProfiles = async uid => {
+export const syncProfiles = async function(uid) {
   if (!navigator.onLine) return;
   const unsynced = await ldb.profiles.where('user_id').equals(uid).and(r => r._synced === 0).toArray();
   for (const row of unsynced) {
     const clean = {};
-    PROFILE_WRITE_FIELDS.forEach(k => { if (row[k] !== undefined) clean[k] = row[k]; });
+    PROFILE_WRITE_FIELDS.forEach(function(k) { if (row[k] !== undefined) clean[k] = row[k]; });
     const { error } = await sb.from('company_profiles').upsert(clean);
     if (!error) await ldb.profiles.update(uid, { _synced: 1 });
   }
@@ -110,16 +108,16 @@ export const syncProfiles = async uid => {
   if (data) await ldb.profiles.put(toLocal(data));
 };
 
-export const syncAll = async uid => {
+export const syncAll = async function(uid) {
   if (!uid || !navigator.onLine) return false;
   try {
     const ts = now();
     const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000));
     await Promise.race([
       Promise.all([
-        syncTable(uid, 'transactions', ldb.transactions, r => ({ desc: r.description, cat: r.category })),
-        syncTable(uid, 'products',     ldb.products,     () => ({})),
-        syncTable(uid, 'losses',       ldb.losses,       r => ({ desc: r.description })),
+        syncTable(uid, 'transactions', ldb.transactions, function(r) { return { desc: r.description, cat: r.category }; }),
+        syncTable(uid, 'products',     ldb.products,     function() { return {}; }),
+        syncTable(uid, 'losses',       ldb.losses,       function(r) { return { desc: r.description }; }),
         syncProfiles(uid),
       ]),
       timeout,
@@ -129,7 +127,7 @@ export const syncAll = async uid => {
   } catch (e) { console.warn('syncAll:', e.message); return false; }
 };
 
-export const fetchClients = async () => {
+export const fetchClients = async function() {
   try {
     const { data } = await sb.from('company_profiles').select('*').order('user_id');
     return data || [];
@@ -137,7 +135,7 @@ export const fetchClients = async () => {
 };
 
 /* v2 — usa RPC SECURITY DEFINER que deleta auth.users tambem */
-export const deleteClient = async uid => {
+export const deleteClient = async function(uid) {
   try {
     const { error } = await sb.rpc('admin_delete_client', { target_uid: uid });
     if (error) throw error;
@@ -145,7 +143,7 @@ export const deleteClient = async uid => {
   } catch (_) { return false; }
 };
 
-export const triggerApkBuild = async (clientName, logoUrl, primaryColor) => {
+export const triggerApkBuild = async function(clientName, logoUrl, primaryColor) {
   const tok = localStorage.getItem('nancia_gh_token') || '';
   if (!tok) return false;
   const res = await fetch(

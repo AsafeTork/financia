@@ -6,14 +6,14 @@ export const PLAN_LIMITS = {
   pro:  { transactions: Infinity, products: Infinity, losses: Infinity },
 };
 
-export const effectivePlan = p => {
+export const effectivePlan = function(p) {
   if (!p || p.plan !== 'pro') return 'free';
   if (!p.plan_expires_at) return 'pro';
   return new Date(p.plan_expires_at) > new Date() ? 'pro' : 'free';
 };
 
-export const limitFor = (p, kind) => PLAN_LIMITS[effectivePlan(p)][kind];
-export const atLimit = (p, kind, count) => count >= limitFor(p, kind);
+export const limitFor = function(p, kind) { return PLAN_LIMITS[effectivePlan(p)][kind]; };
+export const atLimit = function(p, kind, count) { return count >= limitFor(p, kind); };
 export const PLAN_KIND_LABEL = { transactions: 'transacoes', products: 'produtos', losses: 'perdas' };
 
 export const GH_REPO = 'AsafeTork/gestao-financeira';
