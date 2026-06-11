@@ -44,9 +44,7 @@ export default function Login({ brand }) {
         <div style={{position:'relative', zIndex:1}}>
           {brandLogo
             ? <img src={brandLogo} alt="logo" className="w-12 h-12 rounded-2xl object-cover" style={{border:'2px solid rgba(255,255,255,0.25)'}}/>
-            : <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl font-bold text-white" style={{background:'rgba(255,255,255,0.15)', border:'2px solid rgba(255,255,255,0.2)'}}>
-                {brandLetter[0]}
-              </div>
+            : <img src="/icon-192.svg" alt="Financia" className="w-12 h-12"/>
           }
           <p className="text-white font-bold text-2xl mt-4" style={{letterSpacing:'-0.5px'}}>{brandName}</p>
         </div>
@@ -76,9 +74,7 @@ export default function Login({ brand }) {
           <div className="lg:hidden text-center mb-10">
             {brandLogo
               ? <img src={brandLogo} alt="logo" className="w-20 h-20 rounded-2xl object-cover mx-auto shadow-lg" style={{border:'3px solid rgba(0,0,0,0.08)'}}/>
-              : <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-extrabold text-white mx-auto shadow-lg" style={{background: brandColor}}>
-                  {brandLetter[0]}
-                </div>
+              : <img src="/icon-192.svg" alt="Financia" className="w-20 h-20 mx-auto"/>
             }
             <p className="font-extrabold text-2xl mt-4" style={{color: brandColor, letterSpacing:'-0.5px', fontFamily:'Inter, sans-serif'}}>{brandName}</p>
             <p className="text-xs mt-1.5 text-gray-400 tracking-wide uppercase" style={{fontSize:'10px', letterSpacing:'0.08em'}}>Gestao financeira</p>

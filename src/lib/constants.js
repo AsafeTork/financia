@@ -1,4 +1,4 @@
-export const INIT_BRAND = { name: 'Financia', color: '#002f59', color_secondary: null, color_accent: null, theme: 'light', logo: 'G', logo_url: 'https://kxeqhorxhlgwcgywovqr.supabase.co/storage/v1/object/public/logos/7f2b4c1d-fb44-4616-9cf7-1a8963b09d2d/logo.jpg?t=1780853396689' };
+export const INIT_BRAND = { name: 'Financia', color: '#002f59', color_secondary: null, color_accent: null, theme: 'light', logo: 'G', logo_url: null };
 export const INIT_PLAN = { plan: 'free', plan_expires_at: null, plan_activated_by: null };
 
 export const PLAN_LIMITS = {
