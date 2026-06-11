@@ -2,6 +2,16 @@ import Dexie from 'dexie';
 import { sb } from './supabase.js';
 import { now } from './utils.js';
 
+
+const withTimeout = function(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise(function(_, reject) {
+      setTimeout(function() { reject(new Error('timeout')); }, ms);
+    })
+  ]);
+};
+
 export const ldb = new Dexie('gestao_offline');
 
 ldb.version(1).stores({

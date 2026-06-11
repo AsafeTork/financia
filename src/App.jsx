@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { sb } from './lib/supabase.js';
 import { ldb, syncAll, toLocal, setLastSync } from './lib/db.js';
-import { now, today, safe, uid, brandAlpha, deriveCores } from './lib/utils.js';
+import { now, uid, brandAlpha, deriveCores } from './lib/utils.js';
 import { INIT_BRAND, INIT_PLAN, atLimit, limitFor } from './lib/constants.js';
 import Sidebar from './components/Sidebar.jsx';
 import BottomNav from './components/BottomNav.jsx';

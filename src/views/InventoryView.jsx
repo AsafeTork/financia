@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, Inp, Modal, EditBtn, DelBtn, Badge } from '../components/ui.jsx';
 import { PSearch } from '../components/SaleForm.jsx';
 import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';

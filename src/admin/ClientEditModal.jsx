@@ -172,7 +172,6 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
         logo_url: logoUrl || null,
       };
       var profileRes = await sb.from('company_profiles').update(updateData).eq('user_id', client.user_id);
-      console.log('[ClientEditModal save]', { error: profileRes.error, data: profileRes.data });
       if (profileRes.error) { toast('Erro ao salvar perfil.', 'error'); return; }
       if (planChanged) {
         var planRes = await sb.rpc('set_client_plan', {a_target: client.user_id, b_plan: plan, c_actor: adminEmail || 'admin'});
