@@ -368,7 +368,7 @@ export default function App() {
   if (appLoading) return <Loader/>;
   if (!session) {
     if (!window.location.hash || window.location.hash === '#') window.location.hash = 'login';
-    return <Login/>;
+    return <Login brand={brand}/>;
   }
   if (dataLoading) return <Loader text="Carregando seus dados..."/>;
   if (dataError) return (

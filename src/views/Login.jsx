@@ -75,13 +75,13 @@ export default function Login({ brand }) {
 
           <div className="lg:hidden text-center mb-10">
             {brandLogo
-              ? <img src={brandLogo} alt="logo" className="w-14 h-14 rounded-2xl object-cover mx-auto" style={{border:'2px solid rgba(0,0,0,0.06)'}}/>
-              : <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold text-white mx-auto" style={{background: brandColor}}>
+              ? <img src={brandLogo} alt="logo" className="w-20 h-20 rounded-2xl object-cover mx-auto shadow-lg" style={{border:'3px solid rgba(0,0,0,0.08)'}}/>
+              : <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-extrabold text-white mx-auto shadow-lg" style={{background: brandColor}}>
                   {brandLetter[0]}
                 </div>
             }
-            <p className="font-bold text-xl mt-3" style={{color: brandColor, letterSpacing:'-0.5px'}}>{brandName}</p>
-            <p className="text-xs mt-1 text-gray-400">Gestao financeira para seu negocio</p>
+            <p className="font-extrabold text-2xl mt-4" style={{color: brandColor, letterSpacing:'-0.5px', fontFamily:'Inter, sans-serif'}}>{brandName}</p>
+            <p className="text-xs mt-1.5 text-gray-400 tracking-wide uppercase" style={{fontSize:'10px', letterSpacing:'0.08em'}}>Gestao financeira</p>
           </div>
 
           <div className="mb-8">
