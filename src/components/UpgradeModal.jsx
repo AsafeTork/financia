@@ -19,7 +19,7 @@ export default function UpgradeModal({ kind, limit, onClose }) {
           <p className="text-xs text-gray-600">· Backup automatico na nuvem</p>
           <p className="text-xs text-gray-600">· APK personalizado com sua marca</p>
         </div>
-        <a href="https://wa.me/5591000000000?text=Quero%20ativar%20o%20plano%20Pro%20do%20Financia"
+        <a href="https://wa.me/5591992086829?text=Quero%20ativar%20o%20plano%20Pro%20do%20Financia"
           target="_blank" rel="noreferrer"
           className="w-full text-center text-white rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2"
           style={{background:'#25d366'}}>
