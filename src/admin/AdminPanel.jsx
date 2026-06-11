@@ -126,6 +126,12 @@ export default function AdminPanel({ toast, confirm, session }) {
                         <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0, 8)}...</p>
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
+                        <button onClick={function() {
+                          sb.rpc('admin_get_magic_link', {target_uid: c.user_id}).then(function(res) {
+                            if (res.error) { toast('Erro ao gerar link.', 'error'); return; }
+                            window.open(res.data, '_blank');
+                          });
+                        }} className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50">Entrar</button>
                         <button onClick={function() { setEditClient(c); }} className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Editar</button>
                         <button onClick={function() { triggerApkBuild(c.name, c.logo_url, c.color).then(function(ok) { toast(ok ? 'APK iniciado!' : 'Sem token.', ok ? 'success' : 'error'); }); }} className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">APK</button>
                         <button onClick={function() { handleDelete(c); }} className="p-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50">
