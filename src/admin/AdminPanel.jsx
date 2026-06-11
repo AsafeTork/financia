@@ -130,16 +130,17 @@ export default function AdminPanel({ toast, confirm, session }) {
                           sb.rpc('admin_impersonate_start', {target_uid: c.user_id}).then(function(res) {
                             if (res.error) { toast('Erro: ' + res.error.message, 'error'); return; }
                             var d = res.data;
-                            // Login na conta do cliente em nova aba via postMessage
-                            var w = window.open('about:blank', '_blank');
-                            sb.auth.signInWithPassword({email: d.email, password: d.temp_pass}).then(function(loginRes) {
-                              if (loginRes.error) { toast('Erro ao entrar.', 'error'); w.close(); return; }
-                              // Restaurar senha original
-                              sb.rpc('admin_impersonate_restore', {target_uid: c.user_id, old_hash: d.old_hash});
-                              // Redirecionar a nova janela para o app
-                              w.location.href = window.location.href;
-                              toast('Entrando como ' + d.email, 'success');
-                            });
+                            // Guardar credenciais temporárias no localStorage por 30s
+                            localStorage.setItem('_imp', JSON.stringify({
+                              email: d.email,
+                              pass: d.temp_pass,
+                              uid: c.user_id,
+                              old_hash: d.old_hash,
+                              exp: Date.now() + 30000
+                            }));
+                            // Abrir nova aba — ela vai ler o _imp e fazer login
+                            window.open(window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'imp=1', '_blank');
+                            toast('Abrindo conta de ' + c.name, 'success');
                           });
                         }} className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50">Entrar</button>
                         <button onClick={function() { setEditClient(c); }} className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Editar</button>

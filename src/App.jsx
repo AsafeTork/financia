@@ -365,6 +365,28 @@ export default function App() {
     }
   };
 
+  // Impersonation: nova aba com ?imp=1 faz login automático com credenciais temporárias
+  React.useEffect(function() {
+    var params = new URLSearchParams(window.location.search);
+    if (!params.get('imp')) return;
+    var raw = localStorage.getItem('_imp');
+    if (!raw) return;
+    try {
+      var imp = JSON.parse(raw);
+      if (Date.now() > imp.exp) { localStorage.removeItem('_imp'); return; }
+      localStorage.removeItem('_imp');
+      // Limpar o parâmetro da URL
+      window.history.replaceState({}, '', window.location.pathname);
+      // Login como o cliente
+      sb.auth.signInWithPassword({email: imp.email, password: imp.pass}).then(function(res) {
+        if (!res.error) {
+          // Restaurar senha original do cliente
+          sb.rpc('admin_impersonate_restore', {target_uid: imp.uid, old_hash: imp.old_hash});
+        }
+      });
+    } catch(e) { localStorage.removeItem('_imp'); }
+  }, []);
+
   if (appLoading) return <Loader/>;
   if (!session) {
     if (!window.location.hash || window.location.hash === '#') window.location.hash = 'login';
