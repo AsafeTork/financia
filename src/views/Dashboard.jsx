@@ -4,13 +4,6 @@ import { KpiCard, BarChartSVG, UsageBar } from '../components/UsageBar.jsx';
 import { fmt, fmtDate, today, prevDays, brandAlpha } from '../lib/utils.js';
 import { PLAN_LIMITS, effectivePlan } from '../lib/constants.js';
 
-function greeting() {
-  var h = new Date().getHours();
-  if (h < 12) return 'Bom dia';
-  if (h < 18) return 'Boa tarde';
-  return 'Boa noite';
-}
-
 export default function Dashboard({ tx, products, brand, onNav, planInfo, lossesCount }) {
   var cm = today().slice(0, 7);
   var now_d = new Date();
@@ -59,9 +52,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
         <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">
           {new Date().toLocaleDateString('pt-BR', {weekday: 'long', day: 'numeric', month: 'long'})}
         </p>
-        <h2 className="page-header">
-          {greeting()}{companyName ? ', ' + companyName.split(' ')[0] : ''}
-        </h2>
+
       </div>
 
       {lowStock.length > 0 && (
