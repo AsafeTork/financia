@@ -82,7 +82,7 @@ export default function ReportView({ tx, brand, toast }) {
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {recentMonths.map(function(m) {
+        {allMonths.map(function(m) {
           var active = m === month;
           var shortLabel = new Date(m + '-15').toLocaleDateString('pt-BR', {month:'short', year:'2-digit'});
           return (

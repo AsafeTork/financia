@@ -19,48 +19,60 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
 
   const saveProd = async function() {
     if (!pf.name || !pf.price) return;
+    if (Number(pf.price) <= 0) { toast('Preco deve ser maior que zero', 'error'); return; }
     setSaving(true);
-    await onAddProduct({id:'P'+String(Date.now()).slice(-6), name:safe(pf.name), category:pf.category||null, price:Number(pf.price), cost:pf.cost?Number(pf.cost):null, stock:pf.stock!==''?Number(pf.stock):null});
-    toast('Produto adicionado!');
-    setSaving(false);
-    setPm(false);
-    setPf({name:'', category:'', price:'', cost:'', stock:''});
+    try {
+      await onAddProduct({id:'P'+String(Date.now()).slice(-6), name:safe(pf.name), category:pf.category||null, price:Number(pf.price), cost:pf.cost?Number(pf.cost):null, stock:pf.stock!==''?Number(pf.stock):null});
+      toast('Produto adicionado!');
+      setPm(false);
+      setPf({name:'', category:'', price:'', cost:'', stock:''});
+    } catch(_) {}
+    finally { setSaving(false); }
   };
   const saveEditP = async function() {
     if (!editP.name || !editP.price) return;
+    if (Number(editP.price) <= 0) { toast('Preco deve ser maior que zero', 'error'); return; }
     setSaving(true);
-    await onEditProduct(editP.id, {name:safe(editP.name), category:editP.category||null, price:Number(editP.price), cost:editP.cost?Number(editP.cost):null, stock:editP.stock!==''&&editP.stock!=null?Number(editP.stock):null});
-    toast('Produto atualizado');
-    setSaving(false);
-    setEditP(null);
+    try {
+      await onEditProduct(editP.id, {name:safe(editP.name), category:editP.category||null, price:Number(editP.price), cost:editP.cost?Number(editP.cost):null, stock:editP.stock!==''&&editP.stock!=null?Number(editP.stock):null});
+      toast('Produto atualizado');
+      setEditP(null);
+    } catch(_) {}
+    finally { setSaving(false); }
   };
   const saveLoss = async function() {
     if (!lf.desc || !lf.qty) return;
     setSaving(true);
-    await onAddLoss({id:uid(), desc:safe(lf.desc), qty:Number(lf.qty), reason:lf.reason, date:lf.date});
-    const p = products.find(function(p) { return p.name === lf.desc; });
-    if (p && p.stock != null) await onAdjustStock(p.id, -Number(lf.qty));
-    toast(p ? 'Perda registrada e estoque abatido' : 'Perda registrada (produto nao encontrado no estoque)');
-    setSaving(false);
-    setLm(false);
-    setLf({desc:'', qty:'1', reason:'', date:today()});
+    try {
+      await onAddLoss({id:uid(), desc:safe(lf.desc), qty:Number(lf.qty), reason:lf.reason, date:lf.date});
+      const p = products.find(function(p) { return p.name === lf.desc; });
+      if (p && p.stock != null) await onAdjustStock(p.id, -Number(lf.qty));
+      toast(p ? 'Perda registrada e estoque abatido' : 'Perda registrada (produto nao encontrado no estoque)');
+      setLm(false);
+      setLf({desc:'', qty:'1', reason:'', date:today()});
+    } catch(_) {}
+    finally { setSaving(false); }
   };
   const saveEditL = async function() {
     if (!editL.desc || !editL.qty) return;
     setSaving(true);
-    await onEditLoss(editL.id, {desc:safe(editL.desc), qty:Number(editL.qty), reason:editL.reason, date:editL.date});
-    toast('Perda atualizada');
-    setSaving(false);
-    setEditL(null);
+    try {
+      await onEditLoss(editL.id, {desc:safe(editL.desc), qty:Number(editL.qty), reason:editL.reason, date:editL.date});
+      toast('Perda atualizada');
+      setEditL(null);
+    } catch(_) {}
+    finally { setSaving(false); }
   };
   const saveStock = async function() {
     if (!sq || !sm) return;
     setSaving(true);
-    await onAdjustStock(sm, Number(sq));
-    toast('Estoque atualizado!');
-    setSaving(false);
-    setSm(null);
-    setSq('1');
+    try {
+      await onAdjustStock(sm, Number(sq));
+      toast('Estoque atualizado!');
+      setSm(null);
+      setSq('1');
+    } catch(_) {}
+    finally { setSaving(false); }
   };
   const toggleCat = function(cat) {
     setCollapsed(function(p) { const n = new Set(p); n.has(cat) ? n.delete(cat) : n.add(cat); return n; });

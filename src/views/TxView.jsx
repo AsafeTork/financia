@@ -39,22 +39,31 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
   var saveEdit = async function() {
     if (!editItem.desc || !editItem.amount) return;
     setSaving(true);
-    await onEdit(editItem.id, {desc:safe(editItem.desc), amount:Number(editItem.amount), date:editItem.date, method:isIncome ? editItem.method : null, cat:isIncome ? null : editItem.cat});
-    toast(isIncome ? 'Venda atualizada' : 'Despesa atualizada');
-    setSaving(false);
-    setEditItem(null);
+    try {
+      await onEdit(editItem.id, {desc:safe(editItem.desc), amount:Number(editItem.amount), date:editItem.date, method:isIncome ? editItem.method : null, cat:isIncome ? null : editItem.cat});
+      toast(isIncome ? 'Venda atualizada' : 'Despesa atualizada');
+      setEditItem(null);
+    } catch(_) {}
+    finally { setSaving(false); }
   };
   var saveNew = async function() {
     if (!form.desc || !form.amount) return;
     setSaving(true);
-    await onAdd({id:uid(), type:type, desc:safe(form.desc), amount:Number(form.amount), date:form.date, method:isIncome ? form.method : null, cat:isIncome ? null : form.cat});
-    toast(isIncome ? 'Venda registrada!' : 'Despesa registrada!');
-    setModal(false);
-    setSaving(false);
-    setForm({desc:'', amount:'', date:today(), cat:'Fixo', method:'PIX'});
+    try {
+      await onAdd({id:uid(), type:type, desc:safe(form.desc), amount:Number(form.amount), date:form.date, method:isIncome ? form.method : null, cat:isIncome ? null : form.cat});
+      toast(isIncome ? 'Venda registrada!' : 'Despesa registrada!');
+      setModal(false);
+      setForm({desc:'', amount:'', date:today(), cat:'Fixo', method:'PIX'});
+    } catch(_) {}
+    finally { setSaving(false); }
+  };
+  var csvEscape = function(v) {
+    var s = String(v || '');
+    if (/[",\n=+\-@]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
   };
   var exportCSV = function() {
-    var rows = filtered.map(function(t) { return t.date + ',"' + (t.desc||'') + '",' + t.amount.toFixed(2) + ',' + (t.method || t.category || ''); });
+    var rows = filtered.map(function(t) { return csvEscape(t.date) + ',' + csvEscape(t.desc||'') + ',' + t.amount.toFixed(2) + ',' + csvEscape(t.method || t.category || ''); });
     var csv = 'Data,Descricao,Valor,Tipo\n' + rows.join('\n');
     var a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
@@ -99,12 +108,16 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
           </svg>
           <input value={search} onChange={function(e) { setSearch(e.target.value); }}
             placeholder={'Buscar ' + (isIncome ? 'vendas' : 'despesas') + '...'}
-            className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white"/>
+            className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl"
+            style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Inp type="date" value={dateFrom} onChange={function(e) { setDateFrom(e.target.value); }} placeholder="De"/>
           <Inp type="date" value={dateTo}   onChange={function(e) { setDateTo(e.target.value); }}   placeholder="Ate"/>
         </div>
+        {dateFrom && dateTo && dateFrom > dateTo && (
+          <p className="text-xs text-red-500 mt-1">Data inicial deve ser anterior ou igual a data final.</p>
+        )}
         {(search || dateFrom || dateTo) && (
           <button onClick={function() { setSearch(''); setDateFrom(''); setDateTo(''); }}
             className="mt-2 text-xs font-medium text-gray-400 hover:text-gray-600 flex items-center gap-1">
