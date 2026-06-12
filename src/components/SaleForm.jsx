@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Inp, Sel, Spin } from './ui.jsx';
 import { fmt, today, safe, uid } from '../lib/utils.js';
 
@@ -14,7 +14,7 @@ export function PSearch({ products, value, onSelect, onChange, placeholder }) {
         onChange={function(e) { onChange(e.target.value); setOpen(true); }}
         onFocus={function() { setOpen(true); }}
         onBlur={function() { setTimeout(function() { setOpen(false); }, 300); }}
-        placeholder={placeholder || (products.length > 0 ? 'Buscar produto...' : 'Descricao')}
+        placeholder={placeholder || (products.length > 0 ? 'Buscar produto...' : 'Descrição')}
         className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition w-full"
       />
       {open && products.length > 0 && filtered.length > 0 && (

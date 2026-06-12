@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Card } from '../components/ui.jsx';
 
 export default function GhTokenCard({ toast }) {
@@ -17,7 +17,7 @@ export default function GhTokenCard({ toast }) {
           className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-mono flex-1 focus:outline-none focus:border-gray-400"/>
         <button onClick={save} className="px-4 py-2 text-white rounded-xl text-sm font-semibold flex-shrink-0" style={{background:'#002f59'}}>Salvar</button>
       </div>
-      {!tok && <p className="text-xs font-semibold" style={{color:'#dc2626'}}>(!) Sem token - APK nao gerado.</p>}
+      {!tok && <p className="text-xs font-semibold" style={{color:'#dc2626'}}>(!) Sem token - APK não gerado.</p>}
       {tok  && <p className="text-xs text-green-600 font-semibold">Token configurado.</p>}
     </Card>
   );

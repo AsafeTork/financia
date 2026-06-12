@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+﻿import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { sb } from './lib/supabase.js';
 import { ldb, syncAll, toLocal, setLastSync } from './lib/db.js';
 import { now, uid, brandAlpha, deriveCores } from './lib/utils.js';
@@ -196,7 +196,7 @@ export default function App() {
 
   const addTx = async function(t) {
     if (!enforceLimit('transactions', tx.length)) return;
-    if (!t.desc || !t.desc.trim()) { toast('Descricao obrigatoria', 'error'); return; }
+    if (!t.desc || !t.desc.trim()) { toast('Descrição obrigatória', 'error'); return; }
     if (!t.amount || Number(t.amount) <= 0) { toast('Valor deve ser maior que zero', 'error'); return; }
     const userId = session.user.id;
     const rb = session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email;
@@ -214,7 +214,7 @@ export default function App() {
   };
 
   const editTx = async function(id, u) {
-    if (!u.desc || !u.desc.trim()) { toast('Descricao obrigatoria', 'error'); return; }
+    if (!u.desc || !u.desc.trim()) { toast('Descrição obrigatória', 'error'); return; }
     if (!u.amount || Number(u.amount) <= 0) { toast('Valor deve ser maior que zero', 'error'); return; }
     const upd = {description:u.desc, amount:Number(u.amount), date:u.date, method:u.method||null, category:u.cat||null, updated_at:now(), _synced:0, _updated_at:now(), desc:u.desc, cat:u.cat||null};
     try { await ldb.transactions.update(id, upd); }
@@ -243,9 +243,9 @@ export default function App() {
 
   const addProduct = async function(p) {
     if (!enforceLimit('products', products.length)) return;
-    if (!p.name || !p.name.trim()) { toast('Nome do produto obrigatorio', 'error'); return; }
-    if (p.price == null || Number(p.price) < 0) { toast('Preco invalido', 'error'); return; }
-    if (p.stock != null && Number(p.stock) < 0) { toast('Estoque invalido', 'error'); return; }
+    if (!p.name || !p.name.trim()) { toast('Nome do produto obrigatório', 'error'); return; }
+    if (p.price == null || Number(p.price) < 0) { toast('Preço inválido', 'error'); return; }
+    if (p.stock != null && Number(p.stock) < 0) { toast('Estoque inválido', 'error'); return; }
     const userId = session.user.id;
     const rb = session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email;
     const row = {id:p.id, name:p.name, category:p.category||null, price:Number(p.price), cost:Number(p.cost)||0, stock:Number(p.stock)||0, user_id:userId, registered_by:rb, updated_at:now(), _synced:0, _deleted:0, _updated_at:now()};
@@ -262,7 +262,7 @@ export default function App() {
   };
 
   const editProduct = async function(id, u) {
-    if (!u.name || !u.name.trim()) { toast('Nome do produto obrigatorio', 'error'); return; }
+    if (!u.name || !u.name.trim()) { toast('Nome do produto obrigatório', 'error'); return; }
     const upd = {name:u.name, category:u.category||null, price:Number(u.price), cost:Number(u.cost)||0, stock:Number(u.stock)||0, updated_at:now(), _synced:0, _updated_at:now()};
     try { await ldb.products.update(id, upd); }
     catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
@@ -307,7 +307,7 @@ export default function App() {
 
   const addLoss = async function(l) {
     if (!enforceLimit('losses', losses.length)) return;
-    if (!l.desc || !l.desc.trim()) { toast('Descricao obrigatoria', 'error'); return; }
+    if (!l.desc || !l.desc.trim()) { toast('Descrição obrigatória', 'error'); return; }
     if (!l.qty || Number(l.qty) <= 0) { toast('Quantidade deve ser maior que zero', 'error'); return; }
     const userId = session.user.id;
     const rb = session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email;
@@ -325,7 +325,7 @@ export default function App() {
   };
 
   const editLoss = async function(id, u) {
-    if (!u.desc || !u.desc.trim()) { toast('Descricao obrigatoria', 'error'); return; }
+    if (!u.desc || !u.desc.trim()) { toast('Descrição obrigatória', 'error'); return; }
     if (!u.qty || Number(u.qty) <= 0) { toast('Quantidade deve ser maior que zero', 'error'); return; }
     const upd = {description:u.desc, qty:Number(u.qty), reason:u.reason||null, date:u.date, updated_at:now(), _synced:0, _updated_at:now(), desc:u.desc};
     try { await ldb.losses.update(id, upd); }
@@ -356,7 +356,7 @@ export default function App() {
     const userId = session.user.id;
     const row = {user_id:userId, name:nb.name, logo:nb.logo, color:nb.color, color_secondary:nb.color_secondary||null, color_accent:nb.color_accent||null, theme:nb.theme||'light', logo_url:nb.logo_url||null, updated_at:now(), _synced:0, _updated_at:now()};
     try { await ldb.profiles.put(row); }
-    catch(e) { toast('Erro ao salvar configuracoes: ' + (e.message || 'tente novamente'), 'error'); return; }
+    catch(e) { toast('Erro ao salvar configurações: ' + (e.message || 'tente novamente'), 'error'); return; }
     setBrand(nb);
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({type:'UPDATE_BRAND', name:nb.name, logo_url:nb.logo_url||null, color:nb.color||'#002f59'});

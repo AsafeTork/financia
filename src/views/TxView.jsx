@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { Card, Inp, Sel, Modal, EditBtn, DelBtn, Spin } from '../components/ui.jsx';
 import { SaleForm } from '../components/SaleForm.jsx';
 import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';
@@ -64,7 +64,7 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
   };
   var exportCSV = function() {
     var rows = filtered.map(function(t) { return csvEscape(t.date) + ',' + csvEscape(t.desc||'') + ',' + t.amount.toFixed(2) + ',' + csvEscape(t.method || t.category || ''); });
-    var csv = 'Data,Descricao,Valor,Tipo\n' + rows.join('\n');
+    var csv = 'Data,Descrição,Valor,Tipo\n' + rows.join('\n');
     var a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
     a.download = (isIncome ? 'vendas' : 'despesas') + '-' + today() + '.csv';
@@ -208,7 +208,7 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
           />
         ) : (
           <Modal title="Nova Despesa" onClose={function() { setModal(false); }} onSave={saveNew} saving={saving} color={accentColor}>
-            <Inp label="Descricao" value={form.desc} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {desc:e.target.value}); }); }} placeholder="Ex: Aluguel, Energia..."/>
+            <Inp label="Descrição" value={form.desc} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {desc:e.target.value}); }); }} placeholder="Ex: Aluguel, Energia..."/>
             <div className="grid grid-cols-2 gap-3">
               <Inp label="Valor (R$)" type="number" step="0.01" min="0" value={form.amount} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {amount:e.target.value}); }); }} placeholder="0,00"/>
               <Inp label="Data" type="date" value={form.date} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {date:e.target.value}); }); }}/>
@@ -222,7 +222,7 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
 
       {editItem && (
         <Modal title={isIncome ? 'Editar Venda' : 'Editar Despesa'} onClose={function() { setEditItem(null); }} onSave={saveEdit} saving={saving} saveLabel="Salvar alteracoes" color={accentColor}>
-          <Inp label="Descricao" value={editItem.desc} onChange={function(e) { setEditItem(function(f) { return Object.assign({}, f, {desc:e.target.value}); }); }}/>
+          <Inp label="Descrição" value={editItem.desc} onChange={function(e) { setEditItem(function(f) { return Object.assign({}, f, {desc:e.target.value}); }); }}/>
           <div className="grid grid-cols-2 gap-3">
             <Inp label="Valor (R$)" type="number" step="0.01" min="0" value={editItem.amount} onChange={function(e) { setEditItem(function(f) { return Object.assign({}, f, {amount:e.target.value}); }); }}/>
             <Inp label="Data" type="date" value={editItem.date} onChange={function(e) { setEditItem(function(f) { return Object.assign({}, f, {date:e.target.value}); }); }}/>

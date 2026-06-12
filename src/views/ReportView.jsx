@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { Card } from '../components/ui.jsx';
 import { fmt, today, monthLabel, brandAlpha } from '../lib/utils.js';
 
@@ -29,7 +29,7 @@ export default function ReportView({ tx, brand, toast }) {
 
   var exportCSV = function() {
     var rows = filtered.map(function(t) { return t.date + ',"' + t.desc + '",' + t.amount.toFixed(2) + ',' + (t.type === 'income' ? 'Entrada' : 'Saida') + ',' + (t.method || t.category || ''); });
-    var csv = 'Data,Descricao,Valor,Tipo,Metodo/Cat\n' + rows.join('\n');
+    var csv = 'Data,Descrição,Valor,Tipo,Método/Cat\n' + rows.join('\n');
     var a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
     a.download = 'relatorio-' + month + '.csv';

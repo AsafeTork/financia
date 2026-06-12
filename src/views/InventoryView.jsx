@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { Card, Inp, Modal, EditBtn, DelBtn, Badge } from '../components/ui.jsx';
 import { PSearch } from '../components/SaleForm.jsx';
 import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';
@@ -47,7 +47,7 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
       await onAddLoss({id:uid(), desc:safe(lf.desc), qty:Number(lf.qty), reason:lf.reason, date:lf.date});
       const p = products.find(function(p) { return p.name === lf.desc; });
       if (p && p.stock != null) await onAdjustStock(p.id, -Number(lf.qty));
-      toast(p ? 'Perda registrada e estoque abatido' : 'Perda registrada (produto nao encontrado no estoque)');
+      toast(p ? 'Perda registrada e estoque abatido' : 'Perda registrada (produto não encontrado no estoque)');
       setLm(false);
       setLf({desc:'', qty:'1', reason:'', date:today()});
     } catch(_) {}

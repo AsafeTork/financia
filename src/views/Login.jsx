@@ -28,12 +28,17 @@ export default function Login({ brand }) {
   var login = async function() {
     if (!email || !pass) return;
     setLoading(true); setErr('');
-    var res = await sb.auth.signInWithPassword({email:email, password:pass});
-    if (res.error) {
-      if (res.error.message.indexOf('Invalid') !== -1) setErr('E-mail ou senha incorretos.');
-      else setErr('Erro ao entrar. Tente novamente.');
+    try {
+      var res = await sb.auth.signInWithPassword({email:email, password:pass});
+      if (res.error) {
+        if (res.error.message.indexOf('Invalid') !== -1) setErr('E-mail ou senha incorretos.');
+        else setErr('Erro ao entrar. Tente novamente.');
+      }
+    } catch(e) {
+      setErr('Erro de conexão. Verifique sua internet.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

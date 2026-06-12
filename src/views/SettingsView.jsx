@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import { Card, Inp, Spin } from '../components/ui.jsx';
 import LogoImg from '../components/LogoImg.jsx';
 import { sb } from '../lib/supabase.js';
@@ -23,7 +23,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
   }, [isAdmin]);
   
     const changePw = async function() {
-    if (pwForm.newPw !== pwForm.confirm) { toast('As senhas nao coincidem.', 'error'); return; }
+    if (pwForm.newPw !== pwForm.confirm) { toast('As senhas não coincidem.', 'error'); return; }
     if (pwForm.newPw.length < 8) { toast('Senha deve ter ao menos 8 caracteres.', 'error'); return; }
     setPwSaving(true);
     const res = await sb.auth.updateUser({password:pwForm.newPw});
@@ -83,12 +83,12 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
     setUploading(false);
   };
 
-  const allTabs = [{key:'security',label:'Seguranca'},{key:'account',label:'Conta'},{key:'clients',label:'Clientes',adminOnly:true}];
+  const allTabs = [{key:'security',label:'Segurança'},{key:'account',label:'Conta'},{key:'clients',label:'Clientes',adminOnly:true}];
   const tabs = allTabs.filter(function(t) { return !t.adminOnly || isAdmin; });
 
   return (
     <div className="flex flex-col gap-6">
-      <div><h2 className="text-2xl font-bold text-gray-900">Configuracoes</h2><p className="text-sm text-gray-400 mt-0.5">Aparencia, seguranca e conta</p></div>
+      <div><h2 className="text-2xl font-bold text-gray-900">Configurações</h2><p className="text-sm text-gray-400 mt-0.5">Aparência, segurança e conta</p></div>
       <div className="flex border-b border-gray-200">
         {tabs.map(function(t) {
           var active = tab === t.key;
@@ -115,7 +115,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
             </div>
           </div>
           <div className="border-t border-gray-100 pt-4">
-            <p className="text-sm font-semibold text-gray-800 mb-2">Seguranca do sistema</p>
+            <p className="text-sm font-semibold text-gray-800 mb-2">Segurança do sistema</p>
             {['Dados criptografados no Supabase','Cada usuario acessa apenas seus dados (RLS)','Conexao sempre via HTTPS','Sessao expira automaticamente','Nunca compartilhe sua senha'].map(function(s, i) {
               return (
                 <div key={i} className="flex items-center gap-2.5 mb-2">
@@ -136,7 +136,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold" style={{background:brand.color}}>
               {session && session.user && session.user.email ? session.user.email[0].toUpperCase() : 'U'}
             </div>
-            <div><p className="text-sm font-semibold text-gray-800">{session && session.user ? session.user.email : ''}</p><p className="text-xs text-gray-400">Usuario ativo</p></div>
+            <div><p className="text-sm font-semibold text-gray-800">{session && session.user ? session.user.email : ''}</p><p className="text-xs text-gray-400">Usuário ativo</p></div>
           </div>
           <div className="border-t border-gray-100 pt-2">
             <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Versao</span><span className="font-medium">5.0</span></div>

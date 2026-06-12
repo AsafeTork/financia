@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '../components/ui.jsx';
 import { sb } from '../lib/supabase.js';
 import { triggerApkBuild, fetchClients, deleteClient } from '../lib/db.js';
@@ -90,9 +90,9 @@ export default function AdminPanel({ toast, confirm, session }) {
   };
 
   const handleDelete = function(c) {
-    confirm('Excluir todos os dados de "' + (c.name || c.user_id) + '"? Isso nao pode ser desfeito.', async function() {
+    confirm('Excluir todos os dados de "' + (c.name || c.user_id) + '"? Isso não pode ser desfeito.', async function() {
       const ok = await deleteClient(c.user_id);
-      if (ok) { toast('Cliente excluido.'); reload(); }
+      if (ok) { toast('Cliente excluído.'); reload(); }
       else toast('Erro ao excluir.', 'error');
     });
   };
