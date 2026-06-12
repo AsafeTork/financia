@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { font-family: 'Inter', 'DM Sans', system-ui, sans-serif; box-sizing: border-box; }
+body { margin: 0; background: var(--bg-page, #f8fafc); color: var(--text-main, #111827); }
+
+@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes spin    { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.anim-up   { animation: slideUp .2s ease; }
+.anim-fade { animation: fadeIn .15s ease; }
+
+/* Transicoes globais */
+a, button { transition: opacity .15s ease, background-color .15s ease, color .15s ease, box-shadow .15s ease; }
+
+/* Focus rings com brand color */
+input:focus, select:focus, textarea:focus {
+  border-color: var(--brand, #1a6b5c) !important;
+  box-shadow: 0 0 0 3px var(--brand-soft, rgba(26,107,92,0.08)) !important;
+  outline: none !important;
+}
+
+/* Card hover */
+.card-hover { transition: box-shadow .15s ease, transform .15s ease; }
+.card-hover:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-1px); }
+
+/* Numeros financeiros alinhados */
+.tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+/* Titulos de secao */
+.page-header { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; color: var(--text-main, #111827); }
+.page-sub    { font-size: 0.8125rem; color: var(--text-sub, #6b7280); margin-top: 2px; }
+
+/* Valores monetarios */
+.value-xl { font-size: 2rem; font-weight: 800; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.value-lg { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+
+/* Scrollbar customizada */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--brand-soft, rgba(0,0,0,0.12)); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--brand, #1a6b5c); }
+
+/* CSS vars defaults (light) */
+:root {
+  --bg-page:    #f8fafc;
+  --bg-card:    #ffffff;
+  --bg-input:   #ffffff;
+  --bg-subtle:  #f9fafb;
+  --surface:    #ffffff;
+  --text-main:  #111827;
+  --text-sub:   #6b7280;
+  --text-muted: #9ca3af;
+  --border:     #f3f4f6;
+  --border-md:  #e5e7eb;
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:  0 10px 30px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
+}
+
+/* Dark theme overrides */
+[data-theme="dark"] {
+  --bg-page:    #0f172a;
+  --bg-card:    #1e293b;
+  --bg-input:   #1e293b;
+  --bg-subtle:  #162032;
+  --surface:    #1e293b;
+  --text-main:  #f1f5f9;
+  --text-sub:   #94a3b8;
+  --text-muted: #64748b;
+  --border:         #334155;
+  --border-md:      #334155;
+  --border-color:   #334155;
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg:  0 10px 30px rgba(0,0,0,0.5);
+}
+[data-theme="dark"] body        { background: #0f172a; }
+[data-theme="dark"] .bg-white   { background-color: #1e293b !important; }
+[data-theme="dark"] .bg-gray-50 { background-color: #162032 !important; }
+[data-theme="dark"] .bg-gray-100{ background-color: #0f172a !important; }
+[data-theme="dark"] .border-gray-100,
+[data-theme="dark"] .border-gray-200 { border-color: #334155 !important; }
+[data-theme="dark"] .divide-gray-50 > * + * { border-color: #334155 !important; }
+[data-theme="dark"] .text-gray-900 { color: #f1f5f9 !important; }
+[data-theme="dark"] .text-gray-800 { color: #e2e8f0 !important; }
+[data-theme="dark"] .text-gray-700 { color: #cbd5e1 !important; }
+[data-theme="dark"] .text-gray-600 { color: #94a3b8 !important; }
+[data-theme="dark"] .text-gray-500 { color: #64748b !important; }
+[data-theme="dark"] .text-gray-400 { color: #475569 !important; }
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+[data-theme="dark"] .hover\:bg-gray-50:hover,
+[data-theme="dark"] .hover\:bg-gray-100:hover { background-color: #162032 !important; }
+[data-theme="dark"] .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important; }
