@@ -35,6 +35,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [syncStatus, setSyncStatus] = useState('idle');
   const uidRef = useRef(null);
+  const loadingRef = useRef(0);
   const [isAdminDB, setIsAdminDB] = useState(sessionStorage.getItem('is_admin') === '1');
   const [appLoading, setAppLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
@@ -115,21 +116,25 @@ export default function App() {
   };
 
   const loadData = async function(userId) {
+    const token = ++loadingRef.current;
     uidRef.current = userId;
     setDataLoading(true); setDataError(null);
     try {
       await loadFromLocal(userId);
+      if (loadingRef.current !== token) return;
       setDataLoading(false);
       if (navigator.onLine) {
         setSyncStatus('syncing');
         const res = await Promise.all([syncAll(userId), fetchRole(userId)]);
+        if (loadingRef.current !== token) return;
         const ok = res[0], admin = res[1];
         setIsAdminDB(admin);
         if (!admin) sessionStorage.removeItem('is_admin');
-        if (ok) { await loadFromLocal(userId); setSyncStatus('ok'); setTimeout(function() { setSyncStatus('idle'); }, 3000); }
+        if (ok) { await loadFromLocal(userId); if (loadingRef.current !== token) return; setSyncStatus('ok'); setTimeout(function() { setSyncStatus('idle'); }, 3000); }
         else { setSyncStatus('error'); setTimeout(function() { setSyncStatus('idle'); }, 5000); }
       }
     } catch(e) {
+      if (loadingRef.current !== token) return;
       setDataLoading(false);
       setSyncStatus('error'); setTimeout(function() { setSyncStatus('idle'); }, 5000);
       if (navigator.onLine) {
@@ -148,7 +153,7 @@ export default function App() {
           if (lr.data) { const mapped = lr.data.map(function(l) { return Object.assign({}, l, {desc:l.description}); }); setLosses(mapped); await ldb.losses.bulkPut(lr.data.map(function(r) { return toLocal(r, {user_id:userId, desc:r.description}); })); }
           const roleData = roleRes && roleRes.data ? roleRes.data : null;
           setIsAdminDB(roleData && roleData.role === 'admin');
-          await setLastSync(now());
+          await setLastSync(now(), userId);
         } catch(e2) { setDataError('Erro ao carregar dados.'); setDataLoading(false); }
       } else {
         setDataError('Sem conexao e sem dados locais. Conecte-se pelo menos uma vez.');
