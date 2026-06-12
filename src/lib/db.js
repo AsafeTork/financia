@@ -51,16 +51,20 @@ const pickFields = function(obj, fields) {
   return out;
 };
 
-const getLastSync = async function() {
-  const r = await ldb.meta.get('last_sync');
+const getLastSync = async function(uid) {
+  const key = uid ? 'last_sync_' + uid : 'last_sync';
+  const r = await ldb.meta.get(key);
   return r ? r.val : '1970-01-01T00:00:00Z';
 };
 
-export const setLastSync = function(ts) { return ldb.meta.put({ key: 'last_sync', val: ts }); };
+export const setLastSync = function(ts, uid) {
+  const key = uid ? 'last_sync_' + uid : 'last_sync';
+  return ldb.meta.put({ key: key, val: ts });
+};
 
 export const syncTable = async function(uid, table, ldbTable, mapLocal) {
   if (!navigator.onLine) return;
-  const lastSync = await getLastSync();
+  const lastSync = await getLastSync(uid);
   const fields = FIELD_MAP[table] || [];
 
   const unsynced = await ldbTable.where('user_id').equals(uid).and(r => r._synced === 0).toArray();
@@ -71,10 +75,10 @@ export const syncTable = async function(uid, table, ldbTable, mapLocal) {
         await ldbTable.delete(row.id);
       } else {
         const sbRow = pickFields(
-          { ...row, description: row.description || row.desc, category: row.category || row.cat },
+          Object.assign({}, row, { description: row.description || row.desc, category: row.category || row.cat }),
           fields
         );
-        const { error } = await sb.from(table).upsert(sbRow);
+        const { error } = await sb.from(table).upsert(sbRow, { onConflict: 'id' });
         if (!error) await ldbTable.update(row.id, { _synced: 1 });
       }
     } catch (_) {}
@@ -87,7 +91,7 @@ export const syncTable = async function(uid, table, ldbTable, mapLocal) {
   if (pullErr) return;
   for (const row of remote || []) {
     const existing = await ldbTable.get(row.id);
-    if (!existing || existing._synced === 1) {
+    if (!existing || (existing._synced === 1 && row.updated_at >= (existing._updated_at || ''))) {
       await ldbTable.put(toLocal(row, mapLocal(row)));
     }
   }
@@ -101,7 +105,8 @@ export const syncProfiles = async function(uid) {
   for (const row of unsynced) {
     const clean = {};
     PROFILE_WRITE_FIELDS.forEach(function(k) { if (row[k] !== undefined) clean[k] = row[k]; });
-    const { error } = await sb.from('company_profiles').upsert(clean);
+    clean.updated_at = row.updated_at || now();
+    const { error } = await sb.from('company_profiles').upsert(clean, { onConflict: 'user_id' });
     if (!error) await ldb.profiles.update(uid, { _synced: 1 });
   }
   const { data } = await sb.from('company_profiles').select('*').eq('user_id', uid).maybeSingle();
@@ -122,7 +127,7 @@ export const syncAll = async function(uid) {
       ]),
       timeout,
     ]);
-    await setLastSync(ts);
+    await setLastSync(ts, uid);
     return true;
   } catch (e) { console.warn('syncAll:', e.message); return false; }
 };
