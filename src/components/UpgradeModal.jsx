@@ -4,7 +4,7 @@ import { PLAN_KIND_LABEL } from '../lib/constants.js';
 export default function UpgradeModal({ kind, limit, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 anim-fade" style={{background:'rgba(0,0,0,0.5)'}}>
-      <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col gap-4" style={{boxShadow:'0 25px 60px rgba(0,0,0,0.2)'}}>
+      <div className="rounded-2xl w-full max-w-sm p-6 flex flex-col gap-4" style={{background:'var(--bg-card)', boxShadow:'0 25px 60px rgba(0,0,0,0.2)'}}>
         <div className="flex items-center gap-2">
           <span className="text-2xl">🚀</span>
           <p className="font-bold text-gray-800">Limite do plano gratuito</p>

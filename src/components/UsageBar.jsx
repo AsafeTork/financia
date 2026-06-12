@@ -70,8 +70,8 @@ export function BarChartSVG({ data, color }) {
         var y = H - 28 - Math.round((gv / maxVal) * (H - 40));
         return (
           <g key={gi}>
-            <line x1={36} y1={y} x2={data.length * W + 36} y2={y} stroke="#f1f5f9" strokeWidth="1"/>
-            <text x={32} y={y + 3} textAnchor="end" fontSize={8} fill="#cbd5e1">{fmtK(gv)}</text>
+            <line x1={36} y1={y} x2={data.length * W + 36} y2={y} stroke="var(--border-color, #f1f5f9)" strokeWidth="1"/>
+            <text x={32} y={y + 3} textAnchor="end" fontSize={8} fill="var(--text-muted, #cbd5e1)">{fmtK(gv)}</text>
           </g>
         );
       })}
@@ -83,7 +83,7 @@ export function BarChartSVG({ data, color }) {
           <g key={i}>
             <rect x={x} y={H - 28 - ih} width={bw} height={ih || 2} fill={barColor} rx={3} opacity="0.85"/>
             <rect x={x + bw + 2} y={H - 28 - oh} width={bw} height={oh || 2} fill="#fca5a5" rx={3}/>
-            <text x={x + bw + 1} y={H - 6} textAnchor="middle" fontSize={9} fill="#9ca3af">{d.day}</text>
+            <text x={x + bw + 1} y={H - 6} textAnchor="middle" fontSize={9} fill="var(--text-muted, #9ca3af)">{d.day}</text>
           </g>
         );
       })}

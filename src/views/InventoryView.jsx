@@ -128,7 +128,7 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
           var active = tab === t.key;
           return (
             <button key={t.key} onClick={function() { setTab(t.key); }}
-              className={'flex items-center gap-2 pb-3 px-1 mr-5 text-sm font-medium transition-colors ' + (active ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600')}
+              className={'flex items-center gap-2 pb-3 px-1 mr-5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 rounded-sm ' + (active ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600')}
               style={active ? {borderBottom: '2px solid ' + brand.color} : {}}>
               {t.label}
               <span className={'text-xs font-semibold px-1.5 py-0.5 rounded-md ' + (active ? 'text-white' : 'text-gray-400 bg-gray-100')}
