@@ -1,0 +1,13 @@
+node_modules/
+dist/
+android/
+scripts/
+.git/
+*.png
+*.jpg
+*.ico
+*.svg
+*.jar
+*.gradle
+*.properties
+package-lock.json

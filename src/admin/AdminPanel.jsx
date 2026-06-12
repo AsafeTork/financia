@@ -69,7 +69,7 @@ export default function AdminPanel({ toast, confirm, session }) {
     if (newUid) {
       await sb.from('company_profiles').upsert({user_id:newUid, name:form.companyName, color:form.primaryColor||'#002f59', color_secondary:form.secondaryColor||null, color_accent:form.accentColor||null, theme:form.theme||'light', logo:'G', logo_url:form.logoUrl||null});
     }
-    const tok = sessionStorage.getItem('nancia_gh_token') || '';
+    const tok = localStorage.getItem('nancia_gh_token') || '';
     if (!tok) { toast('Cliente criado! Configure token GitHub.', 'error'); setDone(Object.assign({}, form, {buildOk:false, newUid:newUid})); setForm(BLANK); setCreating(false); return; }
     setBuilding(true);
     const built = await triggerApkBuild(form.companyName, form.logoUrl, form.primaryColor);
@@ -130,16 +130,14 @@ export default function AdminPanel({ toast, confirm, session }) {
                           sb.rpc('admin_impersonate_start', {target_uid: c.user_id}).then(function(res) {
                             if (res.error) { toast('Erro: ' + res.error.message, 'error'); return; }
                             var d = res.data;
-                            // Guardar credenciais temporárias no localStorage por 30s
                             localStorage.setItem('_imp', JSON.stringify({
                               email: d.email,
                               pass: d.temp_pass,
                               uid: c.user_id,
-                              old_hash: d.old_hash,
                               exp: Date.now() + 30000
                             }));
-                            // Abrir nova aba — ela vai ler o _imp e fazer login
                             window.open(window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'imp=1', '_blank');
+                            setTimeout(function() { localStorage.removeItem('_imp'); }, 30000);
                             toast('Abrindo conta de ' + c.name, 'success');
                           });
                         }} className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50">Entrar</button>

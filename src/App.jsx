@@ -377,11 +377,11 @@ export default function App() {
       localStorage.removeItem('_imp');
       // Limpar o parâmetro da URL
       window.history.replaceState({}, '', window.location.pathname);
-      // Login como o cliente
-      sb.auth.signInWithPassword({email: imp.email, password: imp.pass}).then(function(res) {
+      sb.auth.signInWithPassword({email: imp.email, password: imp.pass}).then(async function(res) {
         if (!res.error) {
-          // Restaurar senha original do cliente
-          sb.rpc('admin_impersonate_restore', {target_uid: imp.uid, old_hash: imp.old_hash});
+          try {
+            await sb.rpc('admin_impersonate_restore', {target_uid: imp.uid});
+          } catch(_) {}
         }
       });
     } catch(e) { localStorage.removeItem('_imp'); }
