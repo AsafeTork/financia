@@ -2,7 +2,7 @@
 import { Card } from '../components/ui.jsx';
 import { fmt, today, monthLabel, brandAlpha } from '../lib/utils.js';
 
-export default function ReportView({ tx, brand, toast }) {
+export default function ReportView({ tx, brand, toast, onNav }) {
   var accentColor = (brand && brand.color) || '#1a6b5c';
 
   var allMonths = useMemo(function() {
@@ -39,7 +39,7 @@ export default function ReportView({ tx, brand, toast }) {
 
   var kpis = [
     {l:'Entradas', v:income, c:accentColor},
-    {l:'Saidas',   v:expense, c:'#ef4444'},
+    {l:'Saídas',   v:expense, c:'#ef4444'},
     {l:'Resultado', v:income - expense, c: income - expense >= 0 ? accentColor : '#ef4444'},
     {l:'Registros', v:filtered.length, c:'#64748b', isCount:true},
   ];
@@ -58,8 +58,15 @@ export default function ReportView({ tx, brand, toast }) {
                 <path d="M9 17v-2m3 2v-4m3 4v-6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/>
               </svg>
             </div>
-            <p className="text-sm font-semibold text-gray-700">Nenhum dado disponivel</p>
-            <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Registre vendas e despesas para gerar relatorios mensais.</p>
+            <p className="text-sm font-semibold text-gray-700">Nenhum dado disponível</p>
+            <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Registre vendas e despesas para gerar relatórios mensais.</p>
+            {onNav && (
+              <button onClick={function() { onNav('income'); }}
+                className="text-xs font-semibold px-5 py-2.5 rounded-xl text-white transition hover:opacity-90 mt-1"
+                style={{background: accentColor}}>
+                Registrar primeira venda
+              </button>
+            )}
           </div>
         </Card>
       </div>

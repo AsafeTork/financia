@@ -81,13 +81,13 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <KpiCard label="Entradas do mes"
+        <KpiCard label="Entradas do mês"
           value={fmt(ti)}
           color="#22c55e"
           accentBar="#22c55e"
           variation={inVar}
           sub={inVar === null ? 'Sem dados anteriores' : undefined}/>
-        <KpiCard label="Saidas do mes"
+        <KpiCard label="Saídas do mês"
           value={fmt(to)}
           color="#ef4444"
           accentBar="#ef4444"
@@ -112,7 +112,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Plano gratuito</p>
             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full text-white" style={{background: brand.color}}>FREE</span>
           </div>
-          <UsageBar label="Transacoes" used={tx.length} limit={PLAN_LIMITS.free.transactions} color={brand.color} accentColor={brand.color}/>
+          <UsageBar label="Transações" used={tx.length} limit={PLAN_LIMITS.free.transactions} color={brand.color} accentColor={brand.color}/>
           <UsageBar label="Produtos"   used={products.length} limit={PLAN_LIMITS.free.products} color={brand.color} accentColor={brand.color}/>
           <UsageBar label="Perdas"     used={lossesCount || 0} limit={PLAN_LIMITS.free.losses} color={brand.color} accentColor={brand.color}/>
           <p className="text-xs text-gray-400">Upgrade para Pro: registros ilimitados.</p>
@@ -121,7 +121,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
 
       <Card className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-semibold text-gray-800">Ultimos 7 dias</p>
+          <p className="text-sm font-semibold text-gray-800">Últimos 7 dias</p>
           <div className="flex gap-3 text-xs text-gray-400">
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background: brand.color}}/>
@@ -129,7 +129,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-red-200 inline-block"/>
-              Saidas
+              Saídas
             </span>
           </div>
         </div>
@@ -142,7 +142,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
                 <rect x="34" y="15" width="12" height="27" rx="3" fill={brandAlpha(brand.color, 0.17)}/>
                 <rect x="2" y="42" width="44" height="2" rx="1" fill={brandAlpha(brand.color, 0.1)}/>
               </svg>
-              <p className="text-sm font-semibold text-gray-700">Nenhuma movimentacao ainda</p>
+              <p className="text-sm font-semibold text-gray-700">Nenhuma movimentação ainda</p>
               <p className="text-xs text-gray-400">Registre sua primeira venda para ver o resumo aqui.</p>
               <button onClick={function() { onNav('income'); }}
                 className="text-xs font-semibold px-5 py-2.5 rounded-xl text-white transition hover:opacity-90"
@@ -157,7 +157,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
 
       <Card>
         <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-          <p className="text-sm font-semibold text-gray-800">Movimentacoes recentes</p>
+          <p className="text-sm font-semibold text-gray-800">Movimentações recentes</p>
           {recent.length > 0 && (
             <button onClick={function() { onNav('report'); }} className="text-xs text-gray-400 hover:text-gray-600 font-medium">
               Ver relatorio
@@ -170,7 +170,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
               </svg>
-              <p className="text-sm text-gray-400">Nenhuma movimentacao</p>
+              <p className="text-sm text-gray-400">Nenhuma movimentação</p>
               <div className="flex gap-3">
                 <button onClick={function() { onNav('income'); }} className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white" style={{background:'#22c55e'}}>+ Venda</button>
                 <button onClick={function() { onNav('expense'); }} className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-red-400">+ Despesa</button>
