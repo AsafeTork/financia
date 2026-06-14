@@ -116,7 +116,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
           </div>
           <div className="border-t border-gray-100 pt-4">
             <p className="text-sm font-semibold text-gray-800 mb-2">Segurança do sistema</p>
-            {['Dados criptografados no Supabase','Cada usuario acessa apenas seus dados (RLS)','Conexao sempre via HTTPS','Sessao expira automaticamente','Nunca compartilhe sua senha'].map(function(s, i) {
+            {['Dados criptografados no Supabase','Cada usuário acessa apenas seus dados (RLS)','Conexão sempre via HTTPS','Sessão expira automaticamente','Nunca compartilhe sua senha'].map(function(s, i) {
               return (
                 <div key={i} className="flex items-center gap-2.5 mb-2">
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{background:'#dcfce7'}}>
@@ -139,7 +139,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
             <div><p className="text-sm font-semibold text-gray-800">{session && session.user ? session.user.email : ''}</p><p className="text-xs text-gray-400">Usuário ativo</p></div>
           </div>
           <div className="border-t border-gray-100 pt-2">
-            <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Versao</span><span className="font-medium">5.0</span></div>
+            <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Versão</span><span className="font-medium">5.0</span></div>
             <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Banco</span><span className="font-medium">Supabase (PostgreSQL)</span></div>
             <div className="flex justify-between text-sm"><span className="text-gray-500">Hospedagem</span><span className="font-medium">Render</span></div>
           </div>

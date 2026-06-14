@@ -276,7 +276,7 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             />
             {colorSecondary && (
               <button onClick={function() { setSecondary(''); }} className="text-xs text-gray-400 hover:text-gray-600 self-start -mt-1">
-                Resetar para automatico
+                Resetar para automático
               </button>
             )}
             <ColorField
@@ -287,7 +287,7 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             />
             {colorAccent && (
               <button onClick={function() { setAccent(''); }} className="text-xs text-gray-400 hover:text-gray-600 self-start -mt-1">
-                Resetar para automatico
+                Resetar para automático
               </button>
             )}
           </div>
@@ -327,7 +327,7 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
               <button type="button" onClick={function() { setPlan('pro'); }}
                 className={'flex-1 py-2 rounded-xl text-sm font-semibold border ' + (plan === 'pro' ? 'text-white' : 'text-gray-600 bg-white border-gray-200')}
                 style={plan === 'pro' ? {background: color, borderColor: color} : {}}>
-                Pro (R$ 70/mes)
+                Pro (R$ 70/mês)
               </button>
             </div>
             {client.plan_activated_by && plan === 'pro' && <p className="text-xs text-gray-400">Ativado por: {client.plan_activated_by}</p>}

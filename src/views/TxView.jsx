@@ -137,7 +137,7 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
             </div>
             <p className="text-sm font-semibold text-gray-700">{isIncome ? 'Nenhuma venda registrada' : 'Nenhuma despesa registrada'}</p>
             <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
-              {isIncome ? 'Registre vendas com multiplos itens e calculo automatico do total.' : 'Registre aluguel, energia, fornecedores e outras saidas.'}
+              {isIncome ? 'Registre vendas com múltiplos itens e cálculo automático do total.' : 'Registre aluguel, energia, fornecedores e outras saídas.'}
             </p>
             <button onClick={function() { setModal(true); }}
               className="mt-1 text-xs font-semibold px-5 py-2.5 rounded-xl text-white hover:opacity-90 transition"

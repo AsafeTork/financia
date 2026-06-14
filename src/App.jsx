@@ -156,7 +156,7 @@ export default function App() {
           await setLastSync(now(), userId);
         } catch(e2) { setDataError('Erro ao carregar dados.'); setDataLoading(false); }
       } else {
-        setDataError('Sem conexao e sem dados locais. Conecte-se pelo menos uma vez.');
+        setDataError('Sem conexão e sem dados locais. Conecte-se pelo menos uma vez.');
         setDataLoading(false);
       }
     }
@@ -208,8 +208,8 @@ export default function App() {
       try {
         const res = await sb.from('transactions').upsert({id:row.id, type:row.type, description:row.description, amount:row.amount, date:row.date, method:row.method, category:row.category, items:row.items, user_id:userId, registered_by:rb, updated_at:row.updated_at});
         if (!res.error) await ldb.transactions.update(row.id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
+      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
     }
   };
 
@@ -224,8 +224,8 @@ export default function App() {
       try {
         const res = await sb.from('transactions').update({description:upd.description, amount:upd.amount, date:upd.date, method:upd.method, category:upd.category, updated_at:upd.updated_at}).eq('id', id);
         if (!res.error) await ldb.transactions.update(id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
+      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
     }
   };
 
@@ -237,7 +237,7 @@ export default function App() {
       try {
         const res = await sb.from('transactions').delete().eq('id', id);
         if (!res.error) await ldb.transactions.delete(id);
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
     }
   };
 
@@ -256,8 +256,8 @@ export default function App() {
       try {
         const res = await sb.from('products').upsert({id:row.id, name:row.name, category:row.category, price:row.price, cost:row.cost, stock:row.stock, user_id:userId, registered_by:rb, updated_at:row.updated_at});
         if (!res.error) await ldb.products.update(row.id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
+      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
     }
   };
 
@@ -271,8 +271,8 @@ export default function App() {
       try {
         const res = await sb.from('products').update({name:upd.name, category:upd.category, price:upd.price, cost:upd.cost, stock:upd.stock, updated_at:upd.updated_at}).eq('id', id);
         if (!res.error) await ldb.products.update(id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
+      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
     }
   };
 
@@ -284,7 +284,7 @@ export default function App() {
       try {
         const res = await sb.from('products').delete().eq('id', id);
         if (!res.error) await ldb.products.delete(id);
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
     }
   };
 
@@ -300,8 +300,8 @@ export default function App() {
       try {
         const res = await sb.from('products').update({stock:ns, updated_at:upd.updated_at}).eq('id', id);
         if (!res.error) await ldb.products.update(id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
+      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
     }
   };
 
@@ -319,8 +319,8 @@ export default function App() {
       try {
         const res = await sb.from('losses').upsert({id:row.id, description:row.description, qty:row.qty, reason:row.reason, date:row.date, user_id:userId, registered_by:rb, updated_at:row.updated_at});
         if (!res.error) await ldb.losses.update(row.id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
+      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
     }
   };
 
@@ -335,8 +335,8 @@ export default function App() {
       try {
         const res = await sb.from('losses').update({description:upd.description, qty:upd.qty, reason:upd.reason, date:upd.date, updated_at:upd.updated_at}).eq('id', id);
         if (!res.error) await ldb.losses.update(id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
+      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
     }
   };
 
@@ -348,7 +348,7 @@ export default function App() {
       try {
         const res = await sb.from('losses').delete().eq('id', id);
         if (!res.error) await ldb.losses.delete(id);
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
     }
   };
 
@@ -365,8 +365,8 @@ export default function App() {
       try {
         const res = await sb.from('company_profiles').upsert({user_id:userId, name:nb.name, logo:nb.logo, color:nb.color, color_secondary:nb.color_secondary||null, color_accent:nb.color_accent||null, theme:nb.theme||'light', logo_url:nb.logo_url||null});
         if (!res.error) await ldb.profiles.update(userId, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
+      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
     }
   };
 

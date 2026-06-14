@@ -160,7 +160,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
           <p className="text-sm font-semibold text-gray-800">Movimentações recentes</p>
           {recent.length > 0 && (
             <button onClick={function() { onNav('report'); }} className="text-xs text-gray-400 hover:text-gray-600 font-medium">
-              Ver relatorio
+              Ver relatório
             </button>
           )}
         </div>
