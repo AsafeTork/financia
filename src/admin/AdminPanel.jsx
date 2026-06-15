@@ -57,10 +57,14 @@ export default function AdminPanel({ toast, confirm, session }) {
 
   const uploadLogo = async function(file) {
     if (!file) return;
+    const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+    if (allowed.indexOf(file.type) === -1) { toast('Use PNG, JPG ou WebP.', 'error'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast('Imagem deve ter menos de 2MB.', 'error'); return; }
     setUploading(true);
-    const path = 'client-logos/' + Date.now() + '.' + file.name.split('.').pop();
-    const upRes = await sb.storage.from('logos').upload(path, file, {upsert:true});
-    if (upRes.error) { toast('Erro no upload.', 'error'); setUploading(false); return; }
+    const extMap = {'image/png':'png','image/jpeg':'jpg','image/webp':'webp'};
+    const path = 'client-logos/' + Date.now() + '.' + (extMap[file.type] || 'jpg');
+    const upRes = await sb.storage.from('logos').upload(path, file, {upsert:true, contentType:file.type});
+    if (upRes.error) { toast('Erro no upload: ' + upRes.error.message, 'error'); setUploading(false); return; }
     const urlRes = sb.storage.from('logos').getPublicUrl(path);
     const url = urlRes.data.publicUrl + '?t=' + Date.now();
     setForm(function(f) { return Object.assign({}, f, {logoUrl:url}); });
@@ -194,7 +198,7 @@ export default function AdminPanel({ toast, confirm, session }) {
                 }
               </div>
               <div className="flex-1 flex flex-col gap-1.5">
-                <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={function(e) { uploadLogo(e.target.files[0]); }}/>
+                <input ref={logoRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={function(e) { uploadLogo(e.target.files[0]); }}/>
                 <button onClick={function() { logoRef.current.click(); }} disabled={uploading} className="border border-gray-200 rounded-xl py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50">
                   {uploading ? 'Enviando...' : 'Upload de logo'}
                 </button>
