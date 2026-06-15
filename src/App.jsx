@@ -119,7 +119,6 @@ export default function App() {
     const token = ++loadingRef.current;
     uidRef.current = userId;
     setDataError(null);
-    // Mostra o app imediatamente — dados do Dexie chegam em background (<200ms)
     var localDone = false;
     var localTimer = setTimeout(function() {
       if (!localDone && loadingRef.current === token) setDataLoading(true);
@@ -128,7 +127,7 @@ export default function App() {
       await loadFromLocal(userId);
       localDone = true;
       clearTimeout(localTimer);
-      if (loadingRef.current !== token) { setDataLoading(false); return; }
+      if (loadingRef.current !== token) return;
       setDataLoading(false);
       if (navigator.onLine) {
         setSyncStatus('syncing');
@@ -143,7 +142,7 @@ export default function App() {
     } catch(e) {
       localDone = true;
       clearTimeout(localTimer);
-      if (loadingRef.current !== token) { setDataLoading(false); return; }
+      if (loadingRef.current !== token) return;
       setDataLoading(false);
       setSyncStatus('error'); setTimeout(function() { setSyncStatus('idle'); }, 5000);
       if (navigator.onLine) {
@@ -163,13 +162,15 @@ export default function App() {
           const roleData = roleRes && roleRes.data ? roleRes.data : null;
           setIsAdminDB(roleData && roleData.role === 'admin');
           await setLastSync(now(), userId);
-        } catch(e2) { setDataError('Erro ao carregar dados.'); setDataLoading(false); }
+        } catch(e2) { setDataError('Erro ao carregar dados.'); }
       } else {
         setDataError('Sem conexão e sem dados locais. Conecte-se pelo menos uma vez.');
-        setDataLoading(false);
       }
+    } finally {
+      clearTimeout(localTimer);
+      // Safety: garante que spinner nunca fica preso independente de qual caminho foi tomado
+      if (loadingRef.current === token) setDataLoading(false);
     }
-    setDataLoading(false);
   };
 
   useEffect(function() {
@@ -199,7 +200,10 @@ export default function App() {
       setSession(s);
       if (s) {
         localStorage.setItem('financia_last_uid', s.user.id);
-        setIsAdminDB(false); sessionStorage.removeItem('is_admin'); loadData(s.user.id);
+        // Só recarrega dados se o usuário mudou — evita duplo loadData na restauração de sessão
+        if (s.user.id !== uidRef.current) {
+          setIsAdminDB(false); sessionStorage.removeItem('is_admin'); loadData(s.user.id);
+        }
       } else {
         localStorage.removeItem('financia_last_uid');
         ++loadingRef.current;
