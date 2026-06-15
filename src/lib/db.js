@@ -150,18 +150,23 @@ export const deleteClient = async function(uid) {
 
 export const triggerApkBuild = async function(clientName, logoUrl, primaryColor) {
   const tok = localStorage.getItem('nancia_gh_token') || '';
-  if (!tok) return false;
-  const res = await fetch(
-    'https://api.github.com/repos/AsafeTork/gestao-financeira/actions/workflows/build.yml/dispatches',
-    {
-      method: 'POST',
-      headers: { Authorization: 'token ' + tok, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ref: 'main', inputs: {
-        client_name: clientName || 'Financia',
-        logo_url: logoUrl || '',
-        primary_color: (primaryColor || '#002f59').replace('#', ''),
-      }}),
-    }
-  );
-  return res.status === 204;
+  if (!tok) return { ok: false, reason: 'no_token' };
+  try {
+    const res = await fetch(
+      'https://api.github.com/repos/AsafeTork/gestao-financeira/actions/workflows/build.yml/dispatches',
+      {
+        method: 'POST',
+        headers: { Authorization: 'token ' + tok, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref: 'main', inputs: {
+          client_name: clientName || 'Financia',
+          logo_url: logoUrl || '',
+          primary_color: (primaryColor || '#002f59').replace('#', ''),
+        }}),
+      }
+    );
+    if (res.status === 204) return { ok: true };
+    return { ok: false, reason: 'api_error', status: res.status };
+  } catch(e) {
+    return { ok: false, reason: 'network_error' };
+  }
 };

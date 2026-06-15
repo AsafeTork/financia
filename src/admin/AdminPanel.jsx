@@ -74,10 +74,10 @@ export default function AdminPanel({ toast, confirm, session }) {
     setBuilding(true);
     const built = await triggerApkBuild(form.companyName, form.logoUrl, form.primaryColor);
     setBuilding(false);
-    setDone(Object.assign({}, form, {buildOk:built, newUid:newUid}));
+    setDone(Object.assign({}, form, {buildOk:built.ok, newUid:newUid}));
     setForm(BLANK);
     setCreating(false);
-    toast(built ? 'Cliente criado! APK em ~2min.' : 'Erro no APK - verifique token.', built ? 'success' : 'error');
+    toast(built.ok ? 'Cliente criado! APK em ~2min.' : 'Cliente criado, mas APK falhou: ' + (built.status || built.reason || ''), built.ok ? 'success' : 'error');
   };
 
   const copyWpp = async function(c, done_) {
@@ -144,7 +144,13 @@ export default function AdminPanel({ toast, confirm, session }) {
                           });
                         }} className="py-2 text-xs font-semibold rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 min-h-[40px]">Entrar</button>
                         <button onClick={function() { setEditClient(c); }} className="py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[40px]">Editar</button>
-                        <button onClick={function() { triggerApkBuild(c.name, c.logo_url, c.color).then(function(ok) { toast(ok ? 'APK iniciado!' : 'Sem token GitHub.', ok ? 'success' : 'error'); }); }} className="py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[40px]">Gerar APK</button>
+                        <button onClick={function() { triggerApkBuild(c.name, c.logo_url, c.color).then(function(r) {
+                              if (r.ok) { toast('Build iniciado! Veja em Actions no GitHub.', 'success'); return; }
+                              if (r.reason === 'no_token') { toast('Configure o token GitHub antes.', 'error'); return; }
+                              if (r.reason === 'api_error' && r.status === 401) { toast('Token invalido ou expirado.', 'error'); return; }
+                              if (r.reason === 'api_error' && r.status === 404) { toast('Repositorio ou workflow nao encontrado.', 'error'); return; }
+                              toast('Erro ao acionar build (status ' + (r.status || 'rede') + ').', 'error');
+                            }); }} className="py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[40px]">Gerar APK</button>
                         <button onClick={function() { handleDelete(c); }} className="py-2 text-xs font-semibold rounded-lg border border-red-200 text-red-500 hover:bg-red-50 min-h-[40px]">Excluir</button>
                       </div>
                     </div>
