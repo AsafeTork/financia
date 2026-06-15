@@ -128,7 +128,7 @@ export default function App() {
       await loadFromLocal(userId);
       localDone = true;
       clearTimeout(localTimer);
-      if (loadingRef.current !== token) return;
+      if (loadingRef.current !== token) { setDataLoading(false); return; }
       setDataLoading(false);
       if (navigator.onLine) {
         setSyncStatus('syncing');
@@ -143,7 +143,7 @@ export default function App() {
     } catch(e) {
       localDone = true;
       clearTimeout(localTimer);
-      if (loadingRef.current !== token) return;
+      if (loadingRef.current !== token) { setDataLoading(false); return; }
       setDataLoading(false);
       setSyncStatus('error'); setTimeout(function() { setSyncStatus('idle'); }, 5000);
       if (navigator.onLine) {
