@@ -138,7 +138,7 @@ export default function AdminPanel({ toast, confirm, session }) {
                               uid: c.user_id,
                               exp: Date.now() + 30000
                             }));
-                            window.open(window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'imp=1', '_blank');
+                            window.open(window.location.origin + window.location.pathname + '?imp=1', '_blank');
                             setTimeout(function() { localStorage.removeItem('_imp'); }, 30000);
                             toast('Abrindo conta de ' + c.name, 'success');
                           });
