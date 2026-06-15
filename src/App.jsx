@@ -380,17 +380,41 @@ export default function App() {
       var imp = JSON.parse(raw);
       if (Date.now() > imp.exp) { localStorage.removeItem('_imp'); return; }
       localStorage.removeItem('_imp');
-      // Limpar o parâmetro da URL
       window.history.replaceState({}, '', window.location.pathname);
-      sb.auth.signInWithPassword({email: imp.email, password: imp.pass}).then(async function(res) {
+      sb.auth.signInWithPassword({email: imp.email, password: imp.pass}).then(function(res) {
         if (!res.error) {
-          try {
-            await sb.rpc('admin_impersonate_restore', {target_uid: imp.uid});
-          } catch(_) {}
+          // Sinaliza ao admin para restaurar senha quando esta aba fechar
+          sessionStorage.setItem('_imp_uid', imp.uid);
         }
       });
     } catch(e) { localStorage.removeItem('_imp'); }
   }, []);
+
+  // Quando aba de impersonation fechar, sinaliza para a aba do admin restaurar a senha
+  React.useEffect(function() {
+    var handler = function() {
+      var uid = sessionStorage.getItem('_imp_uid');
+      if (uid) {
+        localStorage.setItem('_imp_restore', uid);
+        sessionStorage.removeItem('_imp_uid');
+      }
+    };
+    window.addEventListener('pagehide', handler);
+    return function() { window.removeEventListener('pagehide', handler); };
+  }, []);
+
+  // Admin tab: escuta sinal de restaurar senha quando aba de impersonation fecha
+  React.useEffect(function() {
+    if (!isAdminDB) return;
+    var handler = function(e) {
+      if (e.key !== '_imp_restore' || !e.newValue) return;
+      var uid = e.newValue;
+      localStorage.removeItem('_imp_restore');
+      sb.rpc('admin_impersonate_restore', {target_uid: uid}).catch(function() {});
+    };
+    window.addEventListener('storage', handler);
+    return function() { window.removeEventListener('storage', handler); };
+  }, [isAdminDB]);
 
   if (appLoading) return <Loader/>;
   if (!session) {
