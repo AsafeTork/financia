@@ -125,7 +125,7 @@ Stack: **Vite 5 + React 18 + Tailwind CSS v3 + Supabase JS v2 + Dexie v3**
 
 ### Electron (Windows)
 
-- `electron/main.cjs`: abre `https://gestao-financeira-7heu.onrender.com` em janela nativa.
+- `electron/main.cjs`: abre `https://financia-gestao.onrender.com` em janela nativa.
 - Links externos abrem no browser padrão (não em nova janela Electron).
 - Menu nativo removido.
 - Ícone gerado por `scripts/gen_icon_win.py` em runtime no CI.
@@ -157,7 +157,7 @@ Arquivo: `.github/workflows/build.yml` (nome do workflow: "Build Release")
 
 ## Deploy (Render)
 
-- URL: https://gestao-financeira-7heu.onrender.com
+- URL: https://financia-gestao.onrender.com
 - Qualquer push para `main` dispara deploy automático.
 - Build: ~2-3 min.
 - Build warning "chunk > 500kB" é esperado (Dexie + Supabase SDK) — não é erro.

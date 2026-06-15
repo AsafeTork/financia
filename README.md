@@ -10,7 +10,7 @@ celular, APK nativo Android, ou instalador Windows.
 
 | Recurso | Link |
 |---------|------|
-| App web (produção) | https://gestao-financeira-7heu.onrender.com |
+| App web (produção) | https://financia-gestao.onrender.com |
 | Painel Supabase | https://supabase.com/dashboard/project/kxeqhorxhlgwcgywovqr |
 | GitHub Actions (builds) | `.github/workflows/build.yml` |
 | Painel Render | https://dashboard.render.com |

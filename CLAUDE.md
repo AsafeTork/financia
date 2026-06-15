@@ -6,7 +6,7 @@ Desktop Windows: Electron 31 (electron-builder, NSIS)
 
 ## Deploy
 Render static site — auto-deploy no push para `main`
-URL: https://gestao-financeira-7heu.onrender.com
+URL: https://financia-gestao.onrender.com
 
 ## Regras de código (inegociáveis)
 - SEM optional chaining (`?.`) — browsers antigos

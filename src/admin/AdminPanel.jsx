@@ -82,7 +82,7 @@ export default function AdminPanel({ toast, confirm, session }) {
 
   const copyWpp = async function(c, done_) {
     const d = done_ || c;
-    const msg = (d.companyName || d.name || 'Financia') + '\n\nLink: https://gestao-financeira-7heu.onrender.com\nEmail: ' + d.email + '\nSenha: ' + d.password + (d.buildOk ? '\nAPK: github.com/' + GH_REPO + '/actions' : '');
+    const msg = (d.companyName || d.name || 'Financia') + '\n\nLink: https://financia-gestao.onrender.com\nEmail: ' + d.email + '\nSenha: ' + d.password + (d.buildOk ? '\nAPK: github.com/' + GH_REPO + '/actions' : '');
     await navigator.clipboard.writeText(msg);
     setCopied(d.email || d.user_id);
     setTimeout(function() { setCopied(null); }, 2000);

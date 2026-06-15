@@ -1,7 +1,7 @@
 const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 
-const APP_URL = 'https://gestao-financeira-7heu.onrender.com';
+const APP_URL = 'https://financia-gestao.onrender.com';
 
 function createWindow() {
   var win = new BrowserWindow({
