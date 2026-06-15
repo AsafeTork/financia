@@ -173,23 +173,35 @@ export default function App() {
   };
 
   useEffect(function() {
+    // Precarrega Dexie com uid em cache antes do getSession completar.
+    // Quando loadData rodar logo depois, loadFromLocal retorna em <10ms (Dexie quente)
+    // e o timer de 150ms nunca dispara — sem spinner "Carregando seus dados".
+    var cachedUid = localStorage.getItem('financia_last_uid');
+    if (cachedUid) { loadFromLocal(cachedUid).catch(function() {}); }
+
     var _authTimer = setTimeout(function() { setAppLoading(false); }, 8000);
     sb.auth.getSession().then(function(res) {
       clearTimeout(_authTimer);
       const s = res.data.session;
       setSession(s);
-      if (s) loadData(s.user.id);
+      if (s) {
+        localStorage.setItem('financia_last_uid', s.user.id);
+        loadData(s.user.id);
+      } else {
+        localStorage.removeItem('financia_last_uid');
+        if (cachedUid) { setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN); }
+      }
       setAppLoading(false);
     }).catch(function() { clearTimeout(_authTimer); setAppLoading(false); });
     const authSub = sb.auth.onAuthStateChange(function(event, s) {
-      // INITIAL_SESSION já é tratado pelo getSession() acima — evita duplo loadData
       if (event === 'INITIAL_SESSION') return;
-      // TOKEN_REFRESHED e USER_UPDATED não mudam dados do usuário — ignorar
       if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') return;
       setSession(s);
       if (s) {
+        localStorage.setItem('financia_last_uid', s.user.id);
         setIsAdminDB(false); sessionStorage.removeItem('is_admin'); loadData(s.user.id);
       } else {
+        localStorage.removeItem('financia_last_uid');
         ++loadingRef.current;
         setDataLoading(false);
         uidRef.current = null;
