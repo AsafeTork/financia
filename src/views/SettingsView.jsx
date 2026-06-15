@@ -131,10 +131,13 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
       {tab === 'account' && (
         <Card className="p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold" style={{background:brand.color}}>
-              {session && session.user && session.user.email ? session.user.email[0].toUpperCase() : 'U'}
+            <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden" style={{background:brand.color}}>
+              {brand.logo_url
+                ? <img src={brand.logo_url} alt="logo" className="w-full h-full object-cover"/>
+                : <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">{brand.name ? brand.name[0].toUpperCase() : (session && session.user && session.user.email ? session.user.email[0].toUpperCase() : 'U')}</div>
+              }
             </div>
-            <div><p className="text-sm font-semibold text-gray-800">{session && session.user ? session.user.email : ''}</p><p className="text-xs text-gray-400">Usuário ativo</p></div>
+            <div><p className="text-sm font-semibold text-gray-800">{brand.name || (session && session.user ? session.user.email : '')}</p><p className="text-xs text-gray-400">{session && session.user ? session.user.email : 'Usuário ativo'}</p></div>
           </div>
           <div className="border-t border-gray-100 pt-2">
             <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Versão</span><span className="font-medium">5.0</span></div>
