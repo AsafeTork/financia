@@ -118,13 +118,16 @@ export default function App() {
   const loadData = async function(userId) {
     const token = ++loadingRef.current;
     uidRef.current = userId;
-    setDataLoading(true); setDataError(null);
-    // Safety: garante que dataLoading sempre volta para false
-    var safetyTimer = setTimeout(function() {
-      if (loadingRef.current === token) setDataLoading(false);
-    }, 20000);
+    setDataError(null);
+    // Mostra o app imediatamente — dados do Dexie chegam em background (<200ms)
+    var localDone = false;
+    var localTimer = setTimeout(function() {
+      if (!localDone && loadingRef.current === token) setDataLoading(true);
+    }, 150);
     try {
       await loadFromLocal(userId);
+      localDone = true;
+      clearTimeout(localTimer);
       if (loadingRef.current !== token) return;
       setDataLoading(false);
       if (navigator.onLine) {
@@ -138,6 +141,8 @@ export default function App() {
         else { setSyncStatus('error'); setTimeout(function() { setSyncStatus('idle'); }, 5000); }
       }
     } catch(e) {
+      localDone = true;
+      clearTimeout(localTimer);
       if (loadingRef.current !== token) return;
       setDataLoading(false);
       setSyncStatus('error'); setTimeout(function() { setSyncStatus('idle'); }, 5000);
