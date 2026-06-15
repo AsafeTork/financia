@@ -418,7 +418,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex" style={{background:'var(--bg-page)'}}>
+    <div className="min-h-screen flex overflow-x-hidden" style={{background:'var(--bg-page)'}}>
       <Offline/>
       <SyncBadge status={syncStatus}/>
       <Sidebar view={view} onNav={navTo} brand={brand} open={sidebarOpen} isAdmin={isAdminDB} session={session} onClose={function() { setSidebarOpen(false); }}/>

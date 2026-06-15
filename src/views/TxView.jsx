@@ -167,7 +167,7 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-gray-800 truncate">{t.desc}</p>
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-gray-400 truncate">
                               {t.method || t.category || ''}
                               {t.items && t.items.length > 1 ? ' . ' + t.items.length + ' itens' : ''}
                               {t.registered_by ? ' . ' + t.registered_by : ''}

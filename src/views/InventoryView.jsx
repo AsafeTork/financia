@@ -187,7 +187,7 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                                  <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                                  <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
                                   {p.category && (
                                     <Badge color="#6b7280" bg="#f3f4f6">{p.category}</Badge>
                                   )}
@@ -251,8 +251,8 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
                         </svg>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-800">{l.qty + 'x ' + l.desc}</p>
-                        <p className="text-xs text-gray-400">{fmtDate(l.date)}{l.reason ? ' . ' + l.reason : ''}</p>
+                        <p className="text-sm font-semibold text-gray-800 truncate">{l.qty + 'x ' + l.desc}</p>
+                        <p className="text-xs text-gray-400 truncate">{fmtDate(l.date)}{l.reason ? ' . ' + l.reason : ''}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">

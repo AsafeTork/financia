@@ -157,7 +157,7 @@ export default function ReportView({ tx, brand, toast, onNav }) {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-800 truncate">{t.desc}</p>
-                          <p className="text-xs text-gray-400">{new Date(t.date + 'T12:00').toLocaleDateString('pt-BR') + ' . ' + (t.method || t.category || '') + (t.registered_by ? ' . ' + t.registered_by : '')}</p>
+                          <p className="text-xs text-gray-400 truncate">{new Date(t.date + 'T12:00').toLocaleDateString('pt-BR') + ' . ' + (t.method || t.category || '') + (t.registered_by ? ' . ' + t.registered_by : '')}</p>
                         </div>
                       </div>
                       <span className="text-sm font-semibold tabular flex-shrink-0 ml-3" style={{color: isInc ? accentColor : '#ef4444'}}>
@@ -168,7 +168,7 @@ export default function ReportView({ tx, brand, toast, onNav }) {
                 })}
               </div>
               <div className="flex items-center justify-between px-5 py-3.5 border-t border-gray-100 bg-gray-50">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Resultado do mes</span>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Resultado do mês</span>
                 <span className={'text-sm font-bold tabular ' + (income - expense >= 0 ? 'text-green-600' : 'text-red-500')}>
                   {income - expense >= 0 ? '+' : ''}{fmt(income - expense)}
                 </span>
