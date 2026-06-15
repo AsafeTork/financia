@@ -127,7 +127,7 @@ export default function AdminPanel({ toast, confirm, session }) {
                           <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0, 8)}...</p>
                         </div>
                       </div>
-                      <div className="flex gap-1.5">
+                      <div className="grid grid-cols-2 gap-1.5">
                         <button onClick={function() {
                           sb.rpc('admin_impersonate_start', {target_uid: c.user_id}).then(function(res) {
                             if (res.error) { toast('Erro: ' + res.error.message, 'error'); return; }
@@ -142,17 +142,10 @@ export default function AdminPanel({ toast, confirm, session }) {
                             setTimeout(function() { localStorage.removeItem('_imp'); }, 30000);
                             toast('Abrindo conta de ' + c.name, 'success');
                           });
-                        }} className="flex-1 py-2 text-xs font-semibold rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 min-h-[36px]">Entrar</button>
-                        <button onClick={function() { setEditClient(c); }} className="flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[36px]">Editar</button>
-                        <button onClick={function() { triggerApkBuild(c.name, c.logo_url, c.color).then(function(ok) { toast(ok ? 'APK iniciado!' : 'Sem token GitHub.', ok ? 'success' : 'error'); }); }} className="flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[36px]">APK</button>
-                        <button onClick={function() { handleDelete(c); }} className="p-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 min-h-[36px] min-w-[36px] flex items-center justify-center">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="3,6 5,6 21,6"/>
-                            <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
-                            <path d="M10,11v6M14,11v6"/>
-                            <path d="M9,6V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1v2"/>
-                          </svg>
-                        </button>
+                        }} className="py-2 text-xs font-semibold rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 min-h-[40px]">Entrar</button>
+                        <button onClick={function() { setEditClient(c); }} className="py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[40px]">Editar</button>
+                        <button onClick={function() { triggerApkBuild(c.name, c.logo_url, c.color).then(function(ok) { toast(ok ? 'APK iniciado!' : 'Sem token GitHub.', ok ? 'success' : 'error'); }); }} className="py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[40px]">Gerar APK</button>
+                        <button onClick={function() { handleDelete(c); }} className="py-2 text-xs font-semibold rounded-lg border border-red-200 text-red-500 hover:bg-red-50 min-h-[40px]">Excluir</button>
                       </div>
                     </div>
                   );
