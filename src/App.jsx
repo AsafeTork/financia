@@ -119,6 +119,10 @@ export default function App() {
     const token = ++loadingRef.current;
     uidRef.current = userId;
     setDataLoading(true); setDataError(null);
+    // Safety: garante que dataLoading sempre volta para false
+    var safetyTimer = setTimeout(function() {
+      if (loadingRef.current === token) setDataLoading(false);
+    }, 20000);
     try {
       await loadFromLocal(userId);
       if (loadingRef.current !== token) return;
@@ -160,6 +164,7 @@ export default function App() {
         setDataLoading(false);
       }
     }
+    clearTimeout(safetyTimer);
     setDataLoading(false);
   };
 
@@ -172,10 +177,18 @@ export default function App() {
       if (s) loadData(s.user.id);
       setAppLoading(false);
     }).catch(function() { clearTimeout(_authTimer); setAppLoading(false); });
-    const authSub = sb.auth.onAuthStateChange(function(_, s) {
+    const authSub = sb.auth.onAuthStateChange(function(event, s) {
+      // INITIAL_SESSION já é tratado pelo getSession() acima - evita duplo loadData
+      if (event === 'INITIAL_SESSION') return;
       setSession(s);
-      if (s) { setIsAdminDB(false); sessionStorage.removeItem('is_admin'); loadData(s.user.id); }
-      else { setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN); setIsAdminDB(false); sessionStorage.removeItem('is_admin'); }
+      if (s) {
+        // TOKEN_REFRESHED não muda usuário - só atualiza sessão, sem recarregar dados
+        if (event !== 'TOKEN_REFRESHED') {
+          setIsAdminDB(false); sessionStorage.removeItem('is_admin'); loadData(s.user.id);
+        }
+      } else {
+        setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN); setIsAdminDB(false); sessionStorage.removeItem('is_admin');
+      }
     });
     const syncInterval = setInterval(async function() {
       const userId = uidRef.current;
