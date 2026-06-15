@@ -62,7 +62,8 @@ export default function AdminPanel({ toast, confirm, session }) {
     if (file.size > 2 * 1024 * 1024) { toast('Imagem deve ter menos de 2MB.', 'error'); return; }
     setUploading(true);
     const extMap = {'image/png':'png','image/jpeg':'jpg','image/webp':'webp'};
-    const path = 'client-logos/' + Date.now() + '.' + (extMap[file.type] || 'jpg');
+    const adminUid = session && session.user ? session.user.id : 'admin';
+    const path = adminUid + '/clients/' + Date.now() + '.' + (extMap[file.type] || 'jpg');
     const upRes = await sb.storage.from('logos').upload(path, file, {upsert:true, contentType:file.type});
     if (upRes.error) { toast('Erro no upload: ' + upRes.error.message, 'error'); setUploading(false); return; }
     const urlRes = sb.storage.from('logos').getPublicUrl(path);
