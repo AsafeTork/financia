@@ -221,7 +221,7 @@ export default function AdminPanel({ toast, confirm, session }) {
                   <input type="color" value={val}
                     onChange={function(e) { var v = e.target.value; setForm(function(f) { var upd = {}; upd[field.key] = v; return Object.assign({}, f, upd); }); }}
                     className="w-8 h-8 rounded-lg border border-gray-200 cursor-pointer p-0.5 flex-shrink-0"/>
-                  <input value={val}
+                  <input value={form[field.key] || ''}
                     onChange={function(e) { var v = e.target.value; setForm(function(f) { var upd = {}; upd[field.key] = v; return Object.assign({}, f, upd); }); }}
                     maxLength={7} placeholder="#000000"
                     className="border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-mono flex-1 focus:outline-none focus:border-gray-400 bg-white"/>

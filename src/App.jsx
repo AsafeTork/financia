@@ -55,6 +55,14 @@ export default function App() {
     el.setAttribute('data-theme', b.theme || 'light');
   }, []);
   useEffect(function() { applyBrandVars(brand); }, [brand]);
+
+  // Safety: se o spinner ficar preso por mais de 25s (IndexedDB lock entre abas, etc.), força limpeza
+  useEffect(function() {
+    if (!dataLoading) return;
+    var t = setTimeout(function() { setDataLoading(false); setSyncStatus('idle'); }, 25000);
+    return function() { clearTimeout(t); };
+  }, [dataLoading]);
+
   const [planInfo, setPlanInfo] = useState(INIT_PLAN);
   const [tx, setTx] = useState([]);
   const [products, setProducts] = useState([]);

@@ -58,33 +58,42 @@ export const syncTable = async function(uid, table, ldbTable, mapLocal) {
   const fields = FIELD_MAP[table] || [];
 
   const unsynced = await ldbTable.where('user_id').equals(uid).and(r => r._synced === 0).toArray();
+  const toDeleteIds = [];
+  const toMarkSynced = [];
   for (const row of unsynced) {
     try {
       if (row._deleted) {
         await sb.from(table).delete().eq('id', row.id);
-        await ldbTable.delete(row.id);
+        toDeleteIds.push(row.id);
       } else {
         const sbRow = pickFields(
           Object.assign({}, row, { description: row.description || row.desc, category: row.category || row.cat }),
           fields
         );
         const { error } = await sb.from(table).upsert(sbRow, { onConflict: 'id' });
-        if (!error) await ldbTable.update(row.id, { _synced: 1 });
+        if (!error) toMarkSynced.push(row.id);
       }
     } catch (_) {}
   }
+  if (toDeleteIds.length > 0) await ldbTable.bulkDelete(toDeleteIds);
+  if (toMarkSynced.length > 0) await ldbTable.where('id').anyOf(toMarkSynced).modify({ _synced: 1 });
 
   const { data: remote, error: pullErr } = await sb.from(table).select('*')
     .eq('user_id', uid)
     .gte('updated_at', lastSync)
     .limit(500);
-  if (pullErr) return;
-  for (const row of remote || []) {
-    const existing = await ldbTable.get(row.id);
-    if (!existing || (existing._synced === 1 && row.updated_at >= (existing._updated_at || ''))) {
-      await ldbTable.put(toLocal(row, mapLocal(row)));
+  if (pullErr || !remote || remote.length === 0) return;
+
+  const remoteIds = remote.map(function(r) { return r.id; });
+  const existingArr = await ldbTable.bulkGet(remoteIds);
+  const rowsToPut = [];
+  remote.forEach(function(row, i) {
+    const ex = existingArr[i];
+    if (!ex || (ex._synced === 1 && row.updated_at >= (ex._updated_at || ''))) {
+      rowsToPut.push(toLocal(row, mapLocal(row)));
     }
-  }
+  });
+  if (rowsToPut.length > 0) await ldbTable.bulkPut(rowsToPut);
 };
 
 const PROFILE_WRITE_FIELDS = ['user_id','name','logo','color','color_secondary','color_accent','theme','logo_url'];
