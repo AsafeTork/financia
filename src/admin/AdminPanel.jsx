@@ -2,14 +2,14 @@
 import { Card } from '../components/ui.jsx';
 import { sb } from '../lib/supabase.js';
 import { triggerApkBuild, fetchClients, deleteClient } from '../lib/db.js';
-import { genPwd } from '../lib/utils.js';
+import { genPwd, luminance, lightenHex } from '../lib/utils.js';
 import { GH_REPO } from '../lib/constants.js';
 import ClientEditModal from './ClientEditModal.jsx';
 import { effectivePlan } from '../lib/constants.js';
 
 export default function AdminPanel({ toast, confirm, session }) {
   const adminEmail = session && session.user ? session.user.email : 'admin';
-  const BLANK = {email:'', password:'', companyName:'', logoUrl:'', primaryColor:'#002f59', colors:['#002f59']};
+  const BLANK = {email:'', password:'', companyName:'', logoUrl:'', primaryColor:'#002f59', secondaryColor:'', accentColor:'', colors:['#002f59']};
   const [form, setForm] = useState(BLANK);
   const [creating, setCreating] = useState(false);
   const [building, setBuilding] = useState(false);
@@ -26,19 +26,33 @@ export default function AdminPanel({ toast, confirm, session }) {
 
   const extractColors = function(img) {
     try {
-      const c = document.createElement('canvas'); c.width = 50; c.height = 50;
-      const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, 50, 50);
+      const cv = document.createElement('canvas'); cv.width = 50; cv.height = 50;
+      const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, 50, 50);
       const d = ctx.getImageData(0, 0, 50, 50).data;
       const buckets = {};
-      for (let i = 0; i < d.length; i += 4) {
+      for (var i = 0; i < d.length; i += 4) {
         if (d[i+3] < 128) continue;
-        const r = Math.round(d[i]/32)*32, g = Math.round(d[i+1]/48)*48, b = Math.round(d[i+2]/48)*48;
-        if (r > 220 && g > 220 && b > 220) continue;
+        const r = Math.round(d[i]/48)*48, g = Math.round(d[i+1]/48)*48, b = Math.round(d[i+2]/48)*48;
+        if (r > 230 && g > 230 && b > 230) continue;
         const k = r + ',' + g + ',' + b; buckets[k] = (buckets[k] || 0) + 1;
       }
-      const sorted = Object.entries(buckets).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 5);
-      const hexes = sorted.map(function(pair) { const parts = pair[0].split(',').map(Number); return '#' + parts.map(function(v) { return v.toString(16).padStart(2, '0'); }).join(''); });
-      if (hexes.length) setForm(function(f) { return Object.assign({}, f, {colors:hexes, primaryColor:hexes[0]}); });
+      const allHexes = Object.entries(buckets)
+        .sort(function(a, b) { return b[1] - a[1]; })
+        .map(function(pair) {
+          const parts = pair[0].split(',').map(Number);
+          return '#' + parts.map(function(v) { return v.toString(16).padStart(2, '0'); }).join('');
+        });
+      var dark = null; var mid = null; var light = null;
+      for (var j = 0; j < allHexes.length; j++) {
+        const lum = luminance(allHexes[j]);
+        if (!dark && lum < 0.2) dark = allHexes[j];
+        else if (!mid && lum >= 0.2 && lum <= 0.6) mid = allHexes[j];
+        else if (!light && lum > 0.6) light = allHexes[j];
+      }
+      const primary = dark || allHexes[0] || '#002f59';
+      const secondary = mid || lightenHex(primary, 0.78);
+      const accent = light || lightenHex(primary, 0.92);
+      setForm(function(f) { return Object.assign({}, f, {primaryColor:primary, secondaryColor:secondary, accentColor:accent, colors:allHexes.slice(0,5)}); });
     } catch(_) {}
   };
 
@@ -183,24 +197,34 @@ export default function AdminPanel({ toast, confirm, session }) {
               <div className="flex-1 flex flex-col gap-1.5">
                 <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={function(e) { uploadLogo(e.target.files[0]); }}/>
                 <button onClick={function() { logoRef.current.click(); }} disabled={uploading} className="border border-gray-200 rounded-xl py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50">
-                  {uploading ? 'Enviando...' : '[Upload] Logo'}
+                  {uploading ? 'Enviando...' : 'Upload de logo'}
                 </button>
-                {form.colors.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    {form.colors.map(function(c) {
-                      return (
-                        <button key={c} onClick={function() { setForm(function(f) { return Object.assign({}, f, {primaryColor:c}); }); }}
-                          className="w-6 h-6 rounded-md flex-shrink-0"
-                          style={{background:c, outline:form.primaryColor === c ? '2px solid #002f59' : 'none', outlineOffset:'2px'}}/>
-                      );
-                    })}
-                    <input type="color" value={form.primaryColor}
-                      onChange={function(e) { const v = e.target.value; setForm(function(f) { return Object.assign({}, f, {primaryColor:v, colors:Array.from(new Set([v].concat(f.colors))).slice(0,5)}); }); }}
-                      className="w-6 h-6 rounded-md border border-gray-200 cursor-pointer"/>
-                  </div>
-                )}
+                {form.logoUrl && <button onClick={function() { setForm(function(f) { return Object.assign({}, f, {logoUrl:'', colors:['#002f59'], primaryColor:'#002f59', secondaryColor:'', accentColor:''}); }); }} className="text-xs text-red-400 text-center">Remover logo</button>}
               </div>
             </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cores</label>
+            {[
+              {label:'Primaria', key:'primaryColor'},
+              {label:'Secundaria', key:'secondaryColor'},
+              {label:'Acento', key:'accentColor'}
+            ].map(function(field) {
+              var val = form[field.key] || '#cccccc';
+              return (
+                <div key={field.key} className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-20 flex-shrink-0">{field.label}</span>
+                  <input type="color" value={val}
+                    onChange={function(e) { var v = e.target.value; setForm(function(f) { var upd = {}; upd[field.key] = v; return Object.assign({}, f, upd); }); }}
+                    className="w-8 h-8 rounded-lg border border-gray-200 cursor-pointer p-0.5 flex-shrink-0"/>
+                  <input value={val}
+                    onChange={function(e) { var v = e.target.value; setForm(function(f) { var upd = {}; upd[field.key] = v; return Object.assign({}, f, upd); }); }}
+                    maxLength={7} placeholder="#000000"
+                    className="border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-mono flex-1 focus:outline-none focus:border-gray-400 bg-white"/>
+                  <div className="w-7 h-7 rounded-lg border border-gray-100 flex-shrink-0" style={{background:val}}/>
+                </div>
+              );
+            })}
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Email</label>
