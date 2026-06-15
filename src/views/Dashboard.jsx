@@ -43,7 +43,6 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
   var lowStock = products.filter(function(p) { return p.stock != null && p.stock <= 5; });
   var recent   = tx.slice().sort(function(a, b) { return b.date.localeCompare(a.date); }).slice(0, 8);
   var plan     = effectivePlan(planInfo);
-  var companyName = (brand && brand.name) ? brand.name : '';
 
   return (
     <div className="flex flex-col gap-5">

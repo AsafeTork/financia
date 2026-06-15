@@ -1,6 +1,5 @@
 ﻿import React, { useState, useRef } from 'react';
 import { Card, Inp, Spin } from '../components/ui.jsx';
-import LogoImg from '../components/LogoImg.jsx';
 import { sb } from '../lib/supabase.js';
 import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
@@ -12,7 +11,6 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
   var [pwForm, setPwForm] = useState({newPw:'', confirm:''});
   var [pwSaving, setPwSaving] = useState(false);
   var [uploading, setUploading] = useState(false);
-  var [extractedColors, setExtractedColors] = useState([]);
   var fileRef = useRef();
   React.useEffect(function() {
     if (isAdmin && tab === 'security') {
@@ -75,7 +73,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
         }
         const hexes = Object.entries(bk).sort(function(a, b2) { return b2[1] - a[1]; }).slice(0, 6)
           .map(function(pair) { const parts = pair[0].split(',').map(Number); return '#' + parts.map(function(v) { return v.toString(16).padStart(2,'0'); }).join(''); });
-        if (hexes.length) { setExtractedColors(hexes); setForm(function(f) { return Object.assign({}, f, {color:hexes[0]}); }); }
+        if (hexes.length) { setForm(function(f) { return Object.assign({}, f, {color:hexes[0]}); }); }
       } catch(_) {}
     };
     imgEl.src = url;

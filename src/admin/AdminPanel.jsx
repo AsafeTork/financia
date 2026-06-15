@@ -3,9 +3,8 @@ import { Card } from '../components/ui.jsx';
 import { sb } from '../lib/supabase.js';
 import { triggerApkBuild, fetchClients, deleteClient } from '../lib/db.js';
 import { genPwd, luminance, lightenHex } from '../lib/utils.js';
-import { GH_REPO } from '../lib/constants.js';
+import { GH_REPO, effectivePlan } from '../lib/constants.js';
 import ClientEditModal from './ClientEditModal.jsx';
-import { effectivePlan } from '../lib/constants.js';
 
 export default function AdminPanel({ toast, confirm, session }) {
   const adminEmail = session && session.user ? session.user.email : 'admin';

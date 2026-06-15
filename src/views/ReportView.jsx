@@ -9,17 +9,6 @@ export default function ReportView({ tx, brand, toast, onNav }) {
     return Array.from(new Set(tx.map(function(t) { return t.date.slice(0, 7); }))).sort(function(a, b) { return b.localeCompare(a); });
   }, [tx]);
 
-  var recentMonths = useMemo(function() {
-    var now = today().slice(0, 7);
-    var months = [];
-    for (var i = 0; i < 6; i++) {
-      var d = new Date();
-      d.setMonth(d.getMonth() - i);
-      months.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
-    }
-    return months;
-  }, []);
-
   var [month, setMonth] = useState(today().slice(0, 7));
 
   var filtered = tx.filter(function(t) { return t.date.startsWith(month); });

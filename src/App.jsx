@@ -190,7 +190,6 @@ export default function App() {
       if (s) {
         setIsAdminDB(false); sessionStorage.removeItem('is_admin'); loadData(s.user.id);
       } else {
-        // Cancelar qualquer loadData pendente e garantir que o spinner some
         ++loadingRef.current;
         setDataLoading(false);
         uidRef.current = null;
@@ -390,7 +389,6 @@ export default function App() {
     }
   };
 
-  // Impersonation: nova aba com ?imp=1 faz login automático com credenciais temporárias
   React.useEffect(function() {
     var params = new URLSearchParams(window.location.search);
     if (!params.get('imp')) return;
@@ -410,7 +408,6 @@ export default function App() {
     } catch(e) { localStorage.removeItem('_imp'); }
   }, []);
 
-  // Quando aba de impersonation fechar, sinaliza para a aba do admin restaurar a senha
   React.useEffect(function() {
     var handler = function() {
       var uid = sessionStorage.getItem('_imp_uid');
@@ -423,7 +420,6 @@ export default function App() {
     return function() { window.removeEventListener('pagehide', handler); };
   }, []);
 
-  // Admin tab: escuta sinal de restaurar senha quando aba de impersonation fecha
   React.useEffect(function() {
     if (!isAdminDB) return;
     var handler = function(e) {
