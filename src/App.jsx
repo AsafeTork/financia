@@ -169,7 +169,6 @@ export default function App() {
         setDataLoading(false);
       }
     }
-    clearTimeout(safetyTimer);
     setDataLoading(false);
   };
 
