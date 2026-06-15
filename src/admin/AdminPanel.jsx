@@ -60,17 +60,17 @@ export default function AdminPanel({ toast, confirm, session }) {
 
   const create = async function() {
     if (!form.email || !form.password) { toast('Preencha email e senha.', 'error'); return; }
-    if (form.password.length < 8) { toast('Senha minimo 8 chars.', 'error'); return; }
+    if (form.password.length < 8) { toast('Senha mínimo 8 chars.', 'error'); return; }
     if (!form.companyName) { toast('Informe o nome da empresa.', 'error'); return; }
     setCreating(true);
     const authRes = await sb.auth.signUp({email:form.email, password:form.password});
-    if (authRes.error) { toast(authRes.error.message.includes('already') ? 'Email ja cadastrado.' : 'Erro: ' + authRes.error.message, 'error'); setCreating(false); return; }
+    if (authRes.error) { toast(authRes.error.message.includes('already') ? 'E-mail já cadastrado.' : 'Erro: ' + authRes.error.message, 'error'); setCreating(false); return; }
     const newUid = authRes.data && authRes.data.user ? authRes.data.user.id : null;
     if (newUid) {
       await sb.from('company_profiles').upsert({user_id:newUid, name:form.companyName, color:form.primaryColor||'#002f59', color_secondary:form.secondaryColor||null, color_accent:form.accentColor||null, theme:form.theme||'light', logo:'G', logo_url:form.logoUrl||null});
     }
     const tok = localStorage.getItem('nancia_gh_token') || '';
-    if (!tok) { toast('Cliente criado! Configure token GitHub.', 'error'); setDone(Object.assign({}, form, {buildOk:false, newUid:newUid})); setForm(BLANK); setCreating(false); return; }
+    if (!tok) { toast('Cliente criado! Configure o token GitHub.', 'error'); setDone(Object.assign({}, form, {buildOk:false, newUid:newUid})); setForm(BLANK); setCreating(false); return; }
     setBuilding(true);
     const built = await triggerApkBuild(form.companyName, form.logoUrl, form.primaryColor);
     setBuilding(false);
@@ -109,23 +109,25 @@ export default function AdminPanel({ toast, confirm, session }) {
               <div className="flex flex-col gap-2">
                 {clients.map(function(c) {
                   return (
-                    <div key={c.user_id} className="rounded-xl border border-gray-100 p-3 flex items-center gap-3 bg-white">
-                      <div className="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden" style={{background:c.color||'#002f59'}}>
-                        {c.logo_url
-                          ? <img src={c.logo_url} className="w-full h-full object-cover" alt=""/>
-                          : <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">{(c.name || '?')[0]}</div>
-                        }
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-semibold text-gray-800 truncate">{c.name || 'Sem nome'}</p>
-                          <span className={'text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 ' + (effectivePlan(c) === 'pro' ? 'text-white' : 'text-gray-600 bg-gray-100')} style={effectivePlan(c) === 'pro' ? {background:'#1a6b5c'} : {}}>
-                            {effectivePlan(c) === 'pro' ? 'PRO' : 'FREE'}
-                          </span>
+                    <div key={c.user_id} className="rounded-xl border border-gray-100 p-3 flex flex-col gap-2.5 bg-white">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden" style={{background:c.color||'#002f59'}}>
+                          {c.logo_url
+                            ? <img src={c.logo_url} className="w-full h-full object-cover" alt=""/>
+                            : <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">{(c.name || '?')[0]}</div>
+                          }
                         </div>
-                        <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0, 8)}...</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800 truncate">{c.name || 'Sem nome'}</p>
+                            <span className={'text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 ' + (effectivePlan(c) === 'pro' ? 'text-white' : 'text-gray-600 bg-gray-100')} style={effectivePlan(c) === 'pro' ? {background:'#1a6b5c'} : {}}>
+                              {effectivePlan(c) === 'pro' ? 'PRO' : 'FREE'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0, 8)}...</p>
+                        </div>
                       </div>
-                      <div className="flex gap-1 flex-shrink-0">
+                      <div className="flex gap-1.5">
                         <button onClick={function() {
                           sb.rpc('admin_impersonate_start', {target_uid: c.user_id}).then(function(res) {
                             if (res.error) { toast('Erro: ' + res.error.message, 'error'); return; }
@@ -140,11 +142,11 @@ export default function AdminPanel({ toast, confirm, session }) {
                             setTimeout(function() { localStorage.removeItem('_imp'); }, 30000);
                             toast('Abrindo conta de ' + c.name, 'success');
                           });
-                        }} className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50">Entrar</button>
-                        <button onClick={function() { setEditClient(c); }} className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Editar</button>
-                        <button onClick={function() { triggerApkBuild(c.name, c.logo_url, c.color).then(function(ok) { toast(ok ? 'APK iniciado!' : 'Sem token.', ok ? 'success' : 'error'); }); }} className="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">APK</button>
-                        <button onClick={function() { handleDelete(c); }} className="p-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        }} className="flex-1 py-2 text-xs font-semibold rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 min-h-[36px]">Entrar</button>
+                        <button onClick={function() { setEditClient(c); }} className="flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[36px]">Editar</button>
+                        <button onClick={function() { triggerApkBuild(c.name, c.logo_url, c.color).then(function(ok) { toast(ok ? 'APK iniciado!' : 'Sem token GitHub.', ok ? 'success' : 'error'); }); }} className="flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[36px]">APK</button>
+                        <button onClick={function() { handleDelete(c); }} className="p-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 min-h-[36px] min-w-[36px] flex items-center justify-center">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="3,6 5,6 21,6"/>
                             <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
                             <path d="M10,11v6M14,11v6"/>

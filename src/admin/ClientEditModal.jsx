@@ -26,7 +26,7 @@ function PreviewPaleta({ primary, secondary, accent }) {
         </div>
         <div className="flex flex-col gap-1">
           <div className="flex justify-between">
-            <span className="text-xs text-gray-500">Transacoes</span>
+            <span className="text-xs text-gray-500">Transações</span>
             <span className="text-xs text-gray-400">32/50</span>
           </div>
           <div className="h-1.5 rounded-full overflow-hidden bg-gray-100">
@@ -36,7 +36,7 @@ function PreviewPaleta({ primary, secondary, accent }) {
       </div>
       {warn && (
         <div className="px-3 py-2 bg-amber-50 border-t border-amber-100">
-          <p className="text-xs text-amber-700">Cor primaria muito clara — texto pode ficar ilegivel no sidebar.</p>
+          <p className="text-xs text-amber-700">Cor primária muito clara — texto pode ficar ilegível no sidebar.</p>
         </div>
       )}
     </div>
