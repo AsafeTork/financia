@@ -153,7 +153,7 @@ export const triggerApkBuild = async function(clientName, logoUrl, primaryColor)
   if (!tok) return { ok: false, reason: 'no_token' };
   try {
     const res = await fetch(
-      'https://api.github.com/repos/AsafeTork/gestao-financeira/actions/workflows/build.yml/dispatches',
+      'https://api.github.com/repos/AsafeTork/financia/actions/workflows/build.yml/dispatches',
       {
         method: 'POST',
         headers: { Authorization: 'token ' + tok, 'Content-Type': 'application/json' },
