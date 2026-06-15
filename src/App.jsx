@@ -178,15 +178,18 @@ export default function App() {
       setAppLoading(false);
     }).catch(function() { clearTimeout(_authTimer); setAppLoading(false); });
     const authSub = sb.auth.onAuthStateChange(function(event, s) {
-      // INITIAL_SESSION já é tratado pelo getSession() acima - evita duplo loadData
+      // INITIAL_SESSION já é tratado pelo getSession() acima — evita duplo loadData
       if (event === 'INITIAL_SESSION') return;
+      // TOKEN_REFRESHED e USER_UPDATED não mudam dados do usuário — ignorar
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') return;
       setSession(s);
       if (s) {
-        // TOKEN_REFRESHED não muda usuário - só atualiza sessão, sem recarregar dados
-        if (event !== 'TOKEN_REFRESHED') {
-          setIsAdminDB(false); sessionStorage.removeItem('is_admin'); loadData(s.user.id);
-        }
+        setIsAdminDB(false); sessionStorage.removeItem('is_admin'); loadData(s.user.id);
       } else {
+        // Cancelar qualquer loadData pendente e garantir que o spinner some
+        ++loadingRef.current;
+        setDataLoading(false);
+        uidRef.current = null;
         setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN); setIsAdminDB(false); sessionStorage.removeItem('is_admin');
       }
     });
