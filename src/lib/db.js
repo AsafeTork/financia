@@ -152,7 +152,7 @@ export const triggerApkBuild = async function(clientName, logoUrl, primaryColor)
   const tok = localStorage.getItem('nancia_gh_token') || '';
   if (!tok) return false;
   const res = await fetch(
-    'https://api.github.com/repos/AsafeTork/gestao-financeira/actions/workflows/build-apk.yml/dispatches',
+    'https://api.github.com/repos/AsafeTork/gestao-financeira/actions/workflows/build.yml/dispatches',
     {
       method: 'POST',
       headers: { Authorization: 'token ' + tok, 'Content-Type': 'application/json' },
