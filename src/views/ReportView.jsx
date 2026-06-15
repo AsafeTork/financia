@@ -48,7 +48,7 @@ export default function ReportView({ tx, brand, toast, onNav }) {
     return (
       <div className="flex flex-col gap-5">
         <div>
-          <h2 className="page-header">Relatorio</h2>
+          <h2 className="page-header">Relatório</h2>
           <p className="page-sub">Fechamento mensal</p>
         </div>
         <Card>
@@ -62,7 +62,7 @@ export default function ReportView({ tx, brand, toast, onNav }) {
             <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Registre vendas e despesas para gerar relatórios mensais.</p>
             {onNav && (
               <button onClick={function() { onNav('income'); }}
-                className="text-xs font-semibold px-5 py-2.5 rounded-xl text-white transition hover:opacity-90 mt-1"
+                className="text-xs font-semibold px-5 py-3 rounded-xl text-white transition hover:opacity-90 mt-1 min-h-[44px]"
                 style={{background: accentColor}}>
                 Registrar primeira venda
               </button>
@@ -77,7 +77,7 @@ export default function ReportView({ tx, brand, toast, onNav }) {
     <div className="flex flex-col gap-5">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="page-header">Relatorio</h2>
+          <h2 className="page-header">Relatório</h2>
           <p className="page-sub">Fechamento mensal</p>
         </div>
         {filtered.length > 0 && (

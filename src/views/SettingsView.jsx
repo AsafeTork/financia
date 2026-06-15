@@ -150,7 +150,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
             </div>
             <div className="flex flex-col gap-2">
               <div className="flex items-start gap-2"><span className="text-xs font-bold text-gray-400 flex-shrink-0 mt-0.5">Android</span><p className="text-xs text-gray-500">Toque nos 3 pontinhos do Chrome e escolha "Adicionar a tela inicial"</p></div>
-              <div className="flex items-start gap-2"><span className="text-xs font-bold text-gray-400 flex-shrink-0 mt-0.5">iPhone</span><p className="text-xs text-gray-500">Toque no icone de compartilhar do Safari e escolha "Adicionar a tela de inicio"</p></div>
+              <div className="flex items-start gap-2"><span className="text-xs font-bold text-gray-400 flex-shrink-0 mt-0.5">iPhone</span><p className="text-xs text-gray-500">Toque no ícone de compartilhar do Safari e escolha "Adicionar à tela de início"</p></div>
             </div>
           </div>
           <button onClick={function() { confirm('Sair da conta?', function() { sb.auth.signOut(); }); }} className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Sair da conta</button>

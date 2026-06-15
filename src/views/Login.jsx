@@ -107,7 +107,7 @@ export default function Login({ brand }) {
             )}
             {!resetMode && (
           <button onClick={function() { setResetMode(true); setErr(''); }}
-            className="text-xs text-gray-400 hover:text-gray-600 text-right self-end -mt-2 mb-1">
+            className="text-xs text-gray-400 hover:text-gray-600 text-right self-end -mt-2 mb-1 min-h-[44px] px-1">
             Esqueceu a senha?
           </button>
         )}
@@ -120,11 +120,11 @@ export default function Login({ brand }) {
             {err && <p className="text-xs text-red-500">{err}</p>}
             <div className="flex gap-2">
               <button onClick={function() { setResetMode(false); setErr(''); }}
-                className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600">
+                className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-600 min-h-[44px]">
                 Voltar
               </button>
               <button onClick={resetPassword} disabled={loading || !resetEmail}
-                className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-40"
+                className="flex-1 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40 min-h-[44px]"
                 style={{background:'var(--brand,#002f59)'}}>
                 {loading ? 'Enviando...' : 'Enviar link'}
               </button>

@@ -145,7 +145,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
               <p className="text-sm font-semibold text-gray-700">Nenhuma movimentação ainda</p>
               <p className="text-xs text-gray-400">Registre sua primeira venda para ver o resumo aqui.</p>
               <button onClick={function() { onNav('income'); }}
-                className="text-xs font-semibold px-5 py-2.5 rounded-xl text-white transition hover:opacity-90"
+                className="text-xs font-semibold px-5 py-3 rounded-xl text-white transition hover:opacity-90 min-h-[44px]"
                 style={{background: brand.color}}>
                 Registrar primeira venda
               </button>
@@ -172,8 +172,8 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
               </svg>
               <p className="text-sm text-gray-400">Nenhuma movimentação</p>
               <div className="flex gap-3">
-                <button onClick={function() { onNav('income'); }} className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white" style={{background:'#22c55e'}}>+ Venda</button>
-                <button onClick={function() { onNav('expense'); }} className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-red-400">+ Despesa</button>
+                <button onClick={function() { onNav('income'); }} className="text-xs font-semibold px-4 py-3 rounded-lg text-white min-h-[44px]" style={{background:'#22c55e'}}>+ Venda</button>
+                <button onClick={function() { onNav('expense'); }} className="text-xs font-semibold px-4 py-3 rounded-lg text-white bg-red-400 min-h-[44px]">+ Despesa</button>
               </div>
             </div>
           )
