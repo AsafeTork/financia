@@ -1,6 +1,6 @@
 ﻿import React, { useState, useRef } from 'react';
 import { Card, Inp, Spin } from '../components/ui.jsx';
-import { sb } from '../lib/supabase.js';
+import { updatePassword, uploadLogo as uploadToStorage, signOut as doSignOut } from '../lib/auth.js';
 import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
 
@@ -24,7 +24,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
     if (pwForm.newPw !== pwForm.confirm) { toast('As senhas não coincidem.', 'error'); return; }
     if (pwForm.newPw.length < 8) { toast('Senha deve ter ao menos 8 caracteres.', 'error'); return; }
     setPwSaving(true);
-    const res = await sb.auth.updateUser({password:pwForm.newPw});
+    const res = await updatePassword(pwForm.newPw);
     if (res.error) toast('Erro ao alterar senha.', 'error');
     else { toast('Senha alterada!'); setPwForm({newPw:'', confirm:''}); }
     setPwSaving(false);
@@ -54,10 +54,9 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
     setUploading(true);
     const ext = file.type === 'image/webp' ? 'webp' : rawFile.name.split('.').pop();
     const path = session.user.id + '/logo.' + ext;
-    const upRes = await sb.storage.from('logos').upload(path, file, {upsert:true});
-    if (upRes.error) { toast('Erro no upload.', 'error'); setUploading(false); return; }
-    const urlRes = sb.storage.from('logos').getPublicUrl(path);
-    const url = urlRes.data.publicUrl + '?t=' + Date.now();
+    var result = await uploadToStorage(path, file);
+    if (result.error) { toast('Erro no upload.', 'error'); setUploading(false); return; }
+    var url = result.url + '?t=' + Date.now();
     setForm(function(f) { return Object.assign({}, f, {logo_url:url}); });
     const imgEl = new Image(); imgEl.crossOrigin = 'anonymous';
     imgEl.onload = function() {
@@ -154,7 +153,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
               <div className="flex items-start gap-2"><span className="text-xs font-bold text-gray-400 flex-shrink-0 mt-0.5">iPhone</span><p className="text-xs text-gray-500">Toque no ícone de compartilhar do Safari e escolha "Adicionar à tela de início"</p></div>
             </div>
           </div>
-          <button onClick={function() { confirm('Sair da conta?', function() { sb.auth.signOut(); }); }} className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Sair da conta</button>
+          <button onClick={function() { confirm('Sair da conta?', function() { doSignOut(); }); }} className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Sair da conta</button>
         </Card>
       )}
 

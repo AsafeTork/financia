@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Inp, Spin } from '../components/ui.jsx';
-import { sb } from '../lib/supabase.js';
+import { signIn, sendPasswordReset } from '../lib/auth.js';
 
 export default function Login({ brand }) {
   var [email, setEmail]     = useState('');
@@ -14,7 +14,7 @@ export default function Login({ brand }) {
   var resetPassword = async function() {
     if (!resetEmail) return;
     setLoading(true); setErr('');
-    var res = await sb.auth.resetPasswordForEmail(resetEmail, { redirectTo: window.location.origin });
+    var res = await sendPasswordReset(resetEmail);
     setLoading(false);
     if (res.error) setErr('Erro ao enviar. Verifique o e-mail.');
     else setResetSent(true);
@@ -29,7 +29,7 @@ export default function Login({ brand }) {
     if (!email || !pass) return;
     setLoading(true); setErr('');
     try {
-      var res = await sb.auth.signInWithPassword({email:email, password:pass});
+      var res = await signIn(email, pass);
       if (res.error) {
         if (res.error.message.indexOf('Invalid') !== -1) setErr('E-mail ou senha incorretos.');
         else setErr('Erro ao entrar. Tente novamente.');

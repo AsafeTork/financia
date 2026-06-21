@@ -25,7 +25,7 @@ const hashView = function() { const h = window.location.hash.replace('#',''); re
 function Loader({ text }) {
   return (
     <div className="min-h-screen flex items-center justify-center flex-col gap-3" style={{background:'var(--bg-page)'}}>
-      <div className="w-10 h-10 border-2 border-gray-200 rounded-full animate-spin" style={{borderTopColor:'#1a6b5c'}}/>
+      <div className="w-10 h-10 border-2 border-gray-200 rounded-full animate-spin" style={{borderTopColor:'var(--brand)'}}/>
       {text && <p className="text-sm text-gray-400">{text}</p>}
     </div>
   );
