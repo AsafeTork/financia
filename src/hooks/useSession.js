@@ -20,8 +20,29 @@ export function useSession(p) {
   var setProducts   = p.setProducts;
   var setLosses     = p.setLosses;
 
-  var uidRef     = useRef(null);
-  var loadingRef = useRef(0);
+  var uidRef      = useRef(null);
+  var loadingRef  = useRef(0);
+  var channelRef  = useRef(null);
+  var syncingRef  = useRef(false);
+
+  var subscribeRealtime = function(uid) {
+    if (channelRef.current) { sb.removeChannel(channelRef.current); channelRef.current = null; }
+    var doSync = function() {
+      var userId = uidRef.current;
+      if (!userId || !navigator.onLine || syncingRef.current) return;
+      syncingRef.current = true;
+      syncAll(userId).then(function(ok) {
+        syncingRef.current = false;
+        if (ok) loadFromLocal(userId);
+      }).catch(function() { syncingRef.current = false; });
+    };
+    channelRef.current = sb.channel('rt-' + uid)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, doSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, doSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'losses' }, doSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_profiles' }, doSync)
+      .subscribe();
+  };
 
   var loadFromLocal = async function(userId) {
     var results = await Promise.all([
@@ -71,6 +92,7 @@ export function useSession(p) {
       clearTimeout(localTimer);
       if (loadingRef.current !== token) return;
       setDataLoading(false);
+      subscribeRealtime(userId);
       if (navigator.onLine) {
         setSyncStatus('syncing');
         var res = await Promise.all([syncAll(userId), fetchRole(userId)]);
@@ -191,6 +213,7 @@ export function useSession(p) {
         ++loadingRef.current;
         setDataLoading(false);
         uidRef.current = null;
+        if (channelRef.current) { sb.removeChannel(channelRef.current); channelRef.current = null; }
         setTx([]); setProducts([]); setLosses([]);
         setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN);
         setIsAdminDB(false); sessionStorage.removeItem('is_admin');
@@ -224,6 +247,7 @@ export function useSession(p) {
       authSub.data.subscription.unsubscribe();
       clearInterval(syncInterval);
       document.removeEventListener('visibilitychange', onVisible);
+      if (channelRef.current) { sb.removeChannel(channelRef.current); channelRef.current = null; }
     };
   }, []);
 
