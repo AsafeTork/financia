@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '../components/ui.jsx';
 import { sb } from '../lib/supabase.js';
-import { triggerApkBuild, fetchClients, deleteClient } from '../lib/db.js';
+import { triggerApkBuild, fetchClients, deleteClient, clearClientData } from '../lib/db.js';
 import { genPwd, luminance, lightenHex } from '../lib/utils.js';
 import { GH_REPO, effectivePlan } from '../lib/constants.js';
 import ClientEditModal from './ClientEditModal.jsx';
@@ -18,6 +18,7 @@ export default function AdminPanel({ toast, confirm, session }) {
   const [uploading, setUploading] = useState(false);
   const [editClient, setEditClient] = useState(null);
   const [copied, setCopied] = useState(null);
+  const [clearTarget, setClearTarget] = useState(null);
   const logoRef = useRef();
 
   const reload = function() { fetchClients().then(function(c) { setClients(c); setLoadingCli(false); }); };
@@ -107,6 +108,15 @@ export default function AdminPanel({ toast, confirm, session }) {
     toast('Copiado!');
   };
 
+  const handleClear = function(c, tables) {
+    var label = tables.length === 3 ? 'TODOS os dados' : tables.join(', ');
+    confirm('Limpar ' + label + ' de "' + (c.name || c.user_id) + '"? Isso nao pode ser desfeito.', async function() {
+      const ok = await clearClientData(c.user_id, tables);
+      if (ok) { toast('Dados limpos.'); setClearTarget(null); }
+      else toast('Erro ao limpar dados.', 'error');
+    });
+  };
+
   const handleDelete = function(c) {
     confirm('Excluir todos os dados de "' + (c.name || c.user_id) + '"? Isso não pode ser desfeito.', async function() {
       const ok = await deleteClient(c.user_id);
@@ -171,6 +181,25 @@ export default function AdminPanel({ toast, confirm, session }) {
                             }); }} className="py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[40px]">Gerar APK</button>
                         <button onClick={function() { handleDelete(c); }} className="py-2 text-xs font-semibold rounded-lg border border-red-200 text-red-500 hover:bg-red-50 min-h-[40px]">Excluir</button>
                       </div>
+                      <button onClick={function() { setClearTarget(clearTarget === c.user_id ? null : c.user_id); }}
+                        className="w-full py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-500 hover:bg-orange-50 min-h-[40px]">
+                        {clearTarget === c.user_id ? 'Cancelar' : 'Limpar dados'}
+                      </button>
+                      {clearTarget === c.user_id && (
+                        <div className="flex flex-col gap-2 p-3 rounded-lg bg-orange-50 border border-orange-200">
+                          <p className="text-xs font-semibold text-orange-700">Selecione o que limpar:</p>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <button onClick={function() { handleClear(c, ['transactions']); }}
+                              className="py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-100 min-h-[40px]">Transacoes</button>
+                            <button onClick={function() { handleClear(c, ['products']); }}
+                              className="py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-100 min-h-[40px]">Produtos</button>
+                            <button onClick={function() { handleClear(c, ['losses']); }}
+                              className="py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-100 min-h-[40px]">Perdas</button>
+                            <button onClick={function() { handleClear(c, ['transactions','products','losses']); }}
+                              className="py-2 text-xs font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 min-h-[40px]">Tudo</button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

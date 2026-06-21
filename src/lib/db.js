@@ -157,6 +157,14 @@ export const deleteClient = async function(uid) {
   } catch (_) { return false; }
 };
 
+export const clearClientData = async function(uid, tables) {
+  try {
+    const { error } = await sb.rpc('admin_clear_client_data', { a_uid: uid, b_tables: tables });
+    if (error) throw error;
+    return true;
+  } catch (_) { return false; }
+};
+
 export const triggerApkBuild = async function(clientName, logoUrl, primaryColor) {
   const tok = localStorage.getItem('nancia_gh_token') || '';
   if (!tok) return { ok: false, reason: 'no_token' };
