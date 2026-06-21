@@ -11,7 +11,6 @@ import Header from './components/Header.jsx';
 import Toast from './components/Toast.jsx';
 import Offline from './components/Offline.jsx';
 import Confirm from './components/Confirm.jsx';
-import UpgradeModal from './components/UpgradeModal.jsx';
 import SyncBadge from './components/SyncBadge.jsx';
 import Dashboard from './views/Dashboard.jsx';
 import TxView from './views/TxView.jsx';
@@ -46,7 +45,6 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [toastData, setToastData]       = useState(null);
   const [confirmData, setConfirmData]   = useState(null);
-  const [upgradeNotice, setUpgradeNotice] = useState(null);
 
   const navTo = useCallback(function(v) { setView(v); window.location.hash = v; }, []);
 
@@ -86,11 +84,11 @@ export default function App() {
 
   const enforceLimit = useCallback(function(kind, currentCount) {
     if (atLimit(planInfo, kind, currentCount)) {
-      setUpgradeNotice({kind:kind, limit:limitFor(planInfo, kind)});
+      toast('Limite do plano gratuito atingido. Entre em contato: (91) 99208-6829', 'error');
       return false;
     }
     return true;
-  }, [planInfo]);
+  }, [planInfo, toast]);
 
   const {tx, setTx, addTx, editTx, deleteTx}                                           = useTx(session, enforceLimit, toast);
   const {products, setProducts, addProduct, editProduct, deleteProduct, adjustStock}    = useProducts(session, enforceLimit, toast);
@@ -141,7 +139,6 @@ export default function App() {
       <BottomNav view={view} onNav={navTo} brand={brand}/>
       <Toast toast={toastData}/>
       {confirmData && <Confirm msg={confirmData.msg} onOk={function() { confirmData.onOk(); setConfirmData(null); }} onCancel={function() { setConfirmData(null); }}/>}
-      {upgradeNotice && <UpgradeModal kind={upgradeNotice.kind} limit={upgradeNotice.limit} onClose={function() { setUpgradeNotice(null); }}/>}
     </div>
   );
 }

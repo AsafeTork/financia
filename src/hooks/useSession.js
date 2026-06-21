@@ -212,9 +212,18 @@ export function useSession(p) {
       }
     }, 120000);
 
+    var onVisible = function() {
+      if (document.visibilityState !== 'visible') return;
+      var userId = uidRef.current;
+      if (!userId || !navigator.onLine) return;
+      syncAll(userId).then(function(ok) { if (ok) loadFromLocal(userId); });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
     return function() {
       authSub.data.subscription.unsubscribe();
       clearInterval(syncInterval);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, []);
 

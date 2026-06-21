@@ -13,7 +13,8 @@ export function useProducts(session, enforceLimit, toast) {
     if (p.stock != null && Number(p.stock) < 0) { toast('Estoque inválido', 'error'); return; }
     var userId = session.user.id;
     var rb = session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email;
-    var row = {id:p.id, name:p.name, category:p.category||null, price:Number(p.price), cost:Number(p.cost)||0, stock:Number(p.stock)||0, user_id:userId, registered_by:rb, updated_at:now(), _synced:0, _deleted:0, _updated_at:now()};
+    var stock = (p.stock !== '' && p.stock != null) ? Number(p.stock) : null;
+    var row = {id:p.id, name:p.name, category:p.category||null, price:Number(p.price), cost:Number(p.cost)||0, stock:stock, user_id:userId, registered_by:rb, updated_at:now(), _synced:0, _deleted:0, _updated_at:now()};
     try { await ldb.products.put(row); }
     catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
     setProducts(function(prev) { return prev.concat([row]); });
@@ -28,7 +29,7 @@ export function useProducts(session, enforceLimit, toast) {
 
   var editProduct = async function(id, u) {
     if (!u.name || !u.name.trim()) { toast('Nome do produto obrigatório', 'error'); return; }
-    var upd = {name:u.name, category:u.category||null, price:Number(u.price), cost:Number(u.cost)||0, stock:Number(u.stock)||0, updated_at:now(), _synced:0, _updated_at:now()};
+    var upd = {name:u.name, category:u.category||null, price:Number(u.price), cost:Number(u.cost)||0, stock:(u.stock!==''&&u.stock!=null)?Number(u.stock):null, updated_at:now(), _synced:0, _updated_at:now()};
     try { await ldb.products.update(id, upd); }
     catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
     setProducts(function(p) { return p.map(function(prod) { return prod.id === id ? Object.assign({}, prod, upd) : prod; }); });
