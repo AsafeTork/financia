@@ -19,19 +19,26 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
   var cats    = ['Fixo','Variavel','Estoque','Marketing','Pessoal','Servicos','Outro'];
   var METHODS = ['PIX','Dinheiro','Cartao de Debito','Cartao de Credito','Boleto','Transferencia'];
 
-  var filtered = tx.filter(function(t) { return t.type === type; });
-  if (search)   filtered = filtered.filter(function(t) { return t.desc.toLowerCase().indexOf(search.toLowerCase()) !== -1; });
-  if (dateFrom) filtered = filtered.filter(function(t) { return t.date >= dateFrom; });
-  if (dateTo)   filtered = filtered.filter(function(t) { return t.date <= dateTo; });
-  filtered.sort(function(a, b) { return b.date.localeCompare(a.date); });
-  var total = filtered.reduce(function(s, t) { return s + t.amount; }, 0);
+  var memo = useMemo(function() {
+    var f = tx.filter(function(t) { return t.type === type; });
+    if (search)   f = f.filter(function(t) { return t.desc.toLowerCase().indexOf(search.toLowerCase()) !== -1; });
+    if (dateFrom) f = f.filter(function(t) { return t.date >= dateFrom; });
+    if (dateTo)   f = f.filter(function(t) { return t.date <= dateTo; });
+    f.sort(function(a, b) { return b.date.localeCompare(a.date); });
+    var total = f.reduce(function(s, t) { return s + t.amount; }, 0);
+    var grouped = {};
+    var groupOrder = [];
+    f.forEach(function(t) {
+      if (!grouped[t.date]) { grouped[t.date] = []; groupOrder.push(t.date); }
+      grouped[t.date].push(t);
+    });
+    return {filtered: f, total: total, grouped: grouped, groupOrder: groupOrder};
+  }, [tx, type, search, dateFrom, dateTo]);
 
-  var grouped = {};
-  var groupOrder = [];
-  filtered.forEach(function(t) {
-    if (!grouped[t.date]) { grouped[t.date] = []; groupOrder.push(t.date); }
-    grouped[t.date].push(t);
-  });
+  var filtered  = memo.filtered;
+  var total     = memo.total;
+  var grouped   = memo.grouped;
+  var groupOrder = memo.groupOrder;
 
   var openEdit = function(t) {
     setEditItem({id:t.id, desc:t.desc, amount:String(t.amount), date:t.date, cat:t.category||'Fixo', method:t.method||'PIX'});

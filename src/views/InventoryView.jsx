@@ -78,17 +78,22 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
     setCollapsed(function(p) { const n = new Set(p); n.has(cat) ? n.delete(cat) : n.add(cat); return n; });
   };
 
-  const disp = search.trim()
-    ? products.filter(function(p) { return [p.name, p.category, p.id].filter(Boolean).some(function(v) { return v.toLowerCase().includes(search.toLowerCase()); }); })
-    : products;
+  const listMemo = useMemo(function() {
+    var disp = search.trim()
+      ? products.filter(function(p) { return [p.name, p.category, p.id].filter(Boolean).some(function(v) { return v.toLowerCase().indexOf(search.toLowerCase()) !== -1; }); })
+      : products;
+    var grouped = Object.entries(
+      disp.reduce(function(a, p) { var k = p.category || 'Sem categoria'; if (!a[k]) a[k] = []; a[k].push(p); return a; }, {})
+    ).sort(function(pair1, pair2) {
+      if (pair1[0] === 'Sem categoria') return 1;
+      if (pair2[0] === 'Sem categoria') return -1;
+      return pair1[0].localeCompare(pair2[0]);
+    });
+    return {disp: disp, grouped: grouped};
+  }, [products, search]);
 
-  const grouped = Object.entries(
-    disp.reduce(function(a, p) { const k = p.category || 'Sem categoria'; if (!a[k]) a[k] = []; a[k].push(p); return a; }, {})
-  ).sort(function(pair1, pair2) {
-    if (pair1[0] === 'Sem categoria') return 1;
-    if (pair2[0] === 'Sem categoria') return -1;
-    return pair1[0].localeCompare(pair2[0]);
-  });
+  const disp   = listMemo.disp;
+  const grouped = listMemo.grouped;
 
   const sp = sm ? products.find(function(p) { return p.id === sm; }) : null;
 
