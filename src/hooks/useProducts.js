@@ -7,7 +7,8 @@ export function useProducts(session, enforceLimit, toast) {
   var [products, setProducts] = useState([]);
 
   var addProduct = async function(p) {
-    if (!enforceLimit('products', products.length)) return;
+    var cnt = await ldb.products.where('user_id').equals(session.user.id).filter(function(r) { return !r._deleted; }).count();
+    if (!enforceLimit('products', cnt)) return;
     if (!p.name || !p.name.trim()) { toast('Nome do produto obrigatório', 'error'); return; }
     if (p.price == null || Number(p.price) < 0) { toast('Preço inválido', 'error'); return; }
     if (p.stock != null && Number(p.stock) < 0) { toast('Estoque inválido', 'error'); return; }

@@ -7,7 +7,8 @@ export function useLosses(session, enforceLimit, toast) {
   var [losses, setLosses] = useState([]);
 
   var addLoss = async function(l) {
-    if (!enforceLimit('losses', losses.length)) return;
+    var cnt = await ldb.losses.where('user_id').equals(session.user.id).filter(function(r) { return !r._deleted; }).count();
+    if (!enforceLimit('losses', cnt)) return;
     if (!l.desc || !l.desc.trim()) { toast('Descrição obrigatória', 'error'); return; }
     if (!l.qty || Number(l.qty) <= 0) { toast('Quantidade deve ser maior que zero', 'error'); return; }
     var userId = session.user.id;

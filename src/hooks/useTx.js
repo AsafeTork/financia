@@ -7,7 +7,8 @@ export function useTx(session, enforceLimit, toast) {
   var [tx, setTx] = useState([]);
 
   var addTx = async function(t) {
-    if (!enforceLimit('transactions', tx.length)) return;
+    var cnt = await ldb.transactions.where('user_id').equals(session.user.id).filter(function(r) { return !r._deleted; }).count();
+    if (!enforceLimit('transactions', cnt)) return;
     if (!t.desc || !t.desc.trim()) { toast('Descrição obrigatória', 'error'); return; }
     if (!t.amount || Number(t.amount) <= 0) { toast('Valor deve ser maior que zero', 'error'); return; }
     var userId = session.user.id;
