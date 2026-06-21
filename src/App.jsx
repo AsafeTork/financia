@@ -84,7 +84,7 @@ export default function App() {
 
   const enforceLimit = useCallback(function(kind, currentCount) {
     if (atLimit(planInfo, kind, currentCount)) {
-      toast('Limite do plano gratuito atingido. Entre em contato: (91) 99208-6829', 'error');
+      toast('Plano gratuito esgotado — atualize seu plano para continuar.', 'error');
       return false;
     }
     return true;
