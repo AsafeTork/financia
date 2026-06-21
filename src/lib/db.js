@@ -94,6 +94,16 @@ export const syncTable = async function(uid, table, ldbTable, mapLocal) {
     }
   });
   if (rowsToPut.length > 0) await ldbTable.bulkPut(rowsToPut);
+
+  const { data: allIds } = await sb.from(table).select('id').eq('user_id', uid);
+  if (allIds) {
+    const remoteSet = new Set(allIds.map(function(r) { return r.id; }));
+    const localAll = await ldbTable.where('user_id').equals(uid).toArray();
+    const orphans = localAll
+      .filter(function(r) { return r._synced === 1 && !r._deleted && !remoteSet.has(r.id); })
+      .map(function(r) { return r.id; });
+    if (orphans.length > 0) await ldbTable.bulkDelete(orphans);
+  }
 };
 
 const PROFILE_WRITE_FIELDS = ['user_id','name','logo','color','color_secondary','color_accent','theme','logo_url'];
