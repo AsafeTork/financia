@@ -9,7 +9,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "electron:start": "electron .",
-    "electron:build": "electron-builder --win"
+    "electron:build": "electron-builder --win",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
@@ -18,13 +20,18 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "electron": "^31.0.0",
     "electron-builder": "^24.13.3",
+    "jsdom": "^29.1.1",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "vitest": "^4.1.9"
   },
   "build": {
     "appId": "com.gestaofinanceira.app",
