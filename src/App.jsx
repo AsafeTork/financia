@@ -1,8 +1,11 @@
-﻿import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { sb } from './lib/supabase.js';
 import { ldb, syncAll, toLocal, setLastSync } from './lib/db.js';
-import { now, uid, brandAlpha, deriveCores } from './lib/utils.js';
+import { now, brandAlpha, deriveCores } from './lib/utils.js';
 import { INIT_BRAND, INIT_PLAN, atLimit, limitFor } from './lib/constants.js';
+import { useTx } from './hooks/useTx.js';
+import { useProducts } from './hooks/useProducts.js';
+import { useLosses } from './hooks/useLosses.js';
 import Sidebar from './components/Sidebar.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import Header from './components/Header.jsx';
@@ -32,16 +35,23 @@ function Loader({ text }) {
 }
 
 export default function App() {
-  const [session, setSession] = useState(null);
-  const [syncStatus, setSyncStatus] = useState('idle');
-  const uidRef = useRef(null);
-  const loadingRef = useRef(0);
-  const [isAdminDB, setIsAdminDB] = useState(sessionStorage.getItem('is_admin') === '1');
-  const [appLoading, setAppLoading] = useState(true);
-  const [dataLoading, setDataLoading] = useState(false);
-  const [view, setView] = useState(hashView);
+  const [session, setSession]           = useState(null);
+  const [syncStatus, setSyncStatus]     = useState('idle');
+  const uidRef                          = useRef(null);
+  const loadingRef                      = useRef(0);
+  const [isAdminDB, setIsAdminDB]       = useState(sessionStorage.getItem('is_admin') === '1');
+  const [appLoading, setAppLoading]     = useState(true);
+  const [dataLoading, setDataLoading]   = useState(false);
+  const [view, setView]                 = useState(hashView);
   const navTo = useCallback(function(v) { setView(v); window.location.hash = v; }, []);
-  const [brand, setBrand] = useState(INIT_BRAND);
+  const [brand, setBrand]               = useState(INIT_BRAND);
+  const [planInfo, setPlanInfo]         = useState(INIT_PLAN);
+  const [sidebarOpen, setSidebarOpen]   = useState(false);
+  const [toastData, setToastData]       = useState(null);
+  const [confirmData, setConfirmData]   = useState(null);
+  const [dataError, setDataError]       = useState(null);
+  const [upgradeNotice, setUpgradeNotice] = useState(null);
+
   const applyBrandVars = useCallback(function(b) {
     var primary   = b.color || '#002f59';
     var derived   = deriveCores(primary);
@@ -56,22 +66,12 @@ export default function App() {
   }, []);
   useEffect(function() { applyBrandVars(brand); }, [brand]);
 
-  // Safety: se o spinner ficar preso por mais de 25s (IndexedDB lock entre abas, etc.), força limpeza
+  // Safety: se o spinner ficar preso por mais de 25s, força limpeza
   useEffect(function() {
     if (!dataLoading) return;
     var t = setTimeout(function() { setDataLoading(false); setSyncStatus('idle'); }, 25000);
     return function() { clearTimeout(t); };
   }, [dataLoading]);
-
-  const [planInfo, setPlanInfo] = useState(INIT_PLAN);
-  const [tx, setTx] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [losses, setLosses] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [toastData, setToastData] = useState(null);
-  const [confirmData, setConfirmData] = useState(null);
-  const [dataError, setDataError] = useState(null);
-  const [upgradeNotice, setUpgradeNotice] = useState(null);
 
   const enforceLimit = useCallback(function(kind, currentCount) {
     if (atLimit(planInfo, kind, currentCount)) {
@@ -88,6 +88,10 @@ export default function App() {
   }, []);
 
   const confirm = useCallback(function(msg, onOk) { setConfirmData({msg:msg, onOk:onOk}); }, []);
+
+  const {tx, setTx, addTx, editTx, deleteTx}                                           = useTx(session, enforceLimit, toast);
+  const {products, setProducts, addProduct, editProduct, deleteProduct, adjustStock}    = useProducts(session, enforceLimit, toast);
+  const {losses, setLosses, addLoss, editLoss, deleteLoss}                             = useLosses(session, enforceLimit, toast);
 
   const loadFromLocal = async function(userId) {
     const results = await Promise.all([
@@ -176,222 +180,7 @@ export default function App() {
       }
     } finally {
       clearTimeout(localTimer);
-      // Safety: garante que spinner nunca fica preso independente de qual caminho foi tomado
       if (loadingRef.current === token) setDataLoading(false);
-    }
-  };
-
-  useEffect(function() {
-    // Precarrega Dexie com uid em cache antes do getSession completar.
-    // Quando loadData rodar logo depois, loadFromLocal retorna em <10ms (Dexie quente)
-    // e o timer de 150ms nunca dispara — sem spinner "Carregando seus dados".
-    var cachedUid = localStorage.getItem('financia_last_uid');
-    if (cachedUid) { loadFromLocal(cachedUid).catch(function() {}); }
-
-    var _authTimer = setTimeout(function() { setAppLoading(false); }, 8000);
-    sb.auth.getSession().then(function(res) {
-      clearTimeout(_authTimer);
-      const s = res.data.session;
-      setSession(s);
-      if (s) {
-        localStorage.setItem('financia_last_uid', s.user.id);
-        loadData(s.user.id);
-      } else {
-        localStorage.removeItem('financia_last_uid');
-        if (cachedUid) { setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN); }
-      }
-      setAppLoading(false);
-    }).catch(function() { clearTimeout(_authTimer); setAppLoading(false); });
-    const authSub = sb.auth.onAuthStateChange(function(event, s) {
-      if (event === 'INITIAL_SESSION') return;
-      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') return;
-      setSession(s);
-      if (s) {
-        localStorage.setItem('financia_last_uid', s.user.id);
-        // Só recarrega dados se o usuário mudou — evita duplo loadData na restauração de sessão
-        if (s.user.id !== uidRef.current) {
-          setIsAdminDB(false); sessionStorage.removeItem('is_admin'); loadData(s.user.id);
-        }
-      } else {
-        localStorage.removeItem('financia_last_uid');
-        ++loadingRef.current;
-        setDataLoading(false);
-        uidRef.current = null;
-        setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN); setIsAdminDB(false); sessionStorage.removeItem('is_admin');
-      }
-    });
-    const syncInterval = setInterval(async function() {
-      const userId = uidRef.current;
-      if (!userId || !navigator.onLine) return;
-      setSyncStatus('syncing');
-      const ok = await syncAll(userId);
-      if (ok) { await loadFromLocal(userId); setSyncStatus('ok'); setTimeout(function() { setSyncStatus('idle'); }, 3000); }
-      else { setSyncStatus('error'); setTimeout(function() { setSyncStatus('idle'); }, 5000); }
-    }, 120000);
-    const onHash = function() { setView(hashView()); };
-    window.addEventListener('hashchange', onHash);
-    return function() {
-      authSub.data.subscription.unsubscribe();
-      clearInterval(syncInterval);
-      window.removeEventListener('hashchange', onHash);
-    };
-  }, []);
-
-  const addTx = async function(t) {
-    if (!enforceLimit('transactions', tx.length)) return;
-    if (!t.desc || !t.desc.trim()) { toast('Descrição obrigatória', 'error'); return; }
-    if (!t.amount || Number(t.amount) <= 0) { toast('Valor deve ser maior que zero', 'error'); return; }
-    const userId = session.user.id;
-    const rb = session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email;
-    const row = {id:t.id, type:t.type, description:t.desc, amount:Number(t.amount), date:t.date, method:t.method||null, category:t.cat||null, items:t.items||null, user_id:userId, registered_by:rb, updated_at:now(), _synced:0, _deleted:0, _updated_at:now(), desc:t.desc, cat:t.cat||null};
-    try { await ldb.transactions.put(row); }
-    catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
-    setTx(function(p) { return [row].concat(p); });
-    if (navigator.onLine) {
-      try {
-        const res = await sb.from('transactions').upsert({id:row.id, type:row.type, description:row.description, amount:row.amount, date:row.date, method:row.method, category:row.category, items:row.items, user_id:userId, registered_by:rb, updated_at:row.updated_at});
-        if (!res.error) await ldb.transactions.update(row.id, {_synced:1});
-        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
-    }
-  };
-
-  const editTx = async function(id, u) {
-    if (!u.desc || !u.desc.trim()) { toast('Descrição obrigatória', 'error'); return; }
-    if (!u.amount || Number(u.amount) <= 0) { toast('Valor deve ser maior que zero', 'error'); return; }
-    const upd = {description:u.desc, amount:Number(u.amount), date:u.date, method:u.method||null, category:u.cat||null, updated_at:now(), _synced:0, _updated_at:now(), desc:u.desc, cat:u.cat||null};
-    try { await ldb.transactions.update(id, upd); }
-    catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
-    setTx(function(p) { return p.map(function(t) { return t.id === id ? Object.assign({}, t, upd) : t; }); });
-    if (navigator.onLine) {
-      try {
-        const res = await sb.from('transactions').update({description:upd.description, amount:upd.amount, date:upd.date, method:upd.method, category:upd.category, updated_at:upd.updated_at}).eq('id', id);
-        if (!res.error) await ldb.transactions.update(id, {_synced:1});
-        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
-    }
-  };
-
-  const deleteTx = async function(id) {
-    try { await ldb.transactions.update(id, {_deleted:1, _synced:0, _updated_at:now()}); }
-    catch(e) { toast('Erro ao excluir: ' + (e.message || 'tente novamente'), 'error'); return; }
-    setTx(function(p) { return p.filter(function(t) { return t.id !== id; }); });
-    if (navigator.onLine) {
-      try {
-        const res = await sb.from('transactions').delete().eq('id', id);
-        if (!res.error) await ldb.transactions.delete(id);
-      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
-    }
-  };
-
-  const addProduct = async function(p) {
-    if (!enforceLimit('products', products.length)) return;
-    if (!p.name || !p.name.trim()) { toast('Nome do produto obrigatório', 'error'); return; }
-    if (p.price == null || Number(p.price) < 0) { toast('Preço inválido', 'error'); return; }
-    if (p.stock != null && Number(p.stock) < 0) { toast('Estoque inválido', 'error'); return; }
-    const userId = session.user.id;
-    const rb = session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email;
-    const row = {id:p.id, name:p.name, category:p.category||null, price:Number(p.price), cost:Number(p.cost)||0, stock:Number(p.stock)||0, user_id:userId, registered_by:rb, updated_at:now(), _synced:0, _deleted:0, _updated_at:now()};
-    try { await ldb.products.put(row); }
-    catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
-    setProducts(function(prev) { return prev.concat([row]); });
-    if (navigator.onLine) {
-      try {
-        const res = await sb.from('products').upsert({id:row.id, name:row.name, category:row.category, price:row.price, cost:row.cost, stock:row.stock, user_id:userId, registered_by:rb, updated_at:row.updated_at});
-        if (!res.error) await ldb.products.update(row.id, {_synced:1});
-        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
-    }
-  };
-
-  const editProduct = async function(id, u) {
-    if (!u.name || !u.name.trim()) { toast('Nome do produto obrigatório', 'error'); return; }
-    const upd = {name:u.name, category:u.category||null, price:Number(u.price), cost:Number(u.cost)||0, stock:Number(u.stock)||0, updated_at:now(), _synced:0, _updated_at:now()};
-    try { await ldb.products.update(id, upd); }
-    catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
-    setProducts(function(p) { return p.map(function(prod) { return prod.id === id ? Object.assign({}, prod, upd) : prod; }); });
-    if (navigator.onLine) {
-      try {
-        const res = await sb.from('products').update({name:upd.name, category:upd.category, price:upd.price, cost:upd.cost, stock:upd.stock, updated_at:upd.updated_at}).eq('id', id);
-        if (!res.error) await ldb.products.update(id, {_synced:1});
-        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
-    }
-  };
-
-  const deleteProduct = async function(id) {
-    try { await ldb.products.update(id, {_deleted:1, _synced:0, _updated_at:now()}); }
-    catch(e) { toast('Erro ao excluir: ' + (e.message || 'tente novamente'), 'error'); return; }
-    setProducts(function(p) { return p.filter(function(prod) { return prod.id !== id; }); });
-    if (navigator.onLine) {
-      try {
-        const res = await sb.from('products').delete().eq('id', id);
-        if (!res.error) await ldb.products.delete(id);
-      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
-    }
-  };
-
-  const adjustStock = async function(id, delta) {
-    const found = products.find(function(p) { return p.id === id; });
-    if (!found) return;
-    const ns = Math.max(0, (found.stock || 0) + delta);
-    const upd = {stock:ns, updated_at:now(), _synced:0, _updated_at:now()};
-    try { await ldb.products.update(id, upd); }
-    catch(e) { toast('Erro ao ajustar estoque: ' + (e.message || 'tente novamente'), 'error'); return; }
-    setProducts(function(p) { return p.map(function(prod) { return prod.id === id ? Object.assign({}, prod, upd) : prod; }); });
-    if (navigator.onLine) {
-      try {
-        const res = await sb.from('products').update({stock:ns, updated_at:upd.updated_at}).eq('id', id);
-        if (!res.error) await ldb.products.update(id, {_synced:1});
-        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
-    }
-  };
-
-  const addLoss = async function(l) {
-    if (!enforceLimit('losses', losses.length)) return;
-    if (!l.desc || !l.desc.trim()) { toast('Descrição obrigatória', 'error'); return; }
-    if (!l.qty || Number(l.qty) <= 0) { toast('Quantidade deve ser maior que zero', 'error'); return; }
-    const userId = session.user.id;
-    const rb = session.user.user_metadata && session.user.user_metadata.name ? session.user.user_metadata.name : session.user.email;
-    const row = {id:l.id, description:l.desc, qty:Number(l.qty), reason:l.reason||null, date:l.date, user_id:userId, registered_by:rb, updated_at:now(), _synced:0, _deleted:0, _updated_at:now(), desc:l.desc};
-    try { await ldb.losses.put(row); }
-    catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
-    setLosses(function(p) { return [row].concat(p); });
-    if (navigator.onLine) {
-      try {
-        const res = await sb.from('losses').upsert({id:row.id, description:row.description, qty:row.qty, reason:row.reason, date:row.date, user_id:userId, registered_by:rb, updated_at:row.updated_at});
-        if (!res.error) await ldb.losses.update(row.id, {_synced:1});
-        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
-    }
-  };
-
-  const editLoss = async function(id, u) {
-    if (!u.desc || !u.desc.trim()) { toast('Descrição obrigatória', 'error'); return; }
-    if (!u.qty || Number(u.qty) <= 0) { toast('Quantidade deve ser maior que zero', 'error'); return; }
-    const upd = {description:u.desc, qty:Number(u.qty), reason:u.reason||null, date:u.date, updated_at:now(), _synced:0, _updated_at:now(), desc:u.desc};
-    try { await ldb.losses.update(id, upd); }
-    catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
-    setLosses(function(p) { return p.map(function(l) { return l.id === id ? Object.assign({}, l, upd) : l; }); });
-    if (navigator.onLine) {
-      try {
-        const res = await sb.from('losses').update({description:upd.description, qty:upd.qty, reason:upd.reason, date:upd.date, updated_at:upd.updated_at}).eq('id', id);
-        if (!res.error) await ldb.losses.update(id, {_synced:1});
-        else toast('Aviso: não sincronizado — será tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
-    }
-  };
-
-  const deleteLoss = async function(id) {
-    try { await ldb.losses.update(id, {_deleted:1, _synced:0, _updated_at:now()}); }
-    catch(e) { toast('Erro ao excluir: ' + (e.message || 'tente novamente'), 'error'); return; }
-    setLosses(function(p) { return p.filter(function(l) { return l.id !== id; }); });
-    if (navigator.onLine) {
-      try {
-        const res = await sb.from('losses').delete().eq('id', id);
-        if (!res.error) await ldb.losses.delete(id);
-      } catch(e) { toast('Aviso: não sincronizado — será tentado em breve.', 'success'); }
     }
   };
 
@@ -413,6 +202,61 @@ export default function App() {
     }
   };
 
+  useEffect(function() {
+    var cachedUid = localStorage.getItem('financia_last_uid');
+    if (cachedUid) { loadFromLocal(cachedUid).catch(function() {}); }
+
+    var _authTimer = setTimeout(function() { setAppLoading(false); }, 8000);
+    sb.auth.getSession().then(function(res) {
+      clearTimeout(_authTimer);
+      const s = res.data.session;
+      setSession(s);
+      if (s) {
+        localStorage.setItem('financia_last_uid', s.user.id);
+        loadData(s.user.id);
+      } else {
+        localStorage.removeItem('financia_last_uid');
+        if (cachedUid) { setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN); }
+      }
+      setAppLoading(false);
+    }).catch(function() { clearTimeout(_authTimer); setAppLoading(false); });
+
+    const authSub = sb.auth.onAuthStateChange(function(event, s) {
+      if (event === 'INITIAL_SESSION') return;
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') return;
+      setSession(s);
+      if (s) {
+        localStorage.setItem('financia_last_uid', s.user.id);
+        if (s.user.id !== uidRef.current) {
+          setIsAdminDB(false); sessionStorage.removeItem('is_admin'); loadData(s.user.id);
+        }
+      } else {
+        localStorage.removeItem('financia_last_uid');
+        ++loadingRef.current;
+        setDataLoading(false);
+        uidRef.current = null;
+        setTx([]); setProducts([]); setLosses([]); setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN); setIsAdminDB(false); sessionStorage.removeItem('is_admin');
+      }
+    });
+
+    const syncInterval = setInterval(async function() {
+      const userId = uidRef.current;
+      if (!userId || !navigator.onLine) return;
+      setSyncStatus('syncing');
+      const ok = await syncAll(userId);
+      if (ok) { await loadFromLocal(userId); setSyncStatus('ok'); setTimeout(function() { setSyncStatus('idle'); }, 3000); }
+      else { setSyncStatus('error'); setTimeout(function() { setSyncStatus('idle'); }, 5000); }
+    }, 120000);
+
+    const onHash = function() { setView(hashView()); };
+    window.addEventListener('hashchange', onHash);
+    return function() {
+      authSub.data.subscription.unsubscribe();
+      clearInterval(syncInterval);
+      window.removeEventListener('hashchange', onHash);
+    };
+  }, []);
+
   React.useEffect(function() {
     var params = new URLSearchParams(window.location.search);
     if (!params.get('imp')) return;
@@ -424,10 +268,7 @@ export default function App() {
       localStorage.removeItem('_imp');
       window.history.replaceState({}, '', window.location.pathname);
       sb.auth.signInWithPassword({email: imp.email, password: imp.pass}).then(function(res) {
-        if (!res.error) {
-          // Sinaliza ao admin para restaurar senha quando esta aba fechar
-          sessionStorage.setItem('_imp_uid', imp.uid);
-        }
+        if (!res.error) { sessionStorage.setItem('_imp_uid', imp.uid); }
       });
     } catch(e) { localStorage.removeItem('_imp'); }
   }, []);
@@ -435,10 +276,7 @@ export default function App() {
   React.useEffect(function() {
     var handler = function() {
       var uid = sessionStorage.getItem('_imp_uid');
-      if (uid) {
-        localStorage.setItem('_imp_restore', uid);
-        sessionStorage.removeItem('_imp_uid');
-      }
+      if (uid) { localStorage.setItem('_imp_restore', uid); sessionStorage.removeItem('_imp_uid'); }
     };
     window.addEventListener('pagehide', handler);
     return function() { window.removeEventListener('pagehide', handler); };
