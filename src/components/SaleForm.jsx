@@ -98,7 +98,7 @@ export function SaleForm({ products, brand, onSave, onClose }) {
       <div className="rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg flex flex-col anim-scale" style={{background:'var(--bg-card)', maxHeight:'90vh', boxShadow:'var(--shadow-lg)'}}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <span className="font-semibold text-gray-900">Nova Venda</span>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
+          <button onClick={onClose} aria-label="Fechar" className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>

@@ -18,6 +18,7 @@ export default function BottomNav({ view, onNav, brand }) {
           var active = view === item.key;
           return (
             <button key={item.key} onClick={function() { onNav(item.key); }}
+              aria-label={item.label} aria-current={active ? 'page' : undefined}
               className="relative flex-1 flex flex-col items-center justify-center gap-1 transition-colors min-w-0 pt-1"
               style={{color: active ? brand.color : '#94a3b8'}}>
               {active && (
