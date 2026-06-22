@@ -154,32 +154,36 @@ export default function AdminPanel({ toast, confirm, session }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <p className="text-sm font-bold text-gray-800 mb-3">Visão geral</p>
+        <p className="text-xs font-bold uppercase tracking-wide mb-2.5" style={{color:'var(--text-muted)'}}>Visão geral</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-          {[['Clientes', String(stats.total)], ['Assinantes Pro', String(stats.pro)], ['No plano Free', String(stats.free)], ['Receita/mês', moneyBR(mrr)]].map(function(kv) {
+          {[['Clientes', String(stats.total), false], ['Assinantes Pro', String(stats.pro), false], ['No plano Free', String(stats.free), false], ['Receita/mês', moneyBR(mrr), true]].map(function(kv) {
+            var hl = kv[2];
             return (
-              <div key={kv[0]} className="rounded-xl p-3" style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
+              <div key={kv[0]} className="rounded-xl p-3 relative overflow-hidden" style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
+                {hl && <div style={{position:'absolute', top:0, left:0, right:0, height:3, background:'var(--brand-grad, var(--brand))'}}/>}
                 <p className="text-xs" style={{color:'var(--text-muted)'}}>{kv[0]}</p>
-                <p className="text-lg font-extrabold tabular mt-0.5" style={{color:'var(--text-main)'}}>{kv[1]}</p>
+                <p className="text-lg font-extrabold tabular mt-0.5" style={{color: hl ? 'var(--brand)' : 'var(--text-main)'}}>{kv[1]}</p>
               </div>
             );
           })}
         </div>
         {stats.novos > 0 && <p className="text-xs mb-3" style={{color:'var(--text-sub)'}}>{stats.novos} novo(s) cliente(s) neste mês</p>}
 
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-bold text-gray-800">Clientes</p>
-          <span className="text-xs" style={{color:'var(--text-muted)'}}>{visibleClients.length} de {clients.length}</span>
-        </div>
-        <div className="relative mb-2">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-          <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="Buscar por nome, email ou ID..." className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
-        </div>
-        <div className="flex gap-1.5 mb-3">
-          {[['all','Todos'],['pro','Pro'],['free','Free']].map(function(f) {
-            var active = planFilter === f[0];
-            return <button key={f[0]} onClick={function() { setPlanFilter(f[0]); }} className={'text-xs font-semibold px-3 py-1.5 rounded-lg border transition ' + (active ? 'text-white' : 'text-gray-500 border-gray-200 hover:bg-gray-50')} style={active ? {background:'#002f59', borderColor:'#002f59'} : {}}>{f[1]}</button>;
-          })}
+        <div className="rounded-2xl p-3 mb-1" style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
+          <div className="flex items-center justify-between mb-2.5">
+            <p className="text-xs font-bold uppercase tracking-wide" style={{color:'var(--text-muted)'}}>Clientes</p>
+            <span className="text-xs" style={{color:'var(--text-muted)'}}>{visibleClients.length} de {clients.length}</span>
+          </div>
+          <div className="relative mb-2">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="Buscar por nome, email ou ID..." className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
+          </div>
+          <div className="flex gap-1.5">
+            {[['all','Todos'],['pro','Pro'],['free','Free']].map(function(f) {
+              var active = planFilter === f[0];
+              return <button key={f[0]} onClick={function() { setPlanFilter(f[0]); }} className={'text-xs font-semibold px-3 py-1.5 rounded-lg border transition ' + (active ? 'text-white' : 'text-gray-500 border-gray-200 hover:bg-gray-50')} style={active ? {background:'var(--brand)', borderColor:'var(--brand)'} : {}}>{f[1]}</button>;
+            })}
+          </div>
         </div>
 
         {loadingCli
