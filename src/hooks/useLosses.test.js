@@ -6,10 +6,14 @@ var mockPut    = vi.fn(async function() {});
 var mockUpdate = vi.fn(async function() {});
 var mockDelete = vi.fn(async function() {});
 
+var mockCount = vi.fn(async function() { return 0; });
+var whereChain = { equals: function() { return { filter: function() { return { count: function() { return mockCount.apply(this, arguments); } }; } }; } };
+
 vi.mock('../lib/db.js', function() {
   return {
     ldb: {
       losses: {
+        where:  function() { return whereChain; },
         put:    function() { return mockPut.apply(this, arguments); },
         update: function() { return mockUpdate.apply(this, arguments); },
         delete: function() { return mockDelete.apply(this, arguments); },

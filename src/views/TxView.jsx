@@ -47,7 +47,8 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
     if (!editItem.desc || !editItem.amount) return;
     setSaving(true);
     try {
-      await onEdit(editItem.id, {desc:safe(editItem.desc), amount:Number(editItem.amount), date:editItem.date, method:isIncome ? editItem.method : null, cat:isIncome ? null : editItem.cat});
+      var ok = await onEdit(editItem.id, {desc:safe(editItem.desc), amount:Number(editItem.amount), date:editItem.date, method:isIncome ? editItem.method : null, cat:isIncome ? null : editItem.cat});
+      if (!ok) return;
       toast(isIncome ? 'Venda atualizada' : 'Despesa atualizada');
       setEditItem(null);
     } catch(_) {}
@@ -57,7 +58,8 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
     if (!form.desc || !form.amount) return;
     setSaving(true);
     try {
-      await onAdd({id:uid(), type:type, desc:safe(form.desc), amount:Number(form.amount), date:form.date, method:isIncome ? form.method : null, cat:isIncome ? null : form.cat});
+      var ok = await onAdd({id:uid(), type:type, desc:safe(form.desc), amount:Number(form.amount), date:form.date, method:isIncome ? form.method : null, cat:isIncome ? null : form.cat});
+      if (!ok) return;
       toast(isIncome ? 'Venda registrada!' : 'Despesa registrada!');
       setModal(false);
       setForm({desc:'', amount:'', date:today(), cat:'Fixo', method:'PIX'});
@@ -186,7 +188,7 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
                             {(isIncome ? '+' : '-') + fmt(t.amount)}
                           </span>
                           <EditBtn onClick={function() { openEdit(t); }}/>
-                          <DelBtn onClick={function() { confirm('Excluir este registro?', async function() { await onDelete(t.id); toast('Removido'); }); }}/>
+                          <DelBtn onClick={function() { confirm('Excluir este registro?', async function() { var ok = await onDelete(t.id); if (ok) toast('Removido'); }); }}/>
                         </div>
                       </div>
                     );
@@ -202,7 +204,8 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
         ? (
           <SaleForm products={products} brand={brand}
             onSave={async function(sale) {
-              await onAdd(sale);
+              var ok = await onAdd(sale);
+              if (!ok) return false;
               if (sale.items) {
                 sale.items.forEach(function(it) {
                   var p = products.find(function(p) { return p.name === it.desc; });
@@ -210,6 +213,7 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
                 });
               }
               toast('Venda registrada!');
+              return true;
             }}
             onClose={function() { setModal(false); }}
           />

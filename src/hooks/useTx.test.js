@@ -6,10 +6,14 @@ var mockPut    = vi.fn(async function() {});
 var mockUpdate = vi.fn(async function() {});
 var mockDelete = vi.fn(async function() {});
 
+var mockCount = vi.fn(async function() { return 0; });
+var whereChain = { equals: function() { return { filter: function() { return { count: function() { return mockCount.apply(this, arguments); } }; } }; } };
+
 vi.mock('../lib/db.js', function() {
   return {
     ldb: {
       transactions: {
+        where:  function() { return whereChain; },
         put:    function() { return mockPut.apply(this, arguments); },
         update: function() { return mockUpdate.apply(this, arguments); },
         delete: function() { return mockDelete.apply(this, arguments); },
@@ -128,6 +132,51 @@ describe('editTx', function() {
     await act(async function() { await hook.result.current.editTx('tx1', makeTx({amount:'0'})); });
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(toast).toHaveBeenCalledWith(expect.any(String), 'error');
+  });
+});
+
+describe('contrato de retorno', function() {
+  it('addTx retorna true no sucesso', async function() {
+    var { hook } = makeHook();
+    var ret;
+    await act(async function() { ret = await hook.result.current.addTx(makeTx()); });
+    expect(ret).toBe(true);
+  });
+
+  it('addTx retorna false em validacao', async function() {
+    var { hook } = makeHook();
+    var ret;
+    await act(async function() { ret = await hook.result.current.addTx(makeTx({amount:'0'})); });
+    expect(ret).toBe(false);
+  });
+
+  it('addTx retorna false quando bloqueado por limite', async function() {
+    var { hook } = makeHook(false);
+    var ret;
+    await act(async function() { ret = await hook.result.current.addTx(makeTx()); });
+    expect(ret).toBe(false);
+  });
+
+  it('editTx retorna false em validacao', async function() {
+    var { hook } = makeHook();
+    var ret;
+    await act(async function() { ret = await hook.result.current.editTx('tx1', makeTx({desc:''})); });
+    expect(ret).toBe(false);
+  });
+
+  it('deleteTx retorna true no sucesso', async function() {
+    var { hook } = makeHook();
+    var ret;
+    await act(async function() { await hook.result.current.addTx(makeTx()); });
+    await act(async function() { ret = await hook.result.current.deleteTx('tx1'); });
+    expect(ret).toBe(true);
+  });
+
+  it('nao dispara toast de sucesso (view e dona da mensagem)', async function() {
+    var { hook, toast } = makeHook();
+    await act(async function() { await hook.result.current.addTx(makeTx()); });
+    var successCalls = toast.mock.calls.filter(function(c) { return c[1] === 'success'; });
+    expect(successCalls).toHaveLength(0);
   });
 });
 

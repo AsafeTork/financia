@@ -78,7 +78,7 @@ export function SaleForm({ products, brand, onSave, onClose }) {
     const valid = items.filter(function(i) { return i.desc && i.up; });
     if (!valid.length || !total) return;
     setSaving(true);
-    await onSave({
+    var ok = await onSave({
       id: uid(),
       type: 'income',
       desc: safe(valid.length === 1 ? valid[0].desc : valid.length + ' itens'),
@@ -87,6 +87,7 @@ export function SaleForm({ products, brand, onSave, onClose }) {
       date: date,
       method: method,
     });
+    if (ok === false) { setSaving(false); return; }
     onClose();
   };
 

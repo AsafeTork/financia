@@ -57,7 +57,8 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
     if (Number(pf.price) <= 0) { toast('Preco deve ser maior que zero', 'error'); return; }
     dispatch({type:'SET_SAVING', v:true});
     try {
-      await onAddProduct({id:'P'+String(Date.now()).slice(-6), name:safe(pf.name), category:pf.category||null, price:Number(pf.price), cost:pf.cost?Number(pf.cost):null, stock:pf.stock!==''?Number(pf.stock):null});
+      var ok = await onAddProduct({id:'P'+String(Date.now()).slice(-6), name:safe(pf.name), category:pf.category||null, price:Number(pf.price), cost:pf.cost?Number(pf.cost):null, stock:pf.stock!==''?Number(pf.stock):null});
+      if (!ok) return;
       toast('Produto adicionado!');
       dispatch({type:'CLOSE_PM'});
     } catch(_) {}
@@ -68,7 +69,8 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
     if (Number(editP.price) <= 0) { toast('Preco deve ser maior que zero', 'error'); return; }
     dispatch({type:'SET_SAVING', v:true});
     try {
-      await onEditProduct(editP.id, {name:safe(editP.name), category:editP.category||null, price:Number(editP.price), cost:editP.cost?Number(editP.cost):null, stock:editP.stock!==''&&editP.stock!=null?Number(editP.stock):null});
+      var ok = await onEditProduct(editP.id, {name:safe(editP.name), category:editP.category||null, price:Number(editP.price), cost:editP.cost?Number(editP.cost):null, stock:editP.stock!==''&&editP.stock!=null?Number(editP.stock):null});
+      if (!ok) return;
       toast('Produto atualizado');
       dispatch({type:'SET_EDIT_P', v:null});
     } catch(_) {}
@@ -78,7 +80,8 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
     if (!lf.desc || !lf.qty) return;
     dispatch({type:'SET_SAVING', v:true});
     try {
-      await onAddLoss({id:uid(), desc:safe(lf.desc), qty:Number(lf.qty), reason:lf.reason, date:lf.date});
+      var ok = await onAddLoss({id:uid(), desc:safe(lf.desc), qty:Number(lf.qty), reason:lf.reason, date:lf.date});
+      if (!ok) return;
       const p = products.find(function(p) { return p.name === lf.desc; });
       if (p && p.stock != null) await onAdjustStock(p.id, -Number(lf.qty));
       toast(p ? 'Perda registrada e estoque abatido' : 'Perda registrada (produto nao encontrado no estoque)');
@@ -90,7 +93,8 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
     if (!editL.desc || !editL.qty) return;
     dispatch({type:'SET_SAVING', v:true});
     try {
-      await onEditLoss(editL.id, {desc:safe(editL.desc), qty:Number(editL.qty), reason:editL.reason, date:editL.date});
+      var ok = await onEditLoss(editL.id, {desc:safe(editL.desc), qty:Number(editL.qty), reason:editL.reason, date:editL.date});
+      if (!ok) return;
       toast('Perda atualizada');
       dispatch({type:'SET_EDIT_L', v:null});
     } catch(_) {}
@@ -100,7 +104,8 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
     if (!sq || !sm) return;
     dispatch({type:'SET_SAVING', v:true});
     try {
-      await onAdjustStock(sm, Number(sq));
+      var ok = await onAdjustStock(sm, Number(sq));
+      if (!ok) return;
       toast('Estoque atualizado!');
       dispatch({type:'SET_SM', v:null});
     } catch(_) {}
@@ -244,7 +249,7 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
                                   </button>
                                 )}
                                 <EditBtn onClick={function() { dispatch({type:'SET_EDIT_P', v:{id:p.id, name:p.name, category:p.category||'', price:String(p.price), cost:p.cost!=null?String(p.cost):'', stock:p.stock!=null?String(p.stock):''}}); }}/>
-                                <DelBtn onClick={function() { confirm('Excluir "' + p.name + '"?', async function() { await onDeleteProduct(p.id); toast('Produto removido'); }); }}/>
+                                <DelBtn onClick={function() { confirm('Excluir "' + p.name + '"?', async function() { var ok = await onDeleteProduct(p.id); if (ok) toast('Produto removido'); }); }}/>
                               </div>
                             </div>
                           </div>
@@ -292,7 +297,7 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <EditBtn onClick={function() { dispatch({type:'SET_EDIT_L', v:{id:l.id, desc:l.desc, qty:String(l.qty), reason:l.reason||'', date:l.date}}); }}/>
-                      <DelBtn onClick={function() { confirm('Excluir esta perda?', async function() { await onDeleteLoss(l.id); toast('Perda removida'); }); }}/>
+                      <DelBtn onClick={function() { confirm('Excluir esta perda?', async function() { var ok = await onDeleteLoss(l.id); if (ok) toast('Perda removida'); }); }}/>
                     </div>
                   </div>
                 );
