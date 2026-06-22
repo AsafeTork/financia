@@ -1,17 +1,22 @@
 {
-  "name": "Financia",
+  "name": "Financia — Gestão financeira",
   "short_name": "Financia",
-  "description": "Gestao financeira para pequenas empresas",
+  "description": "Controle vendas, despesas e estoque do seu negócio em um só lugar. Online e offline.",
+  "lang": "pt-BR",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#002f59",
   "theme_color": "#002f59",
+  "categories": ["business", "finance", "productivity"],
   "icons": [
     {
       "src": "/icon-192.svg",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any"
     },
     {
       "src": "/icon-512.svg",
