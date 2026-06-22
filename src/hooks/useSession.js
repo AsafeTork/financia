@@ -20,28 +20,48 @@ export function useSession(p) {
   var setProducts   = p.setProducts;
   var setLosses     = p.setLosses;
 
-  var uidRef      = useRef(null);
-  var loadingRef  = useRef(0);
-  var channelRef  = useRef(null);
-  var syncingRef  = useRef(false);
+  var uidRef        = useRef(null);
+  var loadingRef    = useRef(0);
+  var channelRef    = useRef(null);
+  var syncingRef    = useRef(false);
+  var debounceRef   = useRef(null);
+  var retryRef      = useRef(null);
+  var retryDelayRef = useRef(1000);
+
+  var runSync = function() {
+    var userId = uidRef.current;
+    if (!userId || !navigator.onLine || syncingRef.current) return;
+    syncingRef.current = true;
+    syncAll(userId).then(function(ok) {
+      syncingRef.current = false;
+      if (ok) loadFromLocal(userId);
+    }).catch(function() { syncingRef.current = false; });
+  };
 
   var subscribeRealtime = function(uid) {
     if (channelRef.current) { sb.removeChannel(channelRef.current); channelRef.current = null; }
     var doSync = function() {
-      var userId = uidRef.current;
-      if (!userId || !navigator.onLine || syncingRef.current) return;
-      syncingRef.current = true;
-      syncAll(userId).then(function(ok) {
-        syncingRef.current = false;
-        if (ok) loadFromLocal(userId);
-      }).catch(function() { syncingRef.current = false; });
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(runSync, 800);
     };
     channelRef.current = sb.channel('rt-' + uid)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, doSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, doSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'losses' }, doSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'company_profiles' }, doSync)
-      .subscribe();
+      .subscribe(function(status) {
+        if (status === 'SUBSCRIBED') {
+          retryDelayRef.current = 1000;
+          runSync();
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (retryRef.current) clearTimeout(retryRef.current);
+          var delay = retryDelayRef.current;
+          retryDelayRef.current = Math.min(delay * 2, 30000);
+          retryRef.current = setTimeout(function() {
+            if (uidRef.current && navigator.onLine) subscribeRealtime(uidRef.current);
+          }, delay);
+        }
+      });
   };
 
   var loadFromLocal = async function(userId) {
@@ -214,6 +234,8 @@ export function useSession(p) {
         ++loadingRef.current;
         setDataLoading(false);
         uidRef.current = null;
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        if (retryRef.current) clearTimeout(retryRef.current);
         if (channelRef.current) { sb.removeChannel(channelRef.current); channelRef.current = null; }
         setTx([]); setProducts([]); setLosses([]);
         setBrand(INIT_BRAND); setPlanInfo(INIT_PLAN);
@@ -244,10 +266,22 @@ export function useSession(p) {
     };
     document.addEventListener('visibilitychange', onVisible);
 
+    var onOnline = function() {
+      var userId = uidRef.current;
+      if (!userId) return;
+      retryDelayRef.current = 1000;
+      subscribeRealtime(userId);
+      syncAll(userId).then(function(ok) { if (ok) loadFromLocal(userId); });
+    };
+    window.addEventListener('online', onOnline);
+
     return function() {
       authSub.data.subscription.unsubscribe();
       clearInterval(syncInterval);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onOnline);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (retryRef.current) clearTimeout(retryRef.current);
       if (channelRef.current) { sb.removeChannel(channelRef.current); channelRef.current = null; }
     };
   }, []);
