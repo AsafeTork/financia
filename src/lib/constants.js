@@ -42,6 +42,19 @@ export const PRICING_PLANS = [
   },
 ];
 
+// Temas prontos por segmento — para o admin aplicar a identidade do cliente
+// em um clique, sem precisar entender de cor (primary/secondary/accent).
+export const THEME_PRESETS = [
+  { name: 'Azul Corporativo', segment: 'Serviços e geral',        color: '#002f59', secondary: '#dbe7f3', accent: '#2563eb' },
+  { name: 'Verde Natural',    segment: 'Alimentos e saúde',       color: '#14532d', secondary: '#dcfce7', accent: '#16a34a' },
+  { name: 'Vermelho Energia', segment: 'Restaurante e oficina',   color: '#7f1d1d', secondary: '#fee2e2', accent: '#dc2626' },
+  { name: 'Roxo Premium',     segment: 'Beleza e estética',       color: '#4c1d95', secondary: '#ede9fe', accent: '#7c3aed' },
+  { name: 'Laranja Vibrante', segment: 'Loja e varejo',           color: '#7c2d12', secondary: '#ffedd5', accent: '#ea580c' },
+  { name: 'Rosa Moderno',     segment: 'Moda e salão',            color: '#831843', secondary: '#fce7f3', accent: '#db2777' },
+  { name: 'Petróleo Sóbrio',  segment: 'Consultoria e tech',      color: '#0f3d3e', secondary: '#ccfbf1', accent: '#0d9488' },
+  { name: 'Grafite Minimal',  segment: 'Premium e minimalista',   color: '#1f2937', secondary: '#e5e7eb', accent: '#0ea5e9' },
+];
+
 export const NAV = [
   { key: 'dashboard',  label: 'Dashboard',      d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
   { key: 'income',     label: 'Vendas / Ganhos',          d: 'M12 4v16m8-8l-8-8-8 8' },

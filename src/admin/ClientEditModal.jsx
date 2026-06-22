@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { sb } from '../lib/supabase.js';
 import { hexToRgb, luminance, deriveCores, lightenHex } from '../lib/utils.js';
+import { THEME_PRESETS } from '../lib/constants.js';
 
 function PreviewPaleta({ primary, secondary, accent }) {
   var lum = luminance(primary || '#002f59');
@@ -259,9 +260,36 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             )}
           </div>
 
+          {/* Temas prontos por segmento */}
+          <div className="flex flex-col gap-2">
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Temas prontos</p>
+              <p className="text-xs" style={{color:'#9aa5b1'}}>Escolha um pelo tipo de negócio. Aplica a paleta inteira em um clique.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {THEME_PRESETS.map(function(p) {
+                var active = (color || '').toLowerCase() === p.color.toLowerCase();
+                return (
+                  <button key={p.name} type="button"
+                    onClick={function() { setColorRaw(p.color); setSecondary(p.secondary); setAccent(p.accent); }}
+                    className="rounded-xl p-2.5 text-left transition hover:opacity-90"
+                    style={{ border: (active ? '2px solid ' + p.color : '1px solid #e5e7eb') }}>
+                    <div className="flex gap-1 mb-1.5">
+                      <span className="w-5 h-5 rounded-md" style={{ background: p.color }} />
+                      <span className="w-5 h-5 rounded-md" style={{ background: p.secondary }} />
+                      <span className="w-5 h-5 rounded-md" style={{ background: p.accent }} />
+                    </div>
+                    <p className="text-xs font-semibold" style={{ color: '#1f2937' }}>{p.name}</p>
+                    <p style={{ fontSize: 10, color: '#9aa5b1' }}>{p.segment}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Paleta */}
           <div className="flex flex-col gap-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Identidade visual</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Ajuste fino (opcional)</p>
             <ColorField
               label="Primaria"
               desc="Sidebar, botoes, nav ativo"
