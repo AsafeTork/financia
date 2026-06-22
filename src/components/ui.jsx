@@ -1,14 +1,12 @@
 import React from 'react';
 
 export const Card = function({ children, className, hover, variant, accent, color }) {
-  var base = 'border rounded-xl ';
-  if (variant === 'flat')        base += 'border-gray-100 ';
-  else if (variant === 'raised') base += 'border-gray-100 shadow-md ';
-  else                           base += 'border-gray-100 shadow-sm ';
+  var base = 'rounded-2xl ';
   if (hover) base += 'card-hover ';
+  var shadow = variant === 'flat' ? 'none' : variant === 'raised' ? 'var(--shadow-md)' : 'var(--shadow-sm)';
   return (
-    <div className={base + (className || '')} style={{position:'relative', overflow:'hidden', background:'var(--bg-card)'}}>
-      {accent && <div style={{position:'absolute', top:0, left:0, right:0, height:3, background: color || 'var(--brand, #1a6b5c)', borderRadius:'inherit inherit 0 0'}}/>}
+    <div className={base + (className || '')} style={{position:'relative', overflow:'hidden', background:'var(--bg-card)', border:'1px solid var(--border)', boxShadow: shadow}}>
+      {accent && <div style={{position:'absolute', top:0, left:0, right:0, height:3, background: color || 'var(--brand)'}}/>}
       {children}
     </div>
   );
@@ -141,8 +139,8 @@ export const Empty = function({ icon, title, sub, action, onAction, color }) {
 export const Modal = function({ title, onClose, onSave, color, saving, children, saveLabel, wide }) {
   var bg = color || 'var(--brand)';
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 anim-fade" style={{background:'rgba(0,0,0,0.5)'}}>
-      <div className={'rounded-2xl flex flex-col w-full ' + (wide ? 'max-w-lg' : 'max-w-sm')} style={{background:'var(--bg-card)', boxShadow:'0 25px 60px rgba(0,0,0,0.2)', maxHeight:'90vh'}}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 anim-fade" style={{background:'rgba(15,23,42,0.55)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)'}}>
+      <div className={'rounded-2xl flex flex-col w-full anim-scale ' + (wide ? 'max-w-lg' : 'max-w-sm')} style={{background:'var(--bg-card)', boxShadow:'var(--shadow-lg)', maxHeight:'90vh'}}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <span className="font-semibold text-gray-900">{title}</span>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">

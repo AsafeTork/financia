@@ -193,8 +193,8 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" style={{background:'rgba(0,0,0,0.5)'}}>
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md flex flex-col" style={{maxHeight:'92vh', overflowY:'auto'}}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 anim-fade" style={{background:'rgba(15,23,42,0.55)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)'}}>
+      <div className="rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md flex flex-col anim-scale" style={{background:'var(--bg-card)', maxHeight:'92vh', overflowY:'auto', boxShadow:'var(--shadow-lg)'}}>
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <p className="font-bold text-gray-800">Editar cliente</p>

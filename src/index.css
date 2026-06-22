@@ -10,11 +10,38 @@ body { background: var(--bg-page, #f8fafc); color: var(--text-main, #111827); }
 @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
 @keyframes spin    { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-.anim-up   { animation: slideUp .2s ease; }
-.anim-fade { animation: fadeIn .15s ease; }
+@keyframes scaleIn { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+.anim-up    { animation: slideUp .22s cubic-bezier(.16,1,.3,1); }
+.anim-fade  { animation: fadeIn .15s ease; }
+.anim-scale { animation: scaleIn .2s cubic-bezier(.16,1,.3,1); }
 
 /* Transicoes globais */
-a, button { transition: opacity .15s ease, background-color .15s ease, color .15s ease, box-shadow .15s ease; }
+a, button { transition: opacity .15s ease, background-color .15s ease, color .15s ease, box-shadow .15s ease, transform .12s ease; }
+
+/* Tato no toque/clique */
+button:active:not(:disabled), a:active { transform: scale(.97); }
+
+/* Foco acessivel com a cor da marca (segue o raio do proprio elemento) */
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-soft, rgba(26,107,92,0.25));
+}
+
+/* Skeleton de carregamento */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--border-md) 37%, var(--bg-subtle) 63%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 10px;
+}
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  button:active:not(:disabled), a:active { transform: none; }
+}
 
 /* Focus rings com brand color */
 input:focus, select:focus, textarea:focus {

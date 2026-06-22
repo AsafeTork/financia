@@ -94,8 +94,8 @@ export function SaleForm({ products, brand, onSave, onClose }) {
   const METHODS = ['PIX','Dinheiro','Cartao de Debito','Cartao de Credito','Boleto','Transferencia'];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 anim-fade" style={{background:'rgba(0,0,0,0.5)'}}>
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg flex flex-col" style={{maxHeight:'90vh',boxShadow:'0 25px 60px rgba(0,0,0,0.2)'}}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 anim-fade" style={{background:'rgba(15,23,42,0.55)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)'}}>
+      <div className="rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg flex flex-col anim-scale" style={{background:'var(--bg-card)', maxHeight:'90vh', boxShadow:'var(--shadow-lg)'}}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <span className="font-semibold text-gray-900">Nova Venda</span>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
