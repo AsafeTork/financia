@@ -40,6 +40,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
     });
   }, [tx]);
 
+  var plan     = effectivePlan(planInfo);
   var lowStock = products.filter(function(p) { return p.stock != null && p.stock <= 5; });
   var atAnyLimit = plan === 'free' && (
     tx.length >= PLAN_LIMITS.free.transactions ||
@@ -47,16 +48,17 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
     (lossesCount || 0) >= PLAN_LIMITS.free.losses
   );
   var recent   = tx.slice().sort(function(a, b) { return b.date.localeCompare(a.date); }).slice(0, 8);
-  var plan     = effectivePlan(planInfo);
+  var hour     = new Date().getHours();
+  var greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
 
   return (
     <div className="flex flex-col gap-5">
 
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">
+        <h1 className="page-header">{greeting}</h1>
+        <p className="page-sub capitalize">
           {new Date().toLocaleDateString('pt-BR', {weekday: 'long', day: 'numeric', month: 'long'})}
         </p>
-
       </div>
 
       {lowStock.length > 0 && (
@@ -90,12 +92,14 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
           color="#22c55e"
           accentBar="#22c55e"
           variation={inVar}
+          onClick={function() { onNav('income'); }}
           sub={inVar === null ? 'Sem dados anteriores' : undefined}/>
         <KpiCard label="Saídas do mês"
           value={fmt(to)}
           color="#ef4444"
           accentBar="#ef4444"
           variation={outVar !== null ? -outVar : null}
+          onClick={function() { onNav('expense'); }}
           sub={outVar === null ? 'Sem dados anteriores' : undefined}/>
         <KpiCard label="Resultado"
           value={fmt(profitCurr)}
