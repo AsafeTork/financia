@@ -92,7 +92,7 @@ export const Badge = function({ color, bg, children }) {
   return (
     <span
       className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{color: color || '#1a6b5c', background: bg || 'rgba(26,107,92,0.1)'}}
+      style={{color: color || 'var(--brand)', background: bg || 'var(--brand-soft)'}}
     >
       {children}
     </span>
@@ -130,7 +130,7 @@ export const Empty = function({ icon, title, sub, action, onAction, color }) {
       {action && (
         <button onClick={onAction}
           className="mt-1 text-xs font-semibold px-5 py-2.5 rounded-xl text-white transition hover:opacity-90"
-          style={{background: color || '#1a6b5c'}}>
+          style={{background: color || 'var(--brand)'}}>
           {action}
         </button>
       )}
@@ -139,7 +139,7 @@ export const Empty = function({ icon, title, sub, action, onAction, color }) {
 };
 
 export const Modal = function({ title, onClose, onSave, color, saving, children, saveLabel, wide }) {
-  var bg = color || '#1a6b5c';
+  var bg = color || 'var(--brand)';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 anim-fade" style={{background:'rgba(0,0,0,0.5)'}}>
       <div className={'rounded-2xl flex flex-col w-full ' + (wide ? 'max-w-lg' : 'max-w-sm')} style={{background:'var(--bg-card)', boxShadow:'0 25px 60px rgba(0,0,0,0.2)', maxHeight:'90vh'}}>
