@@ -153,9 +153,9 @@ export default function App() {
       <Offline/>
       <SyncBadge status={syncStatus}/>
       <Sidebar view={view} onNav={navTo} brand={brand} open={sidebarOpen} isAdmin={isAdminDB} session={session} onClose={function() { setSidebarOpen(false); }}/>
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 w-full">
         <Header brand={brand} syncStatus={syncStatus} onMenuOpen={function() { setSidebarOpen(true); }}/>
-        <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto pb-24 lg:pb-8">
+        <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto pb-24 lg:pb-8 min-w-0 overflow-x-hidden">
           <Suspense fallback={<PageSkeleton/>}>
             {views[view]}
           </Suspense>

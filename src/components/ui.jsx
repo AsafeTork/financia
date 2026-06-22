@@ -15,7 +15,7 @@ export const Card = function({ children, className, hover, variant, accent, colo
 export const Inp = function({ label, hint, error, success, className, icon, ...p }) {
   var borderColor = error ? '#ef4444' : success ? '#22c55e' : '';
   return (
-    <div className={'flex flex-col gap-1.5 ' + (className || '')}>
+    <div className={'flex flex-col gap-1.5 min-w-0 ' + (className || '')}>
       {label && (
         <div className="flex items-center gap-1.5">
           {icon && <span className="text-gray-400">{icon}</span>}
@@ -36,9 +36,9 @@ export const Inp = function({ label, hint, error, success, className, icon, ...p
 
 export const Sel = function({ label, className, children, ...p }) {
   return (
-    <div className={'flex flex-col gap-1.5 ' + (className || '')}>
+    <div className={'flex flex-col gap-1.5 min-w-0 ' + (className || '')}>
       {label && <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</label>}
-      <select className="border border-gray-200 rounded-xl px-3 py-3 text-sm transition" style={{background:'var(--bg-input)', color:'var(--text-main)'}} {...p}>{children}</select>
+      <select className="border border-gray-200 rounded-xl px-3 py-3 text-sm transition w-full" style={{background:'var(--bg-input)', color:'var(--text-main)'}} {...p}>{children}</select>
     </div>
   );
 };
