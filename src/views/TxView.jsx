@@ -232,7 +232,7 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
       )}
 
       {editItem && (
-        <Modal title={isIncome ? 'Editar Venda' : 'Editar Despesa'} onClose={function() { setEditItem(null); }} onSave={saveEdit} saving={saving} saveLabel="Salvar alteracoes" color={accentColor}>
+        <Modal title={isIncome ? 'Editar Venda' : 'Editar Despesa'} onClose={function() { setEditItem(null); }} onSave={saveEdit} saving={saving} saveLabel="Salvar alterações" color={accentColor}>
           <Inp label="Descrição" value={editItem.desc} onChange={function(e) { setEditItem(function(f) { return Object.assign({}, f, {desc:e.target.value}); }); }}/>
           <div className="grid grid-cols-2 gap-3">
             <Inp label="Valor (R$)" type="number" step="0.01" min="0" value={editItem.amount} onChange={function(e) { setEditItem(function(f) { return Object.assign({}, f, {amount:e.target.value}); }); }}/>

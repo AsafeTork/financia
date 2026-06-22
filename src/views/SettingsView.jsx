@@ -102,9 +102,9 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
         <Card className="p-6 flex flex-col gap-5">
           <div>
             <p className="text-sm font-semibold text-gray-800 mb-1">Alterar senha</p>
-            <p className="text-xs text-gray-400 mb-4">Use uma senha forte com letras, numeros e simbolos.</p>
+            <p className="text-xs text-gray-400 mb-4">Use uma senha forte com letras, números e símbolos.</p>
             <div className="flex flex-col gap-3">
-              <Inp label="Nova senha" type="password" value={pwForm.newPw} onChange={function(e) { setPwForm(function(f) { return Object.assign({}, f, {newPw:e.target.value}); }); }} placeholder="Minimo 8 caracteres" hint={pwForm.newPw.length > 0 && pwForm.newPw.length < 8 ? 'Muito curta' : ''}/>
+              <Inp label="Nova senha" type="password" value={pwForm.newPw} onChange={function(e) { setPwForm(function(f) { return Object.assign({}, f, {newPw:e.target.value}); }); }} placeholder="Mínimo 8 caracteres" hint={pwForm.newPw.length > 0 && pwForm.newPw.length < 8 ? 'Muito curta' : ''}/>
               <Inp label="Confirmar senha" type="password" value={pwForm.confirm} onChange={function(e) { setPwForm(function(f) { return Object.assign({}, f, {confirm:e.target.value}); }); }} placeholder="Repita a senha" hint={pwForm.confirm && pwForm.newPw !== pwForm.confirm ? 'Senhas diferentes' : ''}/>
               <button onClick={changePw} disabled={pwSaving || !pwForm.newPw || !pwForm.confirm} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40" style={{background:brand.color}}>
                 {pwSaving ? <Spin white/> : 'Alterar senha'}

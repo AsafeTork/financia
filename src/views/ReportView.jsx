@@ -126,11 +126,11 @@ export default function ReportView({ tx, brand, toast, onNav }) {
 
       <Card>
         <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-          <p className="text-sm font-semibold text-gray-800">Movimentacoes</p>
+          <p className="text-sm font-semibold text-gray-800">Movimentações</p>
           <span className="text-xs text-gray-400">{filtered.length} registros</span>
         </div>
         {filtered.length === 0
-          ? <div className="py-10 text-center text-sm text-gray-400">Sem registros neste mes.</div>
+          ? <div className="py-10 text-center text-sm text-gray-400">Sem registros neste mês.</div>
           : (
             <>
               <div className="divide-y divide-gray-50">

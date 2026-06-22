@@ -61,15 +61,15 @@ export default function Login({ brand }) {
             <rect x="45" y="5" width="3" height="35" rx="1.5" fill="white" opacity="0.4"/>
           </svg>
           <p className="text-white text-3xl font-extrabold leading-tight" style={{letterSpacing:'-0.5px'}}>
-            Gestao financeira<br/>
-            <span style={{opacity:0.7}}>para seu negocio.</span>
+            Gestão financeira<br/>
+            <span style={{opacity:0.7}}>para o seu negócio.</span>
           </p>
           <p className="mt-4 text-sm leading-relaxed" style={{color:'rgba(255,255,255,0.6)'}}>
             Controle vendas, despesas e estoque<br/>em um so lugar — online e offline.
           </p>
         </div>
         <div style={{position:'relative', zIndex:1}}>
-          <p className="text-xs" style={{color:'rgba(255,255,255,0.3)'}}>Gestao financeira para pequenos negocios</p>
+          <p className="text-xs" style={{color:'rgba(255,255,255,0.3)'}}>Gestão financeira para pequenos negócios</p>
         </div>
       </div>
 
@@ -82,7 +82,7 @@ export default function Login({ brand }) {
               : <img src="/icon-192.svg" alt="Financia" className="w-20 h-20 mx-auto"/>
             }
             <p className="font-extrabold text-2xl mt-4" style={{color: brandColor, letterSpacing:'-0.5px', fontFamily:'Inter, sans-serif'}}>{brandName}</p>
-            <p className="text-xs mt-1.5 text-gray-400 tracking-wide uppercase" style={{fontSize:'10px', letterSpacing:'0.08em'}}>Gestao financeira</p>
+            <p className="text-xs mt-1.5 text-gray-400 tracking-wide uppercase" style={{fontSize:'10px', letterSpacing:'0.08em'}}>Gestão financeira</p>
           </div>
 
           <div className="mb-8">

@@ -54,7 +54,7 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
 
   const saveProd = async function() {
     if (!pf.name || !pf.price) return;
-    if (Number(pf.price) <= 0) { toast('Preco deve ser maior que zero', 'error'); return; }
+    if (Number(pf.price) <= 0) { toast('Preço deve ser maior que zero', 'error'); return; }
     dispatch({type:'SET_SAVING', v:true});
     try {
       var ok = await onAddProduct({id:'P'+String(Date.now()).slice(-6), name:safe(pf.name), category:pf.category||null, price:Number(pf.price), cost:pf.cost?Number(pf.cost):null, stock:pf.stock!==''?Number(pf.stock):null});
@@ -66,7 +66,7 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
   };
   const saveEditP = async function() {
     if (!editP.name || !editP.price) return;
-    if (Number(editP.price) <= 0) { toast('Preco deve ser maior que zero', 'error'); return; }
+    if (Number(editP.price) <= 0) { toast('Preço deve ser maior que zero', 'error'); return; }
     dispatch({type:'SET_SAVING', v:true});
     try {
       var ok = await onEditProduct(editP.id, {name:safe(editP.name), category:editP.category||null, price:Number(editP.price), cost:editP.cost?Number(editP.cost):null, stock:editP.stock!==''&&editP.stock!=null?Number(editP.stock):null});
@@ -197,7 +197,7 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
                 </svg>
               </div>
               <p className="text-sm font-semibold text-gray-700">Nenhum produto cadastrado</p>
-              <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Adicione produtos ou servicos com preco, custo e controle de estoque.</p>
+              <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Adicione produtos ou serviços com preço, custo e controle de estoque.</p>
               <button onClick={function() { dispatch({type:'OPEN_PM'}); }} className="mt-1 text-xs font-semibold px-5 py-2.5 rounded-xl text-white hover:opacity-90 transition" style={{background: brand.color}}>
                 + Adicionar produto
               </button>
@@ -308,25 +308,25 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
       )}
 
       {pm && (
-        <Modal title="Novo Produto ou Servico" onClose={function() { dispatch({type:'CLOSE_PM'}); }} onSave={saveProd} saving={saving}>
+        <Modal title="Novo Produto ou Serviço" onClose={function() { dispatch({type:'CLOSE_PM'}); }} onSave={saveProd} saving={saving}>
           <Inp label="Nome *" value={pf.name} onChange={function(e) { dispatch({type:'SET_PF', v:{name:e.target.value}}); }} placeholder="Ex: Corte de cabelo, Camiseta P..."/>
-          <Inp label="Categoria" value={pf.category} onChange={function(e) { dispatch({type:'SET_PF', v:{category:e.target.value}}); }} placeholder="Ex: Servicos, Roupas, Alimentos..."/>
+          <Inp label="Categoria" value={pf.category} onChange={function(e) { dispatch({type:'SET_PF', v:{category:e.target.value}}); }} placeholder="Ex: Serviços, Roupas, Alimentos..."/>
           <div className="grid grid-cols-2 gap-3">
-            <Inp label="Preco de venda *" type="number" step="0.01" min="0" value={pf.price} onChange={function(e) { dispatch({type:'SET_PF', v:{price:e.target.value}}); }} placeholder="0,00"/>
+            <Inp label="Preço de venda *" type="number" step="0.01" min="0" value={pf.price} onChange={function(e) { dispatch({type:'SET_PF', v:{price:e.target.value}}); }} placeholder="0,00"/>
             <Inp label="Custo" type="number" step="0.01" min="0" value={pf.cost} onChange={function(e) { dispatch({type:'SET_PF', v:{cost:e.target.value}}); }} placeholder="0,00"/>
           </div>
-          <Inp label="Estoque inicial (em branco para servicos)" type="number" min="0" value={pf.stock} onChange={function(e) { dispatch({type:'SET_PF', v:{stock:e.target.value}}); }} placeholder="Ex: 50"/>
+          <Inp label="Estoque inicial (em branco para serviços)" type="number" min="0" value={pf.stock} onChange={function(e) { dispatch({type:'SET_PF', v:{stock:e.target.value}}); }} placeholder="Ex: 50"/>
         </Modal>
       )}
       {editP && (
-        <Modal title="Editar Produto" onClose={function() { dispatch({type:'SET_EDIT_P', v:null}); }} onSave={saveEditP} saving={saving} saveLabel="Salvar alteracoes">
+        <Modal title="Editar Produto" onClose={function() { dispatch({type:'SET_EDIT_P', v:null}); }} onSave={saveEditP} saving={saving} saveLabel="Salvar alterações">
           <Inp label="Nome *" value={editP.name} onChange={function(e) { dispatch({type:'PATCH_EDIT_P', v:{name:e.target.value}}); }}/>
-          <Inp label="Categoria" value={editP.category} onChange={function(e) { dispatch({type:'PATCH_EDIT_P', v:{category:e.target.value}}); }} placeholder="Ex: Servicos, Roupas..."/>
+          <Inp label="Categoria" value={editP.category} onChange={function(e) { dispatch({type:'PATCH_EDIT_P', v:{category:e.target.value}}); }} placeholder="Ex: Serviços, Roupas..."/>
           <div className="grid grid-cols-2 gap-3">
-            <Inp label="Preco de venda *" type="number" step="0.01" min="0" value={editP.price} onChange={function(e) { dispatch({type:'PATCH_EDIT_P', v:{price:e.target.value}}); }}/>
+            <Inp label="Preço de venda *" type="number" step="0.01" min="0" value={editP.price} onChange={function(e) { dispatch({type:'PATCH_EDIT_P', v:{price:e.target.value}}); }}/>
             <Inp label="Custo" type="number" step="0.01" min="0" value={editP.cost} onChange={function(e) { dispatch({type:'PATCH_EDIT_P', v:{cost:e.target.value}}); }} placeholder="Opcional"/>
           </div>
-          <Inp label="Estoque atual" type="number" min="0" value={editP.stock} onChange={function(e) { dispatch({type:'PATCH_EDIT_P', v:{stock:e.target.value}}); }} placeholder="Em branco para servicos"/>
+          <Inp label="Estoque atual" type="number" min="0" value={editP.stock} onChange={function(e) { dispatch({type:'PATCH_EDIT_P', v:{stock:e.target.value}}); }} placeholder="Em branco para serviços"/>
         </Modal>
       )}
       {lm && (
@@ -338,7 +338,7 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
         </Modal>
       )}
       {editL && (
-        <Modal title="Editar Perda" onClose={function() { dispatch({type:'SET_EDIT_L', v:null}); }} onSave={saveEditL} color="#dc2626" saving={saving} saveLabel="Salvar alteracoes">
+        <Modal title="Editar Perda" onClose={function() { dispatch({type:'SET_EDIT_L', v:null}); }} onSave={saveEditL} color="#dc2626" saving={saving} saveLabel="Salvar alterações">
           <div className="flex flex-col gap-1.5"><label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Produto</label><PSearch products={products} value={editL.desc} onSelect={function(p) { dispatch({type:'PATCH_EDIT_L', v:{desc:p.name}}); }} onChange={function(v) { dispatch({type:'PATCH_EDIT_L', v:{desc:v}}); }} placeholder="Buscar ou digitar"/></div>
           <Inp label="Quantidade" type="number" min="1" value={editL.qty} onChange={function(e) { dispatch({type:'PATCH_EDIT_L', v:{qty:e.target.value}}); }}/>
           <Inp label="Motivo" value={editL.reason} onChange={function(e) { dispatch({type:'PATCH_EDIT_L', v:{reason:e.target.value}}); }} placeholder="Ex: Vencimento..."/>

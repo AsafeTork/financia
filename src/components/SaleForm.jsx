@@ -51,7 +51,7 @@ export function CartRow({ item, idx, products, onChange, onSelect, onRemove }) {
       </div>
       <div className="flex items-end gap-2">
         <Inp label="Qtd" type="number" min="1" value={item.qty} onChange={function(e) { onChange(idx, 'qty', e.target.value); }} className="w-16 flex-shrink-0"/>
-        <Inp label="Preco unit." type="number" step="0.01" min="0" value={item.up} onChange={function(e) { onChange(idx, 'up', e.target.value); }} className="flex-1"/>
+        <Inp label="Preço unit." type="number" step="0.01" min="0" value={item.up} onChange={function(e) { onChange(idx, 'up', e.target.value); }} className="flex-1"/>
         <div className="flex flex-col gap-1.5 w-24 flex-shrink-0">
           <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</label>
           <div className="border border-gray-100 rounded-xl px-3 py-2.5 text-sm bg-white text-gray-700 font-semibold">{lt > 0 ? fmt(lt) : '-'}</div>
