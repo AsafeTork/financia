@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { brandAlpha, deriveCores } from './lib/utils.js';
 import { INIT_BRAND, INIT_PLAN, atLimit, limitFor } from './lib/constants.js';
 import { useTx } from './hooks/useTx.js';
@@ -43,8 +43,9 @@ export default function App() {
   const [syncStatus, setSyncStatus]     = useState('idle');
   const [view, setView]                 = useState(hashView);
   const [sidebarOpen, setSidebarOpen]   = useState(false);
-  const [toastData, setToastData]       = useState(null);
+  const [toasts, setToasts]             = useState([]);
   const [confirmData, setConfirmData]   = useState(null);
+  const toastId                         = useRef(0);
 
   const navTo = useCallback(function(v) { setView(v); window.location.hash = v; }, []);
 
@@ -74,10 +75,17 @@ export default function App() {
     return function() { window.removeEventListener('hashchange', onHash); };
   }, []);
 
+  const dismissToast = useCallback(function(id) {
+    setToasts(function(list) { return list.filter(function(t) { return t.id !== id; }); });
+  }, []);
+
   const toast = useCallback(function(msg, type) {
     if (!type) type = 'success';
-    setToastData({msg:msg, type:type});
-    setTimeout(function() { setToastData(null); }, 3000);
+    var id = ++toastId.current;
+    setToasts(function(list) { return list.concat([{id:id, msg:msg, type:type}]); });
+    setTimeout(function() {
+      setToasts(function(list) { return list.filter(function(t) { return t.id !== id; }); });
+    }, type === 'error' ? 4000 : 3000);
   }, []);
 
   const confirm = useCallback(function(msg, onOk) { setConfirmData({msg:msg, onOk:onOk}); }, []);
@@ -137,7 +145,7 @@ export default function App() {
         <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto pb-24 lg:pb-8">{views[view]}</main>
       </div>
       <BottomNav view={view} onNav={navTo} brand={brand}/>
-      <Toast toast={toastData}/>
+      <Toast toasts={toasts} onDismiss={dismissToast}/>
       {confirmData && <Confirm msg={confirmData.msg} onOk={function() { confirmData.onOk(); setConfirmData(null); }} onCancel={function() { setConfirmData(null); }}/>}
     </div>
   );
