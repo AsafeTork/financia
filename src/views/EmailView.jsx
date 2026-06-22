@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Inp, Textarea } from '../components/ui.jsx';
+import { Card, Inp, Textarea, PageHead } from '../components/ui.jsx';
 import { TEMPLATES } from '../lib/constants.js';
 import { brandAlpha } from '../lib/utils.js';
 import { askAI } from '../lib/ai.js';
@@ -50,7 +50,11 @@ export default function EmailView({ brand, toast }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div><h2 className="page-header">E-mails</h2><p className="page-sub">Templates prontos e editor livre</p></div>
+      <PageHead
+        icon="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+        title="E-mails"
+        sub="Templates prontos e editor livre"
+      />
       <Card className="p-5 flex flex-col gap-4">
         <div className="rounded-xl p-3.5 flex flex-col gap-2.5" style={{background: brandAlpha(brand.color, 0.06), border: '1px solid var(--border)'}}>
           <div className="flex items-center gap-2">
