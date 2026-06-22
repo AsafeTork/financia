@@ -13,10 +13,12 @@ body { background: var(--bg-page, #f8fafc); color: var(--text-main, #111827); }
 
 @keyframes scaleIn { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
 
 .anim-up    { animation: slideUp .22s cubic-bezier(.16,1,.3,1); }
 .anim-fade  { animation: fadeIn .15s ease; }
 .anim-scale { animation: scaleIn .2s cubic-bezier(.16,1,.3,1); }
+.anim-down  { animation: slideDown .25s cubic-bezier(.16,1,.3,1); }
 
 /* Transicoes globais */
 a, button { transition: opacity .15s ease, background-color .15s ease, color .15s ease, box-shadow .15s ease, transform .12s ease; }

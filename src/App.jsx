@@ -13,6 +13,7 @@ import Offline from './components/Offline.jsx';
 import Confirm from './components/Confirm.jsx';
 import SyncBadge from './components/SyncBadge.jsx';
 import UpgradeModal from './components/UpgradeModal.jsx';
+import UpdateBanner from './components/UpdateBanner.jsx';
 import { PageSkeleton } from './components/ui.jsx';
 import Login from './views/Login.jsx';
 
@@ -153,6 +154,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex overflow-x-hidden" style={{background:'var(--bg-page)'}}>
       <Offline/>
+      <UpdateBanner brand={brand}/>
       <SyncBadge status={syncStatus}/>
       <Sidebar view={view} onNav={navTo} brand={brand} open={sidebarOpen} isAdmin={isAdminDB} session={session} onClose={function() { setSidebarOpen(false); }}/>
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 w-full">

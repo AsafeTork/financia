@@ -1,11 +1,29 @@
-const CACHE = 'financia-v3';
+const CACHE = 'financia-v4';
 const STATIC = ['/', '/manifest.json', '/icon-192.svg', '/icon-512.svg'];
 
+// Avisa todas as abas o progresso do cache (alimenta a barra do banner).
+function postProgress(pct) {
+  return self.clients.matchAll({ includeUncontrolled: true }).then(function(cls) {
+    cls.forEach(function(cl) { cl.postMessage({ type: 'CACHE_PROGRESS', pct: pct }); });
+  });
+}
+
 self.addEventListener('install', function(e) {
+  // Cacheia item a item reportando progresso. NAO chama skipWaiting:
+  // o novo SW fica em espera ate o usuario clicar em "Atualizar".
   e.waitUntil(
-    caches.open(CACHE).then(function(c) { return c.addAll(STATIC); })
+    caches.open(CACHE).then(function(c) {
+      var done = 0;
+      function next(i) {
+        if (i >= STATIC.length) return Promise.resolve();
+        return c.add(STATIC[i]).catch(function() {}).then(function() {
+          done++;
+          return postProgress(Math.round((done / STATIC.length) * 100)).then(function() { return next(i + 1); });
+        });
+      }
+      return next(0);
+    })
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', function(e) {
