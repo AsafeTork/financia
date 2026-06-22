@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Card, Inp, Textarea } from '../components/ui.jsx';
 import { TEMPLATES } from '../lib/constants.js';
+import { brandAlpha } from '../lib/utils.js';
+import { askAI } from '../lib/ai.js';
 
 export default function EmailView({ brand, toast }) {
   const [to, setTo] = useState('');
@@ -8,6 +10,26 @@ export default function EmailView({ brand, toast }) {
   const [body, setBody] = useState('');
   const [tpl, setTpl] = useState('custom');
   const [copied, setCopied] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const writeWithAI = async function() {
+    if (!aiPrompt.trim()) return;
+    setAiLoading(true);
+    const sys = 'Voce escreve e-mails profissionais, cordiais e objetivos em portugues do Brasil para clientes de um pequeno negocio. Responda APENAS com o e-mail. A primeira linha deve ser exatamente "Assunto: <assunto>" e em seguida o corpo. Sem comentarios extras.';
+    const r = await askAI(aiPrompt, sys, 600);
+    setAiLoading(false);
+    if (!r.ok) { toast(r.error, 'error'); return; }
+    let txt = r.text;
+    const lines = txt.split('\n');
+    if (lines.length && lines[0].toLowerCase().indexOf('assunto:') === 0) {
+      setSubject(lines[0].slice(lines[0].indexOf(':') + 1).trim());
+      txt = lines.slice(1).join('\n').trim();
+    }
+    setBody(txt);
+    setTpl('custom');
+    toast('Texto gerado pela IA');
+  };
 
   const applyTpl = function(id) {
     setTpl(id);
@@ -30,6 +52,23 @@ export default function EmailView({ brand, toast }) {
     <div className="flex flex-col gap-6">
       <div><h2 className="page-header">E-mails</h2><p className="page-sub">Templates prontos e editor livre</p></div>
       <Card className="p-5 flex flex-col gap-4">
+        <div className="rounded-xl p-3.5 flex flex-col gap-2.5" style={{background: brandAlpha(brand.color, 0.06), border: '1px solid var(--border)'}}>
+          <div className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={brand.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/>
+            </svg>
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{color: brand.color}}>Escrever com IA</p>
+          </div>
+          <input value={aiPrompt} onChange={function(e) { setAiPrompt(e.target.value); }}
+            placeholder="Ex: cobrar a mensalidade do João com cordialidade"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm"
+            style={{background: 'var(--bg-input)', color: 'var(--text-main)'}}/>
+          <button onClick={writeWithAI} disabled={aiLoading || !aiPrompt.trim()}
+            className="text-sm font-semibold py-2.5 rounded-xl text-white transition hover:opacity-90 disabled:opacity-40"
+            style={{background: brand.color}}>
+            {aiLoading ? 'Escrevendo...' : 'Gerar e-mail com IA'}
+          </button>
+        </div>
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Template</p>
           <div className="flex gap-2 flex-wrap">

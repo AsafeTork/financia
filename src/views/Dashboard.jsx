@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card } from '../components/ui.jsx';
 import { KpiCard, BarChartSVG, UsageBar } from '../components/UsageBar.jsx';
 import { fmt, fmtDate, today, prevDays, brandAlpha } from '../lib/utils.js';
 import { PLAN_LIMITS, effectivePlan } from '../lib/constants.js';
+import { askAI } from '../lib/ai.js';
 
 export default function Dashboard({ tx, products, brand, onNav, planInfo, lossesCount }) {
   var cm = today().slice(0, 7);
@@ -50,6 +51,22 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
   var recent   = tx.slice().sort(function(a, b) { return b.date.localeCompare(a.date); }).slice(0, 8);
   var hour     = new Date().getHours();
   var greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+
+  var [aiText, setAiText]       = useState('');
+  var [aiLoading, setAiLoading] = useState(false);
+  var [aiErr, setAiErr]         = useState('');
+
+  var gerarInsights = async function() {
+    setAiLoading(true); setAiErr(''); setAiText('');
+    var resumo = 'Mes atual. Entradas: ' + fmt(ti) + '. Saidas: ' + fmt(to) + '. Lucro: ' + fmt(profitCurr) + '.';
+    if (profVar !== null) resumo += ' Variacao do lucro vs mes anterior: ' + profVar + '%.';
+    if (lowStock.length > 0) resumo += ' Produtos com estoque baixo: ' + lowStock.length + '.';
+    resumo += ' Total de produtos: ' + products.length + '. Lancamentos no mes: ' + mtx.length + '.';
+    var sys = 'Voce e um consultor financeiro para pequenos negocios no Brasil. Com base nos numeros, escreva no maximo 4 dicas curtas, praticas e diretas, em portugues do Brasil, sem jargao e sem repetir os numeros. Foque em acoes concretas. Use uma linha por dica comecando com "- ".';
+    var r = await askAI(resumo, sys, 400);
+    setAiLoading(false);
+    if (r.ok) setAiText(r.text); else setAiErr(r.error);
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -113,6 +130,32 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
           accentBar="#3b82f6"
           sub={di > 0 || dout > 0 ? ('+' + fmt(di) + ' / -' + fmt(dout)) : 'Sem movimento hoje'}/>
       </div>
+
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={brand.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+              <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/>
+            </svg>
+            <p className="text-sm font-semibold text-gray-800 truncate">Insights da IA</p>
+          </div>
+          <button onClick={gerarInsights} disabled={aiLoading}
+            className="text-xs font-semibold px-3 py-2 rounded-lg text-white transition hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+            style={{background: brand.color}}>
+            {aiLoading ? 'Analisando...' : (aiText ? 'Atualizar' : 'Gerar análise')}
+          </button>
+        </div>
+        {aiErr && <p className="text-xs text-red-500">{aiErr}</p>}
+        {!aiText && !aiErr && !aiLoading && <p className="text-xs text-gray-400 leading-relaxed">Receba dicas práticas baseadas nos seus números do mês.</p>}
+        {aiLoading && (
+          <div className="flex flex-col gap-2 mt-1">
+            <div className="skeleton" style={{height:10, width:'100%'}}/>
+            <div className="skeleton" style={{height:10, width:'85%'}}/>
+            <div className="skeleton" style={{height:10, width:'70%'}}/>
+          </div>
+        )}
+        {aiText && <div className="text-sm whitespace-pre-wrap leading-relaxed" style={{color:'var(--text-sub)'}}>{aiText}</div>}
+      </Card>
 
       {plan === 'free' && (
         <Card className="px-5 py-4 flex flex-col gap-3">
