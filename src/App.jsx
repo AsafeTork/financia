@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { brandAlpha, deriveCores } from './lib/utils.js';
 import { INIT_BRAND, INIT_PLAN, atLimit, limitFor } from './lib/constants.js';
 import { useTx } from './hooks/useTx.js';
@@ -12,13 +12,14 @@ import Toast from './components/Toast.jsx';
 import Offline from './components/Offline.jsx';
 import Confirm from './components/Confirm.jsx';
 import SyncBadge from './components/SyncBadge.jsx';
-import Dashboard from './views/Dashboard.jsx';
-import TxView from './views/TxView.jsx';
-import InventoryView from './views/InventoryView.jsx';
-import ReportView from './views/ReportView.jsx';
-import EmailView from './views/EmailView.jsx';
-import SettingsView from './views/SettingsView.jsx';
 import Login from './views/Login.jsx';
+
+const Dashboard     = lazy(function() { return import('./views/Dashboard.jsx'); });
+const TxView        = lazy(function() { return import('./views/TxView.jsx'); });
+const InventoryView = lazy(function() { return import('./views/InventoryView.jsx'); });
+const ReportView    = lazy(function() { return import('./views/ReportView.jsx'); });
+const EmailView     = lazy(function() { return import('./views/EmailView.jsx'); });
+const SettingsView  = lazy(function() { return import('./views/SettingsView.jsx'); });
 
 const VALID_VIEWS = ['dashboard','income','expense','inventory','email','report','settings'];
 const hashView = function() { const h = window.location.hash.replace('#',''); return VALID_VIEWS.includes(h) ? h : 'dashboard'; };
@@ -142,7 +143,11 @@ export default function App() {
       <Sidebar view={view} onNav={navTo} brand={brand} open={sidebarOpen} isAdmin={isAdminDB} session={session} onClose={function() { setSidebarOpen(false); }}/>
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         <Header brand={brand} syncStatus={syncStatus} onMenuOpen={function() { setSidebarOpen(true); }}/>
-        <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto pb-24 lg:pb-8">{views[view]}</main>
+        <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto pb-24 lg:pb-8">
+          <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-2 border-gray-200 rounded-full animate-spin" style={{borderTopColor:'var(--brand)'}}/></div>}>
+            {views[view]}
+          </Suspense>
+        </main>
       </div>
       <BottomNav view={view} onNav={navTo} brand={brand}/>
       <Toast toasts={toasts} onDismiss={dismissToast}/>
