@@ -67,6 +67,8 @@ export default function App() {
     el.style.setProperty('--brand-soft', brandAlpha(primary, 0.08));
     el.style.setProperty('--brand-secondary', secondary);
     el.style.setProperty('--brand-accent', accent);
+    el.style.setProperty('--brand-accent-soft', brandAlpha(accent, 0.12));
+    el.style.setProperty('--brand-grad', 'linear-gradient(135deg, ' + primary + ' 0%, ' + accent + ' 100%)');
     el.setAttribute('data-theme', b.theme || 'light');
   }, []);
   useEffect(function() { applyBrandVars(brand); }, [brand]);

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { sb } from '../lib/supabase.js';
 import { hexToRgb, luminance, deriveCores, lightenHex } from '../lib/utils.js';
 import { THEME_PRESETS } from '../lib/constants.js';
+import { gerarPaleta } from '../lib/ai.js';
 
 function PreviewPaleta({ primary, secondary, accent }) {
   var lum = luminance(primary || '#002f59');
@@ -74,7 +75,24 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
   var [extractedColors, setExtractedColors] = useState([]);
   var [logoUrl, setLogoUrl]          = useState(client.logo_url || null);
   var [uploading, setUploading]      = useState(false);
+  var [aiSegment, setAiSegment]      = useState(client.segment || '');
+  var [aiLoading, setAiLoading]      = useState(false);
+  var [aiRationale, setAiRationale]  = useState('');
   var fileRef = useRef();
+
+  var runAI = async function() {
+    setAiLoading(true);
+    var cores = [color].concat(extractedColors).filter(Boolean);
+    var res = await gerarPaleta({ colors: cores, segment: aiSegment, name: name });
+    setAiLoading(false);
+    if (!res.ok) { toast(res.error, 'error'); return; }
+    setColorRaw(res.palette.primary);
+    setSecondary(res.palette.secondary || '');
+    setAccent(res.palette.accent || '');
+    if (res.palette.theme) setTheme(res.palette.theme);
+    setAiRationale(res.rationale || '');
+    toast('Paleta gerada pela IA!');
+  };
 
   var derived = deriveCores(color);
   var effectiveSecondary = colorSecondary || derived.secondary;
@@ -260,6 +278,26 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             )}
           </div>
 
+          {/* Personalizar com IA */}
+          <div className="flex flex-col gap-2 rounded-xl p-3" style={{border:'1px solid var(--brand-soft)', background:'var(--brand-soft)'}}>
+            <div className="flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16z"/>
+              </svg>
+              <p className="text-xs font-semibold text-gray-700">Personalizar com IA</p>
+            </div>
+            <p className="text-xs text-gray-500">Diga o ramo da empresa. A IA cria uma paleta harmônica com as 3 cores bem distribuídas (usa a logo/cor atual se houver).</p>
+            <input value={aiSegment} onChange={function(e) { setAiSegment(e.target.value); }}
+              placeholder="Ex: padaria, oficina, salão de beleza"
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gray-400 bg-white"/>
+            <button onClick={runAI} disabled={aiLoading}
+              className="text-sm font-semibold py-2.5 rounded-xl text-white transition hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+              style={{background: color}}>
+              {aiLoading ? 'Gerando paleta...' : 'Gerar paleta com IA'}
+            </button>
+            {aiRationale && <p className="text-xs italic text-gray-500">"{aiRationale}"</p>}
+          </div>
+
           {/* Temas prontos por segmento */}
           <div className="flex flex-col gap-2">
             <div>
@@ -355,7 +393,7 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
               <button type="button" onClick={function() { setPlan('pro'); }}
                 className={'flex-1 py-2 rounded-xl text-sm font-semibold border ' + (plan === 'pro' ? 'text-white' : 'text-gray-600 bg-white border-gray-200')}
                 style={plan === 'pro' ? {background: color, borderColor: color} : {}}>
-                Pro (R$ 70/mês)
+                Pro
               </button>
             </div>
             {client.plan_activated_by && plan === 'pro' && <p className="text-xs text-gray-400">Ativado por: {client.plan_activated_by}</p>}

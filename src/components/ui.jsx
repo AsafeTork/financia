@@ -6,7 +6,7 @@ export const Card = function({ children, className, hover, variant, accent, colo
   var shadow = variant === 'flat' ? 'none' : variant === 'raised' ? 'var(--shadow-md)' : 'var(--shadow-sm)';
   return (
     <div className={base + (className || '')} style={{position:'relative', overflow:'hidden', background:'var(--bg-card)', border:'1px solid var(--border)', boxShadow: shadow}}>
-      {accent && <div style={{position:'absolute', top:0, left:0, right:0, height:3, background: color || 'var(--brand)'}}/>}
+      {accent && <div style={{position:'absolute', top:0, left:0, right:0, height:3, background: color || 'var(--brand-grad, var(--brand))'}}/>}
       {children}
     </div>
   );
@@ -183,7 +183,7 @@ export const PageHead = function({ icon, title, sub, right, color }) {
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-start gap-3 min-w-0">
         {icon && (
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{background:'var(--brand-soft)'}}>
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{background:'linear-gradient(135deg, var(--brand-soft), var(--brand-accent-soft, var(--brand-soft)))'}}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={icon}/></svg>
           </div>
         )}

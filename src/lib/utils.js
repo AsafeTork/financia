@@ -30,11 +30,55 @@ export const lightenHex = function(hex, factor) {
   var b = Math.round(c.b + (255 - c.b) * factor);
   return '#' + [r, g, b].map(function(v) { return v.toString(16).padStart(2, '0'); }).join('');
 };
+var clamp01 = function(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); };
+
+export const hexToHsl = function(hex) {
+  var c = hexToRgb(hex);
+  var r = c.r / 255, g = c.g / 255, b = c.b / 255;
+  var max = Math.max(r, g, b), min = Math.min(r, g, b);
+  var h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    var d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h = h / 6;
+  }
+  return { h: h * 360, s: s, l: l };
+};
+
+export const hslToHex = function(h, s, l) {
+  h = ((h % 360) + 360) % 360 / 360;
+  var r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    var hue2rgb = function(p, q, t) {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    var p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  return '#' + [r, g, b].map(function(v) { return Math.round(v * 255).toString(16).padStart(2, '0'); }).join('');
+};
+
+// Gera paleta com cores REALMENTE distintas a partir da primaria:
+// - secondary: tom suave da mesma cor (fundos, badges)
+// - accent: cor de contraste (hue girado ~150graus) vibrante (CTAs, graficos, destaques)
 export const deriveCores = function(primary) {
-  return {
-    secondary: lightenHex(primary || '#002f59', 0.78),
-    accent:    lightenHex(primary || '#002f59', 0.92),
-  };
+  var p = primary || '#002f59';
+  var hsl = hexToHsl(p);
+  var secondary = hslToHex(hsl.h, clamp01(hsl.s * 0.55, 0.12, 0.5), 0.92);
+  var accent = hslToHex(hsl.h + 150, clamp01(hsl.s + 0.15, 0.5, 0.85), clamp01(hsl.l < 0.45 ? 0.52 : hsl.l - 0.05, 0.42, 0.6));
+  return { secondary: secondary, accent: accent };
 };
 
 const PW_LEVELS = [
