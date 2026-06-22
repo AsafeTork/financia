@@ -2,8 +2,8 @@
 import { Card } from '../components/ui.jsx';
 import { sb } from '../lib/supabase.js';
 import { triggerApkBuild, fetchClients, deleteClient, clearClientData } from '../lib/db.js';
-import { genPwd, luminance, lightenHex } from '../lib/utils.js';
-import { GH_REPO, effectivePlan } from '../lib/constants.js';
+import { genPwd, luminance, lightenHex, fmtDate } from '../lib/utils.js';
+import { GH_REPO, effectivePlan, PRICING_PLANS } from '../lib/constants.js';
 import ClientEditModal from './ClientEditModal.jsx';
 
 export default function AdminPanel({ toast, confirm, session }) {
@@ -19,10 +19,31 @@ export default function AdminPanel({ toast, confirm, session }) {
   const [editClient, setEditClient] = useState(null);
   const [copied, setCopied] = useState(null);
   const [clearTarget, setClearTarget] = useState(null);
+  const [search, setSearch] = useState('');
+  const [planFilter, setPlanFilter] = useState('all');
   const logoRef = useRef();
 
   const reload = function() { fetchClients().then(function(c) { setClients(c); setLoadingCli(false); }); };
   useEffect(function() { reload(); }, [done]);
+
+  const proPrice = (function() { var p = PRICING_PLANS.find(function(x) { return x.id === 'pro'; }); return p ? p.price : 49.9; })();
+  const nowMonth = new Date().toISOString().slice(0, 7);
+  const stats = clients.reduce(function(a, c) {
+    var isPro = effectivePlan(c) === 'pro';
+    a.total += 1;
+    if (isPro) a.pro += 1; else a.free += 1;
+    if (c.created_at && String(c.created_at).slice(0, 7) === nowMonth) a.novos += 1;
+    return a;
+  }, { total: 0, pro: 0, free: 0, novos: 0 });
+  var mrr = stats.pro * proPrice;
+  var moneyBR = function(v) { return 'R$ ' + v.toFixed(2).replace('.', ','); };
+
+  const visibleClients = clients.filter(function(c) {
+    if (planFilter !== 'all' && effectivePlan(c) !== planFilter) return false;
+    if (!search.trim()) return true;
+    var q = search.toLowerCase();
+    return [(c.name || ''), (c.email || ''), (c.user_id || '')].some(function(v) { return v.toLowerCase().indexOf(q) !== -1; });
+  });
 
   const extractColors = function(img) {
     try {
@@ -128,14 +149,43 @@ export default function AdminPanel({ toast, confirm, session }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <p className="text-sm font-bold text-gray-800 mb-2">Clientes cadastrados</p>
+        <p className="text-sm font-bold text-gray-800 mb-3">Visão geral</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+          {[['Clientes', String(stats.total)], ['Assinantes Pro', String(stats.pro)], ['No plano Free', String(stats.free)], ['Receita/mês', moneyBR(mrr)]].map(function(kv) {
+            return (
+              <div key={kv[0]} className="rounded-xl p-3" style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
+                <p className="text-xs" style={{color:'var(--text-muted)'}}>{kv[0]}</p>
+                <p className="text-lg font-extrabold tabular mt-0.5" style={{color:'var(--text-main)'}}>{kv[1]}</p>
+              </div>
+            );
+          })}
+        </div>
+        {stats.novos > 0 && <p className="text-xs mb-3" style={{color:'var(--text-sub)'}}>{stats.novos} novo(s) cliente(s) neste mês</p>}
+
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-bold text-gray-800">Clientes</p>
+          <span className="text-xs" style={{color:'var(--text-muted)'}}>{visibleClients.length} de {clients.length}</span>
+        </div>
+        <div className="relative mb-2">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="Buscar por nome, email ou ID..." className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
+        </div>
+        <div className="flex gap-1.5 mb-3">
+          {[['all','Todos'],['pro','Pro'],['free','Free']].map(function(f) {
+            var active = planFilter === f[0];
+            return <button key={f[0]} onClick={function() { setPlanFilter(f[0]); }} className={'text-xs font-semibold px-3 py-1.5 rounded-lg border transition ' + (active ? 'text-white' : 'text-gray-500 border-gray-200 hover:bg-gray-50')} style={active ? {background:'#002f59', borderColor:'#002f59'} : {}}>{f[1]}</button>;
+          })}
+        </div>
+
         {loadingCli
           ? <p className="text-xs text-gray-400">Carregando...</p>
           : clients.length === 0
             ? <p className="text-xs text-gray-400">Nenhum cliente ainda.</p>
-            : (
+            : visibleClients.length === 0
+              ? <p className="text-xs text-gray-400 py-4 text-center">Nenhum cliente encontrado.</p>
+              : (
               <div className="flex flex-col gap-2">
-                {clients.map(function(c) {
+                {visibleClients.map(function(c) {
                   return (
                     <div key={c.user_id} className="rounded-xl border border-gray-100 p-3 flex flex-col gap-2.5 bg-white">
                       <div className="flex items-center gap-3 min-w-0">
@@ -152,7 +202,7 @@ export default function AdminPanel({ toast, confirm, session }) {
                               {effectivePlan(c) === 'pro' ? 'PRO' : 'FREE'}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0, 8)}...</p>
+                          <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0, 8)}{c.updated_at ? ' · ativo ' + fmtDate(String(c.updated_at).slice(0, 10)) : ''}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-1.5">
