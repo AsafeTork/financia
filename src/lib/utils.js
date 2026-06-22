@@ -36,3 +36,38 @@ export const deriveCores = function(primary) {
     accent:    lightenHex(primary || '#002f59', 0.92),
   };
 };
+
+const PW_LEVELS = [
+  { label: 'Muito fraca', pct: 20, color: '#ef4444' },
+  { label: 'Fraca',       pct: 40, color: '#f97316' },
+  { label: 'Razoável',    pct: 62, color: '#eab308' },
+  { label: 'Boa',         pct: 82, color: '#22c55e' },
+  { label: 'Forte',       pct: 100, color: '#0f9d6c' },
+];
+
+export const passwordStrength = function(pw) {
+  if (!pw) return { score: 0, label: '', pct: 0, color: '#e5e7eb' };
+  let s = 0;
+  if (pw.length >= 8) s += 1;
+  if (pw.length >= 12) s += 1;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) s += 1;
+  if (/\d/.test(pw)) s += 1;
+  if (/[^a-zA-Z0-9]/.test(pw)) s += 1;
+  let idx = s - 1;
+  if (idx < 0) idx = 0;
+  if (idx > 4) idx = 4;
+  return Object.assign({ score: s }, PW_LEVELS[idx]);
+};
+
+export const validPhone = function(s) {
+  const digits = String(s || '').replace(/\D/g, '');
+  return digits.length >= 10 && digits.length <= 13;
+};
+
+export const maskPhone = function(s) {
+  let d = String(s || '').replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 2) return d.length ? '(' + d : d;
+  if (d.length <= 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2);
+  if (d.length <= 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
+  return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+};

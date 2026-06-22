@@ -4,6 +4,21 @@ export var signIn = async function(email, pass) {
   return sb.auth.signInWithPassword({email: email, password: pass});
 };
 
+export var signUp = async function(email, pass, meta) {
+  return sb.auth.signUp({
+    email: email,
+    password: pass,
+    options: { data: meta || {}, emailRedirectTo: window.location.origin },
+  });
+};
+
+export var signInWithGoogle = async function() {
+  return sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin },
+  });
+};
+
 export var sendPasswordReset = async function(email) {
   return sb.auth.resetPasswordForEmail(email, {redirectTo: window.location.origin});
 };
