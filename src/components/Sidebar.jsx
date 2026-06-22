@@ -11,12 +11,11 @@ export default function Sidebar({ view, onNav, brand, open, onClose, isAdmin, se
     var active = view === item.key;
     return (
       <button key={item.key} onClick={function() { onNav(item.key); onClose(); }}
-        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition w-full text-left relative"
-        style={active
-          ? {background: 'rgba(255,255,255,0.12)', color: 'white', borderLeft: '3px solid white', paddingLeft: 9}
-          : {color: 'rgba(255,255,255,0.5)', paddingLeft: 12}}>
+        className={'relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition w-full text-left ' + (active ? 'text-white' : 'text-white/55 hover:text-white hover:bg-white/5')}
+        style={active ? {background: 'rgba(255,255,255,0.14)'} : {}}>
+        {active && <span className="absolute left-0 top-1/2 h-5 w-1 rounded-r-full bg-white" style={{transform:'translateY(-50%)'}}/>}
         <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 2 : 1.5} d={item.d}/>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 2 : 1.6} d={item.d}/>
         </svg>
         <span className="truncate">{item.label}</span>
       </button>

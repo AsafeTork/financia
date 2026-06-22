@@ -1,4 +1,5 @@
 import React from 'react';
+import { brandAlpha } from '../lib/utils.js';
 
 var ITEMS = [
   { key: 'dashboard', label: 'Início',    d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -17,16 +18,18 @@ export default function BottomNav({ view, onNav, brand }) {
           var active = view === item.key;
           return (
             <button key={item.key} onClick={function() { onNav(item.key); }}
-              className="relative flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors min-w-0 pt-1"
+              className="relative flex-1 flex flex-col items-center justify-center gap-1 transition-colors min-w-0 pt-1"
               style={{color: active ? brand.color : '#94a3b8'}}>
               {active && (
-                <div className="absolute top-0 left-1/2 w-5 h-0.5 rounded-b-full" style={{background: brand.color, transform:'translateX(-50%)'}}/>
+                <div className="absolute top-0 left-1/2 w-8 h-0.5 rounded-b-full" style={{background: brand.color, transform:'translateX(-50%)'}}/>
               )}
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-                <path d={item.d}/>
-              </svg>
-              <span style={{fontSize: 10, fontWeight: active ? 600 : 400, lineHeight: '14px'}}>{item.label}</span>
+              <div className="flex items-center justify-center rounded-xl transition-all" style={{width:36, height:26, background: active ? brandAlpha(brand.color, 0.12) : 'transparent'}}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={active ? 2.2 : 1.6} strokeLinecap="round" strokeLinejoin="round">
+                  <path d={item.d}/>
+                </svg>
+              </div>
+              <span style={{fontSize: 10, fontWeight: active ? 600 : 400, lineHeight: '12px'}}>{item.label}</span>
             </button>
           );
         })}
