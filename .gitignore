@@ -6,3 +6,4 @@ dist/
 electron/icon.ico
 release/
 *.exe
+search.py
