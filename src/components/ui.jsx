@@ -174,3 +174,26 @@ export const DelBtn = function({ onClick }) {
     </button>
   );
 };
+
+export const Skeleton = function({ w, h, r, className }) {
+  return <div className={'skeleton ' + (className || '')} style={{ width: w || '100%', height: h || 12, borderRadius: r || 8 }} />;
+};
+
+// Esqueleto de pagina mostrado enquanto a view carrega (sensacao de velocidade).
+export const PageSkeleton = function() {
+  return (
+    <div className="flex flex-col gap-5" aria-hidden="true">
+      <div className="flex flex-col gap-2">
+        <Skeleton w="45%" h={26} r={10} />
+        <Skeleton w="28%" h={12} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {[0, 1, 2, 3].map(function(i) { return <Skeleton key={i} h={88} r={16} />; })}
+      </div>
+      <Skeleton h={180} r={16} />
+      <div className="flex flex-col gap-2">
+        {[0, 1, 2].map(function(i) { return <Skeleton key={i} h={56} r={12} />; })}
+      </div>
+    </div>
+  );
+};
