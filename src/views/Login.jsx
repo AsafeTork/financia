@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Inp, Spin } from '../components/ui.jsx';
-import { sb } from '../lib/supabase.js';
+import { signIn, sendPasswordReset } from '../lib/auth.js';
 
 export default function Login({ brand }) {
   var [email, setEmail]     = useState('');
@@ -14,7 +14,7 @@ export default function Login({ brand }) {
   var resetPassword = async function() {
     if (!resetEmail) return;
     setLoading(true); setErr('');
-    var res = await sb.auth.resetPasswordForEmail(resetEmail, { redirectTo: window.location.origin });
+    var res = await sendPasswordReset(resetEmail);
     setLoading(false);
     if (res.error) setErr('Erro ao enviar. Verifique o e-mail.');
     else setResetSent(true);
@@ -29,7 +29,7 @@ export default function Login({ brand }) {
     if (!email || !pass) return;
     setLoading(true); setErr('');
     try {
-      var res = await sb.auth.signInWithPassword({email:email, password:pass});
+      var res = await signIn(email, pass);
       if (res.error) {
         if (res.error.message.indexOf('Invalid') !== -1) setErr('E-mail ou senha incorretos.');
         else setErr('Erro ao entrar. Tente novamente.');
@@ -90,15 +90,14 @@ export default function Login({ brand }) {
             <p className="text-sm text-gray-500 mt-1">Entre com seu e-mail e senha para continuar</p>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <form onSubmit={function(e) { e.preventDefault(); if (!resetMode && !resetSent) { login(); } else if (resetMode && !resetSent) { resetPassword(); } }} className="flex flex-col gap-4">
             <Inp label="E-mail" type="email" value={email}
               onChange={function(e) { setEmail(e.target.value); }}
               placeholder="seu@email.com"
               error={err && err.indexOf('E-mail') !== -1 ? err : ''}/>
             <Inp label="Senha" type="password" value={pass}
               onChange={function(e) { setPass(e.target.value); }}
-              placeholder="Sua senha"
-              onKeyDown={function(e) { if (e.key === 'Enter') login(); }}/>
+              placeholder="Sua senha"/>
             {err && (
               <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{background:'#fef2f2', border:'1px solid #fecaca'}}>
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="#ef4444" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
@@ -106,8 +105,8 @@ export default function Login({ brand }) {
               </div>
             )}
             {!resetMode && (
-          <button onClick={function() { setResetMode(true); setErr(''); }}
-            className="text-xs text-gray-400 hover:text-gray-600 text-right self-end -mt-2 mb-1">
+          <button type="button" onClick={function() { setResetMode(true); setErr(''); }}
+            className="text-xs text-gray-400 hover:text-gray-600 text-right self-end -mt-2 mb-1 min-h-[44px] px-1">
             Esqueceu a senha?
           </button>
         )}
@@ -119,12 +118,12 @@ export default function Login({ brand }) {
               placeholder="Seu e-mail" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm"/>
             {err && <p className="text-xs text-red-500">{err}</p>}
             <div className="flex gap-2">
-              <button onClick={function() { setResetMode(false); setErr(''); }}
-                className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600">
+              <button type="button" onClick={function() { setResetMode(false); setErr(''); }}
+                className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-600 min-h-[44px]">
                 Voltar
               </button>
-              <button onClick={resetPassword} disabled={loading || !resetEmail}
-                className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-40"
+              <button disabled={loading || !resetEmail}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40 min-h-[44px]"
                 style={{background:'var(--brand,#002f59)'}}>
                 {loading ? 'Enviando...' : 'Enviar link'}
               </button>
@@ -135,18 +134,18 @@ export default function Login({ brand }) {
           <div className="p-4 rounded-xl bg-green-50 border border-green-200 flex flex-col gap-2 text-center">
             <p className="text-sm font-semibold text-green-700">Link enviado!</p>
             <p className="text-xs text-green-600">Verifique seu e-mail para redefinir a senha.</p>
-            <button onClick={function() { setResetMode(false); setResetSent(false); setErr(''); }}
+            <button type="button" onClick={function() { setResetMode(false); setResetSent(false); setErr(''); }}
               className="text-xs text-gray-500 underline mt-1">Voltar ao login</button>
           </div>
         )}
         {!resetMode && !resetSent && (
-          <button onClick={login} disabled={loading || !email || !pass}
+          <button disabled={loading || !email || !pass}
             className="w-full text-white rounded-xl py-3.5 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40 transition hover:opacity-90"
             style={{background: brandColor, marginTop:4}}>
             {loading ? <Spin white/> : 'Entrar'}
           </button>
         )}
-          </div>
+          </form>
 
           <p className="text-center text-xs mt-10 text-gray-300">{brandName} . gestao financeira</p>
         </div>

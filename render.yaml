@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: gestao-financeira
+    name: financia
     env: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist

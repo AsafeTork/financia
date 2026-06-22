@@ -10,7 +10,7 @@
             android:exported="true">
             <meta-data
                 android:name="android.support.customtabs.trusted.DEFAULT_URL"
-                android:value="https://gestao-financeira-7heu.onrender.com"/>
+                android:value="https://financia-gestao.onrender.com"/>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -20,7 +20,7 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https"
-                      android:host="gestao-financeira-7heu.onrender.com"/>
+                      android:host="financia-gestao.onrender.com"/>
             </intent-filter>
         </activity>
         <service android:name="com.google.androidbrowserhelper.trusted.DelegationService"

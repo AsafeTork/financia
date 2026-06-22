@@ -10,13 +10,13 @@ export default function UpgradeModal({ kind, limit, onClose }) {
           <p className="font-bold text-gray-800">Limite do plano gratuito</p>
         </div>
         <p className="text-sm text-gray-600 leading-relaxed">
-          Voce atingiu o limite de <b>{limit} {PLAN_KIND_LABEL[kind]}</b> do plano gratuito.
+          Você atingiu o limite de <b>{limit} {PLAN_KIND_LABEL[kind]}</b> do plano gratuito.
         </p>
         <div className="rounded-xl p-3 flex flex-col gap-1.5" style={{background:'#f0fdf4',border:'1px solid #bbf7d0'}}>
-          <p className="text-xs font-bold text-gray-700">Plano Pro — R$ 70/mes</p>
-          <p className="text-xs text-gray-600">· Transacoes, produtos e perdas ilimitados</p>
-          <p className="text-xs text-gray-600">· Sincronizacao entre dispositivos</p>
-          <p className="text-xs text-gray-600">· Backup automatico na nuvem</p>
+          <p className="text-xs font-bold text-gray-700">Plano Pro — R$ 70/mês</p>
+          <p className="text-xs text-gray-600">· Transações, produtos e perdas ilimitados</p>
+          <p className="text-xs text-gray-600">· Sincronização entre dispositivos</p>
+          <p className="text-xs text-gray-600">· Backup automático na nuvem</p>
           <p className="text-xs text-gray-600">· APK personalizado com sua marca</p>
         </div>
         <a href="https://wa.me/5591992086829?text=Quero%20ativar%20o%20plano%20Pro%20do%20Financia"
@@ -30,7 +30,7 @@ export default function UpgradeModal({ kind, limit, onClose }) {
           Falar no WhatsApp
         </a>
         <button onClick={onClose} className="w-full rounded-xl py-2 text-sm text-gray-500 border border-gray-200">
-          Agora nao
+          Agora não
         </button>
       </div>
     </div>

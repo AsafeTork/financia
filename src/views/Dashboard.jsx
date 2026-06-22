@@ -41,9 +41,13 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
   }, [tx]);
 
   var lowStock = products.filter(function(p) { return p.stock != null && p.stock <= 5; });
+  var atAnyLimit = plan === 'free' && (
+    tx.length >= PLAN_LIMITS.free.transactions ||
+    products.length >= PLAN_LIMITS.free.products ||
+    (lossesCount || 0) >= PLAN_LIMITS.free.losses
+  );
   var recent   = tx.slice().sort(function(a, b) { return b.date.localeCompare(a.date); }).slice(0, 8);
   var plan     = effectivePlan(planInfo);
-  var companyName = (brand && brand.name) ? brand.name : '';
 
   return (
     <div className="flex flex-col gap-5">
@@ -81,13 +85,13 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <KpiCard label="Entradas do mes"
+        <KpiCard label="Entradas do mês"
           value={fmt(ti)}
           color="#22c55e"
           accentBar="#22c55e"
           variation={inVar}
           sub={inVar === null ? 'Sem dados anteriores' : undefined}/>
-        <KpiCard label="Saidas do mes"
+        <KpiCard label="Saídas do mês"
           value={fmt(to)}
           color="#ef4444"
           accentBar="#ef4444"
@@ -112,16 +116,31 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Plano gratuito</p>
             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full text-white" style={{background: brand.color}}>FREE</span>
           </div>
-          <UsageBar label="Transacoes" used={tx.length} limit={PLAN_LIMITS.free.transactions} color={brand.color} accentColor={brand.color}/>
+          <UsageBar label="Transações" used={tx.length} limit={PLAN_LIMITS.free.transactions} color={brand.color} accentColor={brand.color}/>
           <UsageBar label="Produtos"   used={products.length} limit={PLAN_LIMITS.free.products} color={brand.color} accentColor={brand.color}/>
           <UsageBar label="Perdas"     used={lossesCount || 0} limit={PLAN_LIMITS.free.losses} color={brand.color} accentColor={brand.color}/>
-          <p className="text-xs text-gray-400">Upgrade para Pro: registros ilimitados.</p>
+          {atAnyLimit && (
+            <div className="flex items-center gap-2 rounded-lg px-3 py-2.5 border border-red-200" style={{background:'rgba(239,68,68,0.06)'}}>
+              <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"/>
+              <p className="text-xs font-semibold text-red-700">Plano gratuito esgotado — novos registros bloqueados</p>
+            </div>
+          )}
+          <a href="https://wa.me/5591992086829?text=Quero%20ativar%20o%20plano%20Pro%20do%20Financia"
+            target="_blank" rel="noreferrer"
+            className="flex items-center justify-center gap-2 text-sm font-semibold text-white rounded-xl py-3 min-h-[44px] transition hover:opacity-90"
+            style={{background:'#25d366'}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.115.554 4.103 1.523 5.83L.057 23.25l5.565-1.457A11.95 11.95 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.876 0-3.63-.487-5.147-1.342l-.369-.217-3.302.866.878-3.21-.24-.38A9.954 9.954 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+            </svg>
+            Ativar plano Pro via WhatsApp
+          </a>
         </Card>
       )}
 
       <Card className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-semibold text-gray-800">Ultimos 7 dias</p>
+          <p className="text-sm font-semibold text-gray-800">Últimos 7 dias</p>
           <div className="flex gap-3 text-xs text-gray-400">
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background: brand.color}}/>
@@ -129,7 +148,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-red-200 inline-block"/>
-              Saidas
+              Saídas
             </span>
           </div>
         </div>
@@ -142,10 +161,10 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
                 <rect x="34" y="15" width="12" height="27" rx="3" fill={brandAlpha(brand.color, 0.17)}/>
                 <rect x="2" y="42" width="44" height="2" rx="1" fill={brandAlpha(brand.color, 0.1)}/>
               </svg>
-              <p className="text-sm font-semibold text-gray-700">Nenhuma movimentacao ainda</p>
+              <p className="text-sm font-semibold text-gray-700">Nenhuma movimentação ainda</p>
               <p className="text-xs text-gray-400">Registre sua primeira venda para ver o resumo aqui.</p>
               <button onClick={function() { onNav('income'); }}
-                className="text-xs font-semibold px-5 py-2.5 rounded-xl text-white transition hover:opacity-90"
+                className="text-xs font-semibold px-5 py-3 rounded-xl text-white transition hover:opacity-90 min-h-[44px]"
                 style={{background: brand.color}}>
                 Registrar primeira venda
               </button>
@@ -157,10 +176,10 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
 
       <Card>
         <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-          <p className="text-sm font-semibold text-gray-800">Movimentacoes recentes</p>
+          <p className="text-sm font-semibold text-gray-800">Movimentações recentes</p>
           {recent.length > 0 && (
             <button onClick={function() { onNav('report'); }} className="text-xs text-gray-400 hover:text-gray-600 font-medium">
-              Ver relatorio
+              Ver relatório
             </button>
           )}
         </div>
@@ -170,10 +189,10 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
               </svg>
-              <p className="text-sm text-gray-400">Nenhuma movimentacao</p>
+              <p className="text-sm text-gray-400">Nenhuma movimentação</p>
               <div className="flex gap-3">
-                <button onClick={function() { onNav('income'); }} className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white" style={{background:'#22c55e'}}>+ Venda</button>
-                <button onClick={function() { onNav('expense'); }} className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-red-400">+ Despesa</button>
+                <button onClick={function() { onNav('income'); }} className="text-xs font-semibold px-4 py-3 rounded-lg text-white min-h-[44px]" style={{background:'#22c55e'}}>+ Venda</button>
+                <button onClick={function() { onNav('expense'); }} className="text-xs font-semibold px-4 py-3 rounded-lg text-white bg-red-400 min-h-[44px]">+ Despesa</button>
               </div>
             </div>
           )

@@ -1,7 +1,6 @@
 ﻿import React, { useState, useRef } from 'react';
 import { Card, Inp, Spin } from '../components/ui.jsx';
-import LogoImg from '../components/LogoImg.jsx';
-import { sb } from '../lib/supabase.js';
+import { updatePassword, uploadLogo as uploadToStorage, signOut as doSignOut } from '../lib/auth.js';
 import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
 
@@ -12,7 +11,6 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
   var [pwForm, setPwForm] = useState({newPw:'', confirm:''});
   var [pwSaving, setPwSaving] = useState(false);
   var [uploading, setUploading] = useState(false);
-  var [extractedColors, setExtractedColors] = useState([]);
   var fileRef = useRef();
   React.useEffect(function() {
     if (isAdmin && tab === 'security') {
@@ -26,7 +24,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
     if (pwForm.newPw !== pwForm.confirm) { toast('As senhas não coincidem.', 'error'); return; }
     if (pwForm.newPw.length < 8) { toast('Senha deve ter ao menos 8 caracteres.', 'error'); return; }
     setPwSaving(true);
-    const res = await sb.auth.updateUser({password:pwForm.newPw});
+    const res = await updatePassword(pwForm.newPw);
     if (res.error) toast('Erro ao alterar senha.', 'error');
     else { toast('Senha alterada!'); setPwForm({newPw:'', confirm:''}); }
     setPwSaving(false);
@@ -56,10 +54,9 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
     setUploading(true);
     const ext = file.type === 'image/webp' ? 'webp' : rawFile.name.split('.').pop();
     const path = session.user.id + '/logo.' + ext;
-    const upRes = await sb.storage.from('logos').upload(path, file, {upsert:true});
-    if (upRes.error) { toast('Erro no upload.', 'error'); setUploading(false); return; }
-    const urlRes = sb.storage.from('logos').getPublicUrl(path);
-    const url = urlRes.data.publicUrl + '?t=' + Date.now();
+    var result = await uploadToStorage(path, file);
+    if (result.error) { toast('Erro no upload.', 'error'); setUploading(false); return; }
+    var url = result.url + '?t=' + Date.now();
     setForm(function(f) { return Object.assign({}, f, {logo_url:url}); });
     const imgEl = new Image(); imgEl.crossOrigin = 'anonymous';
     imgEl.onload = function() {
@@ -75,7 +72,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
         }
         const hexes = Object.entries(bk).sort(function(a, b2) { return b2[1] - a[1]; }).slice(0, 6)
           .map(function(pair) { const parts = pair[0].split(',').map(Number); return '#' + parts.map(function(v) { return v.toString(16).padStart(2,'0'); }).join(''); });
-        if (hexes.length) { setExtractedColors(hexes); setForm(function(f) { return Object.assign({}, f, {color:hexes[0]}); }); }
+        if (hexes.length) { setForm(function(f) { return Object.assign({}, f, {color:hexes[0]}); }); }
       } catch(_) {}
     };
     imgEl.src = url;
@@ -116,7 +113,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
           </div>
           <div className="border-t border-gray-100 pt-4">
             <p className="text-sm font-semibold text-gray-800 mb-2">Segurança do sistema</p>
-            {['Dados criptografados no Supabase','Cada usuario acessa apenas seus dados (RLS)','Conexao sempre via HTTPS','Sessao expira automaticamente','Nunca compartilhe sua senha'].map(function(s, i) {
+            {['Dados criptografados no Supabase','Cada usuário acessa apenas seus dados (RLS)','Conexão sempre via HTTPS','Sessão expira automaticamente','Nunca compartilhe sua senha'].map(function(s, i) {
               return (
                 <div key={i} className="flex items-center gap-2.5 mb-2">
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{background:'#dcfce7'}}>
@@ -133,13 +130,16 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
       {tab === 'account' && (
         <Card className="p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold" style={{background:brand.color}}>
-              {session && session.user && session.user.email ? session.user.email[0].toUpperCase() : 'U'}
+            <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden" style={{background:brand.color}}>
+              {brand.logo_url
+                ? <img src={brand.logo_url} alt="logo" className="w-full h-full object-cover"/>
+                : <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">{brand.name ? brand.name[0].toUpperCase() : (session && session.user && session.user.email ? session.user.email[0].toUpperCase() : 'U')}</div>
+              }
             </div>
-            <div><p className="text-sm font-semibold text-gray-800">{session && session.user ? session.user.email : ''}</p><p className="text-xs text-gray-400">Usuário ativo</p></div>
+            <div><p className="text-sm font-semibold text-gray-800">{brand.name || (session && session.user ? session.user.email : '')}</p><p className="text-xs text-gray-400">{session && session.user ? session.user.email : 'Usuário ativo'}</p></div>
           </div>
           <div className="border-t border-gray-100 pt-2">
-            <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Versao</span><span className="font-medium">5.0</span></div>
+            <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Versão</span><span className="font-medium">5.0</span></div>
             <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Banco</span><span className="font-medium">Supabase (PostgreSQL)</span></div>
             <div className="flex justify-between text-sm"><span className="text-gray-500">Hospedagem</span><span className="font-medium">Render</span></div>
           </div>
@@ -150,10 +150,10 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
             </div>
             <div className="flex flex-col gap-2">
               <div className="flex items-start gap-2"><span className="text-xs font-bold text-gray-400 flex-shrink-0 mt-0.5">Android</span><p className="text-xs text-gray-500">Toque nos 3 pontinhos do Chrome e escolha "Adicionar a tela inicial"</p></div>
-              <div className="flex items-start gap-2"><span className="text-xs font-bold text-gray-400 flex-shrink-0 mt-0.5">iPhone</span><p className="text-xs text-gray-500">Toque no icone de compartilhar do Safari e escolha "Adicionar a tela de inicio"</p></div>
+              <div className="flex items-start gap-2"><span className="text-xs font-bold text-gray-400 flex-shrink-0 mt-0.5">iPhone</span><p className="text-xs text-gray-500">Toque no ícone de compartilhar do Safari e escolha "Adicionar à tela de início"</p></div>
             </div>
           </div>
-          <button onClick={function() { confirm('Sair da conta?', function() { sb.auth.signOut(); }); }} className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Sair da conta</button>
+          <button onClick={function() { confirm('Sair da conta?', function() { doSignOut(); }); }} className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Sair da conta</button>
         </Card>
       )}
 

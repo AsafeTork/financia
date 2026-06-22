@@ -2,16 +2,6 @@ import Dexie from 'dexie';
 import { sb } from './supabase.js';
 import { now } from './utils.js';
 
-
-const withTimeout = function(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise(function(_, reject) {
-      setTimeout(function() { reject(new Error('timeout')); }, ms);
-    })
-  ]);
-};
-
 export const ldb = new Dexie('gestao_offline');
 
 ldb.version(1).stores({
@@ -68,32 +58,51 @@ export const syncTable = async function(uid, table, ldbTable, mapLocal) {
   const fields = FIELD_MAP[table] || [];
 
   const unsynced = await ldbTable.where('user_id').equals(uid).and(r => r._synced === 0).toArray();
+  const toDeleteIds = [];
+  const toMarkSynced = [];
   for (const row of unsynced) {
     try {
       if (row._deleted) {
         await sb.from(table).delete().eq('id', row.id);
-        await ldbTable.delete(row.id);
+        toDeleteIds.push(row.id);
       } else {
         const sbRow = pickFields(
           Object.assign({}, row, { description: row.description || row.desc, category: row.category || row.cat }),
           fields
         );
         const { error } = await sb.from(table).upsert(sbRow, { onConflict: 'id' });
-        if (!error) await ldbTable.update(row.id, { _synced: 1 });
+        if (!error) toMarkSynced.push(row.id);
       }
     } catch (_) {}
   }
+  if (toDeleteIds.length > 0) await ldbTable.bulkDelete(toDeleteIds);
+  if (toMarkSynced.length > 0) await ldbTable.where('id').anyOf(toMarkSynced).modify({ _synced: 1 });
 
   const { data: remote, error: pullErr } = await sb.from(table).select('*')
     .eq('user_id', uid)
     .gte('updated_at', lastSync)
     .limit(500);
-  if (pullErr) return;
-  for (const row of remote || []) {
-    const existing = await ldbTable.get(row.id);
-    if (!existing || (existing._synced === 1 && row.updated_at >= (existing._updated_at || ''))) {
-      await ldbTable.put(toLocal(row, mapLocal(row)));
+  if (pullErr || !remote || remote.length === 0) return;
+
+  const remoteIds = remote.map(function(r) { return r.id; });
+  const existingArr = await ldbTable.bulkGet(remoteIds);
+  const rowsToPut = [];
+  remote.forEach(function(row, i) {
+    const ex = existingArr[i];
+    if (!ex || (ex._synced === 1 && row.updated_at >= (ex._updated_at || ''))) {
+      rowsToPut.push(toLocal(row, mapLocal(row)));
     }
+  });
+  if (rowsToPut.length > 0) await ldbTable.bulkPut(rowsToPut);
+
+  const { data: allIds } = await sb.from(table).select('id').eq('user_id', uid);
+  if (allIds) {
+    const remoteSet = new Set(allIds.map(function(r) { return r.id; }));
+    const localAll = await ldbTable.where('user_id').equals(uid).toArray();
+    const orphans = localAll
+      .filter(function(r) { return r._synced === 1 && !r._deleted && !remoteSet.has(r.id); })
+      .map(function(r) { return r.id; });
+    if (orphans.length > 0) await ldbTable.bulkDelete(orphans);
   }
 };
 
@@ -148,20 +157,33 @@ export const deleteClient = async function(uid) {
   } catch (_) { return false; }
 };
 
+export const clearClientData = async function(uid, tables) {
+  try {
+    const { error } = await sb.rpc('admin_clear_client_data', { a_uid: uid, b_tables: tables });
+    if (error) throw error;
+    return true;
+  } catch (_) { return false; }
+};
+
 export const triggerApkBuild = async function(clientName, logoUrl, primaryColor) {
   const tok = localStorage.getItem('nancia_gh_token') || '';
-  if (!tok) return false;
-  const res = await fetch(
-    'https://api.github.com/repos/AsafeTork/gestao-financeira/actions/workflows/build-apk.yml/dispatches',
-    {
-      method: 'POST',
-      headers: { Authorization: 'token ' + tok, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ref: 'main', inputs: {
-        client_name: clientName || 'Financia',
-        logo_url: logoUrl || '',
-        primary_color: (primaryColor || '#002f59').replace('#', ''),
-      }}),
-    }
-  );
-  return res.status === 204;
+  if (!tok) return { ok: false, reason: 'no_token' };
+  try {
+    const res = await fetch(
+      'https://api.github.com/repos/AsafeTork/financia/actions/workflows/build.yml/dispatches',
+      {
+        method: 'POST',
+        headers: { Authorization: 'token ' + tok, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref: 'main', inputs: {
+          client_name: clientName || 'Financia',
+          logo_url: logoUrl || '',
+          primary_color: (primaryColor || '#002f59').replace('#', ''),
+        }}),
+      }
+    );
+    if (res.status === 204) return { ok: true };
+    return { ok: false, reason: 'api_error', status: res.status };
+  } catch(e) {
+    return { ok: false, reason: 'network_error' };
+  }
 };

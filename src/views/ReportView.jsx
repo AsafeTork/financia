@@ -2,23 +2,12 @@
 import { Card } from '../components/ui.jsx';
 import { fmt, today, monthLabel, brandAlpha } from '../lib/utils.js';
 
-export default function ReportView({ tx, brand, toast }) {
+export default function ReportView({ tx, brand, toast, onNav }) {
   var accentColor = (brand && brand.color) || '#1a6b5c';
 
   var allMonths = useMemo(function() {
     return Array.from(new Set(tx.map(function(t) { return t.date.slice(0, 7); }))).sort(function(a, b) { return b.localeCompare(a); });
   }, [tx]);
-
-  var recentMonths = useMemo(function() {
-    var now = today().slice(0, 7);
-    var months = [];
-    for (var i = 0; i < 6; i++) {
-      var d = new Date();
-      d.setMonth(d.getMonth() - i);
-      months.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
-    }
-    return months;
-  }, []);
 
   var [month, setMonth] = useState(today().slice(0, 7));
 
@@ -39,7 +28,7 @@ export default function ReportView({ tx, brand, toast }) {
 
   var kpis = [
     {l:'Entradas', v:income, c:accentColor},
-    {l:'Saidas',   v:expense, c:'#ef4444'},
+    {l:'Saídas',   v:expense, c:'#ef4444'},
     {l:'Resultado', v:income - expense, c: income - expense >= 0 ? accentColor : '#ef4444'},
     {l:'Registros', v:filtered.length, c:'#64748b', isCount:true},
   ];
@@ -48,7 +37,7 @@ export default function ReportView({ tx, brand, toast }) {
     return (
       <div className="flex flex-col gap-5">
         <div>
-          <h2 className="page-header">Relatorio</h2>
+          <h2 className="page-header">Relatório</h2>
           <p className="page-sub">Fechamento mensal</p>
         </div>
         <Card>
@@ -58,8 +47,15 @@ export default function ReportView({ tx, brand, toast }) {
                 <path d="M9 17v-2m3 2v-4m3 4v-6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/>
               </svg>
             </div>
-            <p className="text-sm font-semibold text-gray-700">Nenhum dado disponivel</p>
-            <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Registre vendas e despesas para gerar relatorios mensais.</p>
+            <p className="text-sm font-semibold text-gray-700">Nenhum dado disponível</p>
+            <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Registre vendas e despesas para gerar relatórios mensais.</p>
+            {onNav && (
+              <button onClick={function() { onNav('income'); }}
+                className="text-xs font-semibold px-5 py-3 rounded-xl text-white transition hover:opacity-90 mt-1 min-h-[44px]"
+                style={{background: accentColor}}>
+                Registrar primeira venda
+              </button>
+            )}
           </div>
         </Card>
       </div>
@@ -70,7 +66,7 @@ export default function ReportView({ tx, brand, toast }) {
     <div className="flex flex-col gap-5">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="page-header">Relatorio</h2>
+          <h2 className="page-header">Relatório</h2>
           <p className="page-sub">Fechamento mensal</p>
         </div>
         {filtered.length > 0 && (
@@ -150,7 +146,7 @@ export default function ReportView({ tx, brand, toast }) {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-800 truncate">{t.desc}</p>
-                          <p className="text-xs text-gray-400">{new Date(t.date + 'T12:00').toLocaleDateString('pt-BR') + ' . ' + (t.method || t.category || '') + (t.registered_by ? ' . ' + t.registered_by : '')}</p>
+                          <p className="text-xs text-gray-400 truncate">{new Date(t.date + 'T12:00').toLocaleDateString('pt-BR') + ' . ' + (t.method || t.category || '') + (t.registered_by ? ' . ' + t.registered_by : '')}</p>
                         </div>
                       </div>
                       <span className="text-sm font-semibold tabular flex-shrink-0 ml-3" style={{color: isInc ? accentColor : '#ef4444'}}>
@@ -161,7 +157,7 @@ export default function ReportView({ tx, brand, toast }) {
                 })}
               </div>
               <div className="flex items-center justify-between px-5 py-3.5 border-t border-gray-100 bg-gray-50">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Resultado do mes</span>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Resultado do mês</span>
                 <span className={'text-sm font-bold tabular ' + (income - expense >= 0 ? 'text-green-600' : 'text-red-500')}>
                   {income - expense >= 0 ? '+' : ''}{fmt(income - expense)}
                 </span>
