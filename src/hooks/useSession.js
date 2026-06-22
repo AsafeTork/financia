@@ -210,6 +210,7 @@ export function useSession(p) {
       setSession(s);
       if (s) {
         localStorage.setItem('financia_last_uid', s.user.id);
+        localStorage.setItem('financia_seen', '1');
         loadData(s.user.id);
       } else {
         localStorage.removeItem('financia_last_uid');
@@ -224,6 +225,7 @@ export function useSession(p) {
       setSession(s);
       if (s) {
         localStorage.setItem('financia_last_uid', s.user.id);
+        localStorage.setItem('financia_seen', '1');
         if (s.user.id !== uidRef.current) {
           setIsAdminDB(false);
           sessionStorage.removeItem('is_admin');

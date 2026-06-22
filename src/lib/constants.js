@@ -18,6 +18,30 @@ export const PLAN_KIND_LABEL = { transactions: 'transacoes', products: 'produtos
 
 export const GH_REPO = 'AsafeTork/financia';
 
+export const WHATSAPP = '5591992086829';
+
+// Vitrine de vendas (landing). Gating real continua em PLAN_LIMITS/effectivePlan.
+export const PRICING_PLANS = [
+  {
+    id: 'free', name: 'Grátis', price: 0, period: '',
+    tagline: 'Para começar a organizar',
+    cta: 'Começar grátis',
+    features: ['50 transações', '20 produtos', '10 perdas', 'Funciona offline', '1 dispositivo'],
+  },
+  {
+    id: 'pro', name: 'Pro', price: 49.9, period: '/mês', popular: true,
+    tagline: 'Para o negócio que cresce',
+    cta: 'Assinar Pro',
+    features: ['Transações ilimitadas', 'Produtos ilimitados', 'Perdas ilimitadas', 'Sincroniza em tempo real entre celulares', 'Relatórios e exportação CSV', 'Suporte prioritário'],
+  },
+  {
+    id: 'premium', name: 'Premium', price: 99.9, period: '/mês',
+    tagline: 'Para quem quer escalar',
+    cta: 'Falar com vendas',
+    features: ['Tudo do Pro', 'Vários usuários na mesma conta', 'Metas e orçamento mensal', 'Marca personalizada (white-label)', 'Relatórios avançados', 'Suporte dedicado'],
+  },
+];
+
 export const NAV = [
   { key: 'dashboard',  label: 'Dashboard',      d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
   { key: 'income',     label: 'Vendas / Ganhos',          d: 'M12 4v16m8-8l-8-8-8 8' },

@@ -14,6 +14,7 @@ import Confirm from './components/Confirm.jsx';
 import SyncBadge from './components/SyncBadge.jsx';
 import Login from './views/Login.jsx';
 
+const Landing       = lazy(function() { return import('./views/Landing.jsx'); });
 const Dashboard     = lazy(function() { return import('./views/Dashboard.jsx'); });
 const TxView        = lazy(function() { return import('./views/TxView.jsx'); });
 const InventoryView = lazy(function() { return import('./views/InventoryView.jsx'); });
@@ -46,6 +47,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [toasts, setToasts]             = useState([]);
   const [confirmData, setConfirmData]   = useState(null);
+  const [showLogin, setShowLogin]       = useState(false);
   const toastId                         = useRef(0);
 
   const navTo = useCallback(function(v) { setView(v); window.location.hash = v; }, []);
@@ -113,7 +115,14 @@ export default function App() {
 
   if (appLoading) return <Loader/>;
   if (!session) {
-    if (!window.location.hash || window.location.hash === '#') window.location.hash = 'login';
+    var seen = !!localStorage.getItem('financia_seen');
+    if (!seen && !showLogin) {
+      return (
+        <Suspense fallback={<Loader/>}>
+          <Landing brand={brand} onEnter={function() { setShowLogin(true); }}/>
+        </Suspense>
+      );
+    }
     return <Login brand={brand}/>;
   }
   if (dataLoading) return <Loader text="Carregando seus dados..."/>;
