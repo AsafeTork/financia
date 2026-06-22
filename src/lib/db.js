@@ -129,7 +129,7 @@ export const syncAll = async function(uid) {
     ]);
     await setLastSync(ts, uid);
     return true;
-  } catch (e) { console.warn('syncAll:', e.message); return false; }
+  } catch (_) { return false; }
 };
 
 export const fetchClients = async function() {

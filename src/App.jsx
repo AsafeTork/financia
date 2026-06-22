@@ -204,12 +204,13 @@ export default function App() {
     try { await ldb.transactions.put(row); }
     catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
     setTx(function(p) { return [row].concat(p); });
+    toast('Transação registrada', 'success');
     if (navigator.onLine) {
       try {
         const res = await sb.from('transactions').upsert({id:row.id, type:row.type, description:row.description, amount:row.amount, date:row.date, method:row.method, category:row.category, items:row.items, user_id:userId, registered_by:rb, updated_at:row.updated_at});
         if (!res.error) await ldb.transactions.update(row.id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Nao sincronizado — tentaremos em breve', 'warning');
+      } catch(e) { toast('Nao sincronizado — tentaremos em breve', 'warning'); }
     }
   };
 
@@ -220,12 +221,13 @@ export default function App() {
     try { await ldb.transactions.update(id, upd); }
     catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
     setTx(function(p) { return p.map(function(t) { return t.id === id ? Object.assign({}, t, upd) : t; }); });
+    toast('Transação atualizada', 'success');
     if (navigator.onLine) {
       try {
         const res = await sb.from('transactions').update({description:upd.description, amount:upd.amount, date:upd.date, method:upd.method, category:upd.category, updated_at:upd.updated_at}).eq('id', id);
         if (!res.error) await ldb.transactions.update(id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Nao sincronizado — tentaremos em breve', 'warning');
+      } catch(e) { toast('Nao sincronizado — tentaremos em breve', 'warning'); }
     }
   };
 
@@ -233,11 +235,12 @@ export default function App() {
     try { await ldb.transactions.update(id, {_deleted:1, _synced:0, _updated_at:now()}); }
     catch(e) { toast('Erro ao excluir: ' + (e.message || 'tente novamente'), 'error'); return; }
     setTx(function(p) { return p.filter(function(t) { return t.id !== id; }); });
+    toast('Transação excluída', 'success');
     if (navigator.onLine) {
       try {
         const res = await sb.from('transactions').delete().eq('id', id);
         if (!res.error) await ldb.transactions.delete(id);
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+      } catch(e) { toast('Nao sincronizado — tentaremos em breve', 'warning'); }
     }
   };
 
@@ -252,12 +255,13 @@ export default function App() {
     try { await ldb.products.put(row); }
     catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
     setProducts(function(prev) { return prev.concat([row]); });
+    toast('Produto cadastrado', 'success');
     if (navigator.onLine) {
       try {
         const res = await sb.from('products').upsert({id:row.id, name:row.name, category:row.category, price:row.price, cost:row.cost, stock:row.stock, user_id:userId, registered_by:rb, updated_at:row.updated_at});
         if (!res.error) await ldb.products.update(row.id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Nao sincronizado — tentaremos em breve', 'warning');
+      } catch(e) { toast('Nao sincronizado — tentaremos em breve', 'warning'); }
     }
   };
 
@@ -267,12 +271,13 @@ export default function App() {
     try { await ldb.products.update(id, upd); }
     catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
     setProducts(function(p) { return p.map(function(prod) { return prod.id === id ? Object.assign({}, prod, upd) : prod; }); });
+    toast('Produto atualizado', 'success');
     if (navigator.onLine) {
       try {
         const res = await sb.from('products').update({name:upd.name, category:upd.category, price:upd.price, cost:upd.cost, stock:upd.stock, updated_at:upd.updated_at}).eq('id', id);
         if (!res.error) await ldb.products.update(id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Nao sincronizado — tentaremos em breve', 'warning');
+      } catch(e) { toast('Nao sincronizado — tentaremos em breve', 'warning'); }
     }
   };
 
@@ -280,11 +285,12 @@ export default function App() {
     try { await ldb.products.update(id, {_deleted:1, _synced:0, _updated_at:now()}); }
     catch(e) { toast('Erro ao excluir: ' + (e.message || 'tente novamente'), 'error'); return; }
     setProducts(function(p) { return p.filter(function(prod) { return prod.id !== id; }); });
+    toast('Produto excluído', 'success');
     if (navigator.onLine) {
       try {
         const res = await sb.from('products').delete().eq('id', id);
         if (!res.error) await ldb.products.delete(id);
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+      } catch(e) { toast('Nao sincronizado — tentaremos em breve', 'warning'); }
     }
   };
 
@@ -296,12 +302,13 @@ export default function App() {
     try { await ldb.products.update(id, upd); }
     catch(e) { toast('Erro ao ajustar estoque: ' + (e.message || 'tente novamente'), 'error'); return; }
     setProducts(function(p) { return p.map(function(prod) { return prod.id === id ? Object.assign({}, prod, upd) : prod; }); });
+    toast('Estoque atualizado', 'success');
     if (navigator.onLine) {
       try {
         const res = await sb.from('products').update({stock:ns, updated_at:upd.updated_at}).eq('id', id);
         if (!res.error) await ldb.products.update(id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Nao sincronizado — tentaremos em breve', 'warning');
+      } catch(e) { toast('Nao sincronizado — tentaremos em breve', 'warning'); }
     }
   };
 
@@ -315,12 +322,13 @@ export default function App() {
     try { await ldb.losses.put(row); }
     catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
     setLosses(function(p) { return [row].concat(p); });
+    toast('Perda registrada', 'success');
     if (navigator.onLine) {
       try {
         const res = await sb.from('losses').upsert({id:row.id, description:row.description, qty:row.qty, reason:row.reason, date:row.date, user_id:userId, registered_by:rb, updated_at:row.updated_at});
         if (!res.error) await ldb.losses.update(row.id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Nao sincronizado — tentaremos em breve', 'warning');
+      } catch(e) { toast('Nao sincronizado — tentaremos em breve', 'warning'); }
     }
   };
 
@@ -331,12 +339,13 @@ export default function App() {
     try { await ldb.losses.update(id, upd); }
     catch(e) { toast('Erro ao salvar: ' + (e.message || 'tente novamente'), 'error'); return; }
     setLosses(function(p) { return p.map(function(l) { return l.id === id ? Object.assign({}, l, upd) : l; }); });
+    toast('Perda atualizada', 'success');
     if (navigator.onLine) {
       try {
         const res = await sb.from('losses').update({description:upd.description, qty:upd.qty, reason:upd.reason, date:upd.date, updated_at:upd.updated_at}).eq('id', id);
         if (!res.error) await ldb.losses.update(id, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Nao sincronizado — tentaremos em breve', 'warning');
+      } catch(e) { toast('Nao sincronizado — tentaremos em breve', 'warning'); }
     }
   };
 
@@ -344,11 +353,12 @@ export default function App() {
     try { await ldb.losses.update(id, {_deleted:1, _synced:0, _updated_at:now()}); }
     catch(e) { toast('Erro ao excluir: ' + (e.message || 'tente novamente'), 'error'); return; }
     setLosses(function(p) { return p.filter(function(l) { return l.id !== id; }); });
+    toast('Perda excluída', 'success');
     if (navigator.onLine) {
       try {
         const res = await sb.from('losses').delete().eq('id', id);
         if (!res.error) await ldb.losses.delete(id);
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+      } catch(e) { toast('Nao sincronizado — tentaremos em breve', 'warning'); }
     }
   };
 
@@ -358,6 +368,7 @@ export default function App() {
     try { await ldb.profiles.put(row); }
     catch(e) { toast('Erro ao salvar configurações: ' + (e.message || 'tente novamente'), 'error'); return; }
     setBrand(nb);
+    toast('Configurações salvas', 'success');
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({type:'UPDATE_BRAND', name:nb.name, logo_url:nb.logo_url||null, color:nb.color||'#002f59'});
     }
@@ -365,8 +376,8 @@ export default function App() {
       try {
         const res = await sb.from('company_profiles').upsert({user_id:userId, name:nb.name, logo:nb.logo, color:nb.color, color_secondary:nb.color_secondary||null, color_accent:nb.color_accent||null, theme:nb.theme||'light', logo_url:nb.logo_url||null});
         if (!res.error) await ldb.profiles.update(userId, {_synced:1});
-        else toast('Aviso: nao sincronizado — sera tentado em breve.', 'success');
-      } catch(e) { toast('Aviso: nao sincronizado — sera tentado em breve.', 'success'); }
+        else toast('Nao sincronizado — tentaremos em breve', 'warning');
+      } catch(e) { toast('Nao sincronizado — tentaremos em breve', 'warning'); }
     }
   };
 
