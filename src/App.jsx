@@ -23,8 +23,9 @@ const InventoryView = lazy(function() { return import('./views/InventoryView.jsx
 const ReportView    = lazy(function() { return import('./views/ReportView.jsx'); });
 const EmailView     = lazy(function() { return import('./views/EmailView.jsx'); });
 const SettingsView  = lazy(function() { return import('./views/SettingsView.jsx'); });
+const PlansView     = lazy(function() { return import('./views/PlansView.jsx'); });
 
-const VALID_VIEWS = ['dashboard','income','expense','inventory','email','report','settings'];
+const VALID_VIEWS = ['dashboard','income','expense','inventory','email','report','settings','planos'];
 const hashView = function() { const h = window.location.hash.replace('#',''); return VALID_VIEWS.includes(h) ? h : 'dashboard'; };
 
 function Loader({ text }) {
@@ -139,13 +140,14 @@ export default function App() {
 
   const p = {brand:brand, toast:toast, confirm:confirm};
   const views = {
-    dashboard: React.createElement(Dashboard, {tx:tx, products:products, brand:brand, onNav:navTo, planInfo:planInfo, lossesCount:losses.length, onUpgrade:function() { setShowUpgrade(true); }}),
+    dashboard: React.createElement(Dashboard, {tx:tx, products:products, brand:brand, onNav:navTo, planInfo:planInfo, lossesCount:losses.length, onUpgrade:function() { navTo('planos'); }}),
     income:    React.createElement(TxView, Object.assign({type:'income', tx:tx, products:products, onAdd:addTx, onEdit:editTx, onDelete:deleteTx, onDeductStock:function(id,qty){adjustStock(id,-qty);}}, p)),
     expense:   React.createElement(TxView, Object.assign({type:'expense', tx:tx, products:products, onAdd:addTx, onEdit:editTx, onDelete:deleteTx, onDeductStock:function(){}}, p)),
     inventory: React.createElement(InventoryView, Object.assign({products:products, losses:losses, onAddProduct:addProduct, onEditProduct:editProduct, onDeleteProduct:deleteProduct, onAddLoss:addLoss, onEditLoss:editLoss, onDeleteLoss:deleteLoss, onAdjustStock:adjustStock}, p)),
     email:     React.createElement(EmailView, {brand:brand, toast:toast}),
     report:    React.createElement(ReportView, {tx:tx, brand:brand, toast:toast, onNav:navTo}),
     settings:  React.createElement(SettingsView, {brand:brand, session:session, onSave:saveBrand, toast:toast, confirm:confirm, isAdmin:isAdminDB}),
+    planos:    React.createElement(PlansView, {brand:brand, planInfo:planInfo}),
   };
 
   return (
