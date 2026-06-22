@@ -1,37 +1,74 @@
 import React from 'react';
-import { PLAN_KIND_LABEL } from '../lib/constants.js';
+import { PRICING_PLANS, WHATSAPP, PLAN_KIND_LABEL } from '../lib/constants.js';
+import { brandAlpha } from '../lib/utils.js';
 
-export default function UpgradeModal({ kind, limit, onClose }) {
+var money = function(v) { return v === 0 ? 'R$ 0' : 'R$ ' + v.toFixed(2).replace('.', ','); };
+
+export default function UpgradeModal({ reason, brand, onClose }) {
+  var c = (brand && brand.color) || '#002f59';
+  var plans = PRICING_PLANS.filter(function(p) { return p.id !== 'free'; });
+  var waBase = 'https://wa.me/' + WHATSAPP + '?text=';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 anim-fade" style={{background:'rgba(0,0,0,0.5)'}}>
-      <div className="rounded-2xl w-full max-w-sm p-6 flex flex-col gap-4" style={{background:'var(--bg-card)', boxShadow:'0 25px 60px rgba(0,0,0,0.2)'}}>
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🚀</span>
-          <p className="font-bold text-gray-800">Limite do plano gratuito</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 anim-fade" style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
+      <div className="rounded-2xl w-full max-w-md flex flex-col anim-scale" style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-lg)', maxHeight: '92vh' }}>
+
+        <div className="px-6 pt-6 pb-4 flex-shrink-0">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-display text-xl font-semibold" style={{ color: 'var(--text-main)' }}>
+                {reason ? 'Seu plano grátis chegou ao limite' : 'Desbloqueie tudo no Pro'}
+              </p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-sub)' }}>
+                {reason
+                  ? 'Você atingiu ' + reason.limit + ' ' + (PLAN_KIND_LABEL[reason.kind] || 'itens') + '. Faça upgrade para continuar sem limites.'
+                  : 'Mais espaço, mais recursos e suporte para o seu negócio crescer.'}
+              </p>
+            </div>
+            <button onClick={onClose} aria-label="Fechar" className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 flex-shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
         </div>
-        <p className="text-sm text-gray-600 leading-relaxed">
-          Você atingiu o limite de <b>{limit} {PLAN_KIND_LABEL[kind]}</b> do plano gratuito.
-        </p>
-        <div className="rounded-xl p-3 flex flex-col gap-1.5" style={{background:'#f0fdf4',border:'1px solid #bbf7d0'}}>
-          <p className="text-xs font-bold text-gray-700">Plano Pro — R$ 70/mês</p>
-          <p className="text-xs text-gray-600">· Transações, produtos e perdas ilimitados</p>
-          <p className="text-xs text-gray-600">· Sincronização entre dispositivos</p>
-          <p className="text-xs text-gray-600">· Backup automático na nuvem</p>
-          <p className="text-xs text-gray-600">· APK personalizado com sua marca</p>
+
+        <div className="px-6 pb-2 flex flex-col gap-3 overflow-y-auto">
+          {plans.map(function(p) {
+            var popular = !!p.popular;
+            var wa = waBase + encodeURIComponent('Quero ativar o plano ' + p.name + ' do Financia.');
+            return (
+              <div key={p.id} className="rounded-2xl p-4" style={{ border: popular ? ('2px solid ' + c) : '1px solid var(--border)', background: popular ? brandAlpha(c, 0.05) : 'transparent' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold" style={{ color: 'var(--text-main)' }}>{p.name}</span>
+                    {popular && <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ background: c }}>Recomendado</span>}
+                  </div>
+                  <span className="font-display font-semibold tabular" style={{ color: 'var(--text-main)' }}>{money(p.price)}<span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>{p.period}</span></span>
+                </div>
+                <div className="flex flex-col gap-1.5 mb-3">
+                  {p.features.slice(0, 4).map(function(f) {
+                    return (
+                      <div key={f} className="flex items-start gap-2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0f9d6c" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5"><path d="M5 13l4 4L19 7" /></svg>
+                        <span className="text-xs" style={{ color: 'var(--text-sub)' }}>{f}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <a href={wa} target="_blank" rel="noreferrer"
+                  className="block text-center text-sm font-semibold py-2.5 rounded-xl transition hover:opacity-90"
+                  style={popular ? { background: c, color: '#fff' } : { border: '1px solid var(--border-md)', color: 'var(--text-main)' }}>
+                  Quero o {p.name}
+                </a>
+              </div>
+            );
+          })}
         </div>
-        <a href="https://wa.me/5591992086829?text=Quero%20ativar%20o%20plano%20Pro%20do%20Financia"
-          target="_blank" rel="noreferrer"
-          className="w-full text-center text-white rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2"
-          style={{background:'#25d366'}}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.115.554 4.103 1.523 5.83L.057 23.25l5.565-1.457A11.95 11.95 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.876 0-3.63-.487-5.147-1.342l-.369-.217-3.302.866.878-3.21-.24-.38A9.954 9.954 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
-          </svg>
-          Falar no WhatsApp
-        </a>
-        <button onClick={onClose} className="w-full rounded-xl py-2 text-sm text-gray-500 border border-gray-200">
-          Agora não
-        </button>
+
+        <div className="px-6 py-4 flex-shrink-0">
+          <button onClick={onClose} className="w-full rounded-xl py-2.5 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+            Agora não
+          </button>
+        </div>
       </div>
     </div>
   );

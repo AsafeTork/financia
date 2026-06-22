@@ -12,6 +12,7 @@ import Toast from './components/Toast.jsx';
 import Offline from './components/Offline.jsx';
 import Confirm from './components/Confirm.jsx';
 import SyncBadge from './components/SyncBadge.jsx';
+import UpgradeModal from './components/UpgradeModal.jsx';
 import Login from './views/Login.jsx';
 
 const Landing       = lazy(function() { return import('./views/Landing.jsx'); });
@@ -48,6 +49,7 @@ export default function App() {
   const [toasts, setToasts]             = useState([]);
   const [confirmData, setConfirmData]   = useState(null);
   const [showLogin, setShowLogin]       = useState(false);
+  const [showUpgrade, setShowUpgrade]   = useState(false);
   const toastId                         = useRef(0);
 
   const navTo = useCallback(function(v) { setView(v); window.location.hash = v; }, []);
@@ -95,11 +97,11 @@ export default function App() {
 
   const enforceLimit = useCallback(function(kind, currentCount) {
     if (atLimit(planInfo, kind, currentCount)) {
-      toast('Plano gratuito esgotado — atualize seu plano para continuar.', 'error');
+      setShowUpgrade({ kind: kind, limit: limitFor(planInfo, kind) });
       return false;
     }
     return true;
-  }, [planInfo, toast]);
+  }, [planInfo]);
 
   const {tx, setTx, addTx, editTx, deleteTx}                                           = useTx(session, enforceLimit, toast);
   const {products, setProducts, addProduct, editProduct, deleteProduct, adjustStock}    = useProducts(session, enforceLimit, toast);
@@ -136,7 +138,7 @@ export default function App() {
 
   const p = {brand:brand, toast:toast, confirm:confirm};
   const views = {
-    dashboard: React.createElement(Dashboard, {tx:tx, products:products, brand:brand, onNav:navTo, planInfo:planInfo, lossesCount:losses.length}),
+    dashboard: React.createElement(Dashboard, {tx:tx, products:products, brand:brand, onNav:navTo, planInfo:planInfo, lossesCount:losses.length, onUpgrade:function() { setShowUpgrade(true); }}),
     income:    React.createElement(TxView, Object.assign({type:'income', tx:tx, products:products, onAdd:addTx, onEdit:editTx, onDelete:deleteTx, onDeductStock:function(id,qty){adjustStock(id,-qty);}}, p)),
     expense:   React.createElement(TxView, Object.assign({type:'expense', tx:tx, products:products, onAdd:addTx, onEdit:editTx, onDelete:deleteTx, onDeductStock:function(){}}, p)),
     inventory: React.createElement(InventoryView, Object.assign({products:products, losses:losses, onAddProduct:addProduct, onEditProduct:editProduct, onDeleteProduct:deleteProduct, onAddLoss:addLoss, onEditLoss:editLoss, onDeleteLoss:deleteLoss, onAdjustStock:adjustStock}, p)),
@@ -161,6 +163,7 @@ export default function App() {
       <BottomNav view={view} onNav={navTo} brand={brand}/>
       <Toast toasts={toasts} onDismiss={dismissToast}/>
       {confirmData && <Confirm msg={confirmData.msg} onOk={function() { confirmData.onOk(); setConfirmData(null); }} onCancel={function() { setConfirmData(null); }}/>}
+      {showUpgrade && <UpgradeModal reason={typeof showUpgrade === 'object' ? showUpgrade : null} brand={brand} onClose={function() { setShowUpgrade(false); }}/>}
     </div>
   );
 }

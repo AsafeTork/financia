@@ -5,7 +5,7 @@ import { fmt, fmtDate, today, prevDays, brandAlpha } from '../lib/utils.js';
 import { PLAN_LIMITS, effectivePlan } from '../lib/constants.js';
 import { askAI } from '../lib/ai.js';
 
-export default function Dashboard({ tx, products, brand, onNav, planInfo, lossesCount }) {
+export default function Dashboard({ tx, products, brand, onNav, planInfo, lossesCount, onUpgrade }) {
   var cm = today().slice(0, 7);
   var now_d = new Date();
   var prevM = new Date(now_d.getFullYear(), now_d.getMonth() - 1, 1);
@@ -77,6 +77,30 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
           {new Date().toLocaleDateString('pt-BR', {weekday: 'long', day: 'numeric', month: 'long'})}
         </p>
       </div>
+
+      {tx.length === 0 && products.length === 0 && (
+        <Card className="p-5" accent={true} color={brand.color}>
+          <p className="font-display text-lg font-semibold mt-1" style={{color:'var(--text-main)'}}>Bem-vindo ao Financia</p>
+          <p className="text-sm mt-1 mb-4" style={{color:'var(--text-sub)'}}>Em 3 passos o controle do seu negócio começa a funcionar.</p>
+          <div className="flex flex-col gap-2">
+            {[
+              {n:'1', t:'Cadastre seus produtos ou serviços', act:function() { onNav('inventory'); }, btn:'Cadastrar'},
+              {n:'2', t:'Registre a sua primeira venda', act:function() { onNav('income'); }, btn:'Registrar'},
+              {n:'3', t:'Acompanhe o lucro aqui no painel', act:null, btn:''}
+            ].map(function(step) {
+              return (
+                <div key={step.n} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{background:'var(--bg-subtle)'}}>
+                  <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{background: brand.color}}>{step.n}</span>
+                  <span className="text-sm flex-1 min-w-0" style={{color:'var(--text-main)'}}>{step.t}</span>
+                  {step.act && (
+                    <button onClick={step.act} className="text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0 transition hover:opacity-90" style={{background: brandAlpha(brand.color, 0.12), color: brand.color}}>{step.btn}</button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {lowStock.length > 0 && (
         <div className="rounded-xl border border-amber-200 px-4 py-3.5 flex flex-col gap-2" style={{background:'rgba(245,158,11,0.10)'}}>
@@ -172,16 +196,12 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
               <p className="text-xs font-semibold text-red-700">Plano gratuito esgotado — novos registros bloqueados</p>
             </div>
           )}
-          <a href="https://wa.me/5591992086829?text=Quero%20ativar%20o%20plano%20Pro%20do%20Financia"
-            target="_blank" rel="noreferrer"
+          <button onClick={onUpgrade}
             className="flex items-center justify-center gap-2 text-sm font-semibold text-white rounded-xl py-3 min-h-[44px] transition hover:opacity-90"
-            style={{background:'#25d366'}}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.115.554 4.103 1.523 5.83L.057 23.25l5.565-1.457A11.95 11.95 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.876 0-3.63-.487-5.147-1.342l-.369-.217-3.302.866.878-3.21-.24-.38A9.954 9.954 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
-            </svg>
-            Ativar plano Pro via WhatsApp
-          </a>
+            style={{background: brand.color}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/></svg>
+            {atAnyLimit ? 'Fazer upgrade para continuar' : 'Ver planos e fazer upgrade'}
+          </button>
         </Card>
       )}
 

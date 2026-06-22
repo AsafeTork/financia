@@ -59,7 +59,7 @@ input:focus, select:focus, textarea:focus {
 .tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
 
 /* Titulos de secao */
-.page-header { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; color: var(--text-main, #111827); }
+.page-header { font-family: 'Fraunces', Georgia, serif; font-optical-sizing: auto; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.5px; color: var(--text-main, #111827); }
 .page-sub    { font-size: 0.8125rem; color: var(--text-sub, #6b7280); margin-top: 2px; }
 
 /* Valores monetarios */
