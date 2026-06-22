@@ -85,7 +85,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
 
   return (
     <div className="flex flex-col gap-6">
-      <div><h2 className="text-2xl font-bold text-gray-900">Configurações</h2><p className="text-sm text-gray-400 mt-0.5">Aparência, segurança e conta</p></div>
+      <div><h2 className="page-header">Configurações</h2><p className="page-sub">Aparência, segurança e conta</p></div>
       <div className="flex border-b border-gray-200">
         {tabs.map(function(t) {
           var active = tab === t.key;

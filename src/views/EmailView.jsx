@@ -28,7 +28,7 @@ export default function EmailView({ brand, toast }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div><h2 className="text-2xl font-bold text-gray-900">E-mails</h2><p className="text-sm text-gray-400 mt-0.5">Templates prontos e editor livre</p></div>
+      <div><h2 className="page-header">E-mails</h2><p className="page-sub">Templates prontos e editor livre</p></div>
       <Card className="p-5 flex flex-col gap-4">
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Template</p>
