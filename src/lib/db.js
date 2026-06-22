@@ -152,6 +152,17 @@ export const fetchClients = async function() {
   } catch (_) { return []; }
 };
 
+/* Uso por cliente (apenas admin) via RPC SECURITY DEFINER. Retorna mapa user_id -> {tx_count, prod_count, loss_count, last_activity} */
+export const fetchClientUsage = async function() {
+  try {
+    const { data, error } = await sb.rpc('admin_client_usage');
+    if (error) return {};
+    const map = {};
+    (data || []).forEach(function(r) { map[r.user_id] = r; });
+    return map;
+  } catch (_) { return {}; }
+};
+
 /* v2 — usa RPC SECURITY DEFINER que deleta auth.users tambem */
 export const deleteClient = async function(uid) {
   try {

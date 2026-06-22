@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '../components/ui.jsx';
 import { sb } from '../lib/supabase.js';
-import { triggerApkBuild, fetchClients, deleteClient, clearClientData } from '../lib/db.js';
+import { triggerApkBuild, fetchClients, deleteClient, clearClientData, fetchClientUsage } from '../lib/db.js';
 import { genPwd, luminance, lightenHex, fmtDate } from '../lib/utils.js';
 import { GH_REPO, effectivePlan, PRICING_PLANS } from '../lib/constants.js';
 import ClientEditModal from './ClientEditModal.jsx';
@@ -21,9 +21,14 @@ export default function AdminPanel({ toast, confirm, session }) {
   const [clearTarget, setClearTarget] = useState(null);
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('all');
+  const [usage, setUsage] = useState({});
   const logoRef = useRef();
 
-  const reload = function() { fetchClients().then(function(c) { setClients(c); setLoadingCli(false); }); };
+  const reload = function() {
+    Promise.all([fetchClients(), fetchClientUsage()]).then(function(res) {
+      setClients(res[0]); setUsage(res[1] || {}); setLoadingCli(false);
+    });
+  };
   useEffect(function() { reload(); }, [done]);
 
   const proPrice = (function() { var p = PRICING_PLANS.find(function(x) { return x.id === 'pro'; }); return p ? p.price : 49.9; })();
@@ -205,6 +210,13 @@ export default function AdminPanel({ toast, confirm, session }) {
                           <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0, 8)}{c.updated_at ? ' · ativo ' + fmtDate(String(c.updated_at).slice(0, 10)) : ''}</p>
                         </div>
                       </div>
+                      {usage[c.user_id] && (
+                        <div className="flex items-center gap-3 text-xs px-0.5 flex-wrap" style={{color:'var(--text-sub)'}}>
+                          <span className="font-semibold tabular">{usage[c.user_id].tx_count}</span><span className="-ml-2.5">lançamentos</span>
+                          <span className="font-semibold tabular">{usage[c.user_id].prod_count}</span><span className="-ml-2.5">produtos</span>
+                          <span className="font-semibold tabular">{usage[c.user_id].loss_count}</span><span className="-ml-2.5">perdas</span>
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 gap-1.5">
                         <button onClick={function() {
                           sb.rpc('admin_impersonate_start', {target_uid: c.user_id}).then(function(res) {
