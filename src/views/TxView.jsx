@@ -1,5 +1,5 @@
 ﻿import React, { useState, useMemo } from 'react';
-import { Card, Inp, Sel, Modal, EditBtn, DelBtn, Spin } from '../components/ui.jsx';
+import { Card, Inp, Sel, Modal, EditBtn, DelBtn, Spin, PageHead } from '../components/ui.jsx';
 import { SaleForm } from '../components/SaleForm.jsx';
 import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';
 
@@ -84,15 +84,12 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
   return (
     <div className="flex flex-col gap-5 pb-20 lg:pb-0">
 
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="page-header">{isIncome ? 'Vendas / Ganhos' : 'Despesas'}</h2>
-          <p className="page-sub">
-            {filtered.length} registro{filtered.length !== 1 ? 's' : ''}{' . '}
-            <span className="font-semibold tabular" style={{color: accentColor}}>{fmt(total)}</span>
-          </p>
-        </div>
-        <div className="flex gap-2 flex-shrink-0">
+      <PageHead
+        icon={isIncome ? 'M12 4v16m8-8l-8-8-8 8' : 'M12 20V4m-8 8l8 8 8-8'}
+        color={accentColor}
+        title={isIncome ? 'Vendas / Ganhos' : 'Despesas'}
+        sub={<>{filtered.length} registro{filtered.length !== 1 ? 's' : ''}{' . '}<span className="font-semibold tabular" style={{color: accentColor}}>{fmt(total)}</span></>}
+        right={<>
           <button onClick={exportCSV} title="Exportar CSV" aria-label="Exportar CSV"
             className="p-2.5 border border-gray-200 text-gray-400 rounded-xl hover:bg-gray-50 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,8 +104,8 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
             </svg>
             {isIncome ? 'Nova Venda' : 'Nova Despesa'}
           </button>
-        </div>
-      </div>
+        </>}
+      />
 
       <Card className="p-4">
         <div className="relative mb-3">

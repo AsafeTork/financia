@@ -1,5 +1,5 @@
 import React, { useMemo, useReducer } from 'react';
-import { Card, Inp, Modal, EditBtn, DelBtn, Badge } from '../components/ui.jsx';
+import { Card, Inp, Modal, EditBtn, DelBtn, Badge, PageHead } from '../components/ui.jsx';
 import { PSearch } from '../components/SaleForm.jsx';
 import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';
 
@@ -140,12 +140,12 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="page-header">Estoque e Perdas</h2>
-          <p className="page-sub">{products.length} produto{products.length !== 1 ? 's' : ''} . {losses.length} perda{losses.length !== 1 ? 's' : ''}</p>
-        </div>
-        <div className="flex-shrink-0">
+      <PageHead
+        icon="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+        color={brand.color}
+        title="Estoque e Perdas"
+        sub={products.length + ' produto' + (products.length !== 1 ? 's' : '') + ' . ' + losses.length + ' perda' + (losses.length !== 1 ? 's' : '')}
+        right={<>
           {tab === 'products' && (
             <button onClick={function() { dispatch({type:'OPEN_PM'}); }}
               className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition"
@@ -161,8 +161,8 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
               Registrar perda
             </button>
           )}
-        </div>
-      </div>
+        </>}
+      />
 
       <div className="flex border-b border-gray-100">
         {TABS.map(function(t) {

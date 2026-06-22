@@ -175,6 +175,28 @@ export const DelBtn = function({ onClick }) {
   );
 };
 
+// Cabecalho padrao de aba: icone identificador + titulo (Fraunces) + subtitulo de contexto.
+// Da identidade visual consistente a todas as telas e orienta o usuario sobre o que cada aba faz.
+export const PageHead = function({ icon, title, sub, right, color }) {
+  var c = color || 'var(--brand)';
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3 min-w-0">
+        {icon && (
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{background:'var(--brand-soft)'}}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={icon}/></svg>
+          </div>
+        )}
+        <div className="min-w-0">
+          <h2 className="page-header">{title}</h2>
+          {sub && <p className="page-sub">{sub}</p>}
+        </div>
+      </div>
+      {right && <div className="flex gap-2 flex-shrink-0">{right}</div>}
+    </div>
+  );
+};
+
 export const Skeleton = function({ w, h, r, className }) {
   return <div className={'skeleton ' + (className || '')} style={{ width: w || '100%', height: h || 12, borderRadius: r || 8 }} />;
 };
