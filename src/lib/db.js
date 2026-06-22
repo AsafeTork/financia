@@ -53,7 +53,7 @@ export const setLastSync = function(ts, uid) {
 };
 
 export const syncTable = async function(uid, table, ldbTable, mapLocal) {
-  if (!navigator.onLine) return;
+  if (!navigator.onLine) return true;
   const lastSync = await getLastSync(uid);
   const fields = FIELD_MAP[table] || [];
 
@@ -82,7 +82,8 @@ export const syncTable = async function(uid, table, ldbTable, mapLocal) {
     .eq('user_id', uid)
     .gte('updated_at', lastSync)
     .limit(500);
-  if (pullErr || !remote || remote.length === 0) return;
+  if (pullErr) return false;
+  if (!remote || remote.length === 0) return true;
 
   const remoteIds = remote.map(function(r) { return r.id; });
   const existingArr = await ldbTable.bulkGet(remoteIds);
@@ -104,12 +105,13 @@ export const syncTable = async function(uid, table, ldbTable, mapLocal) {
       .map(function(r) { return r.id; });
     if (orphans.length > 0) await ldbTable.bulkDelete(orphans);
   }
+  return true;
 };
 
 const PROFILE_WRITE_FIELDS = ['user_id','name','logo','color','color_secondary','color_accent','theme','logo_url'];
 
 export const syncProfiles = async function(uid) {
-  if (!navigator.onLine) return;
+  if (!navigator.onLine) return true;
   const unsynced = await ldb.profiles.where('user_id').equals(uid).and(r => r._synced === 0).toArray();
   for (const row of unsynced) {
     const clean = {};
@@ -118,8 +120,10 @@ export const syncProfiles = async function(uid) {
     const { error } = await sb.from('company_profiles').upsert(clean, { onConflict: 'user_id' });
     if (!error) await ldb.profiles.update(uid, { _synced: 1 });
   }
-  const { data } = await sb.from('company_profiles').select('*').eq('user_id', uid).maybeSingle();
+  const { data, error: profPullErr } = await sb.from('company_profiles').select('*').eq('user_id', uid).maybeSingle();
+  if (profPullErr) return false;
   if (data) await ldb.profiles.put(toLocal(data));
+  return true;
 };
 
 export const syncAll = async function(uid) {
@@ -127,7 +131,7 @@ export const syncAll = async function(uid) {
   try {
     const ts = now();
     const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000));
-    await Promise.race([
+    const results = await Promise.race([
       Promise.all([
         syncTable(uid, 'transactions', ldb.transactions, function(r) { return { desc: r.description, cat: r.category }; }),
         syncTable(uid, 'products',     ldb.products,     function() { return {}; }),
@@ -137,7 +141,7 @@ export const syncAll = async function(uid) {
       timeout,
     ]);
     await setLastSync(ts, uid);
-    return true;
+    return results.every(Boolean);
   } catch (_) { return false; }
 };
 
