@@ -15,10 +15,11 @@ export function PSearch({ products, value, onSelect, onChange, placeholder }) {
         onFocus={function() { setOpen(true); }}
         onBlur={function() { setTimeout(function() { setOpen(false); }, 300); }}
         placeholder={placeholder || (products.length > 0 ? 'Buscar produto...' : 'Descrição')}
-        className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-500 transition w-full"
+        className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none transition w-full"
+        style={{background:'var(--bg-input)', color:'var(--text-main)'}}
       />
       {open && products.length > 0 && filtered.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 z-30 overflow-hidden max-h-48 overflow-y-auto" style={{boxShadow:'0 8px 24px rgba(0,0,0,0.1)'}}>
+        <div className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-gray-200 z-30 overflow-hidden max-h-48 overflow-y-auto" style={{background:'var(--bg-card)', boxShadow:'0 8px 24px rgba(0,0,0,0.1)'}}>
           {filtered.map(function(p) {
             return (
               <button key={p.id} onPointerDown={function() { onSelect(p); setOpen(false); }} className="flex items-center justify-between w-full px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0">
@@ -54,7 +55,7 @@ export function CartRow({ item, idx, products, onChange, onSelect, onRemove }) {
         <Inp label="Preço unit." type="number" step="0.01" min="0" value={item.up} onChange={function(e) { onChange(idx, 'up', e.target.value); }} className="flex-1"/>
         <div className="flex flex-col gap-1.5 w-24 flex-shrink-0">
           <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</label>
-          <div className="border border-gray-100 rounded-xl px-3 py-2.5 text-sm bg-white text-gray-700 font-semibold">{lt > 0 ? fmt(lt) : '-'}</div>
+          <div className="border border-gray-100 rounded-xl px-3 py-2.5 text-sm font-semibold" style={{background:'var(--bg-input)', color:'var(--text-main)'}}>{lt > 0 ? fmt(lt) : '-'}</div>
         </div>
       </div>
     </div>
