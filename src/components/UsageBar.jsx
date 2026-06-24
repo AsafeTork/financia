@@ -14,8 +14,8 @@ export function UsageBar({ label, used, limit, color, accentColor }) {
           {used}/{limit === Infinity ? 'ilimitado' : limit}
         </span>
       </div>
-      <div className="h-1.5 rounded-full overflow-hidden bg-gray-100">
-        <div className="h-full rounded-full transition-all" style={{width: pct + '%', background: barColor}}/>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{background:'var(--bg-subtle)'}}>
+        <div className="h-full rounded-full transition-all duration-300 ease-out" style={{width: pct + '%', background: barColor}}/>
       </div>
     </div>
   );
@@ -30,7 +30,7 @@ export function KpiCard({ label, value, variation, sub, color, accentBar, onClic
   // (ex: despesa subindo = vermelho, mesmo com seta pra cima e numero positivo).
   var good = invert ? (hasVar && variation <= 0) : up;
   return (
-    <Card className={'p-4 overflow-hidden' + (hasClick ? ' cursor-pointer card-hover' : '')}
+    <Card className={'p-4 overflow-hidden' + (hasClick ? ' cursor-pointer card-hover transition-transform duration-150 active:scale-[0.98]' : '')}
       onClick={hasClick ? onClick : undefined}
       accent={true}
       color={barColor}>
