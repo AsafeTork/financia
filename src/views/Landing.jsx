@@ -41,8 +41,8 @@ export default function Landing({ onEnter }) {
             <span className="font-display text-xl font-semibold" style={{ color: INK, letterSpacing: '-0.3px' }}>Financia</span>
           </div>
           <nav className="flex items-center gap-1 sm:gap-2">
-            <a href="#planos" className="hidden sm:block text-sm font-medium px-4 py-2 rounded-xl transition hover:bg-black/5" style={{ color: MUTED }}>Planos</a>
-            <button onClick={onEnter} className="text-sm font-semibold px-4 py-2 rounded-xl text-white transition hover:opacity-90" style={{ background: BRAND }}>Entrar</button>
+            <a href="#planos" className="hidden sm:flex items-center text-sm font-medium px-4 min-h-[44px] rounded-xl transition hover:bg-black/5" style={{ color: MUTED }}>Planos</a>
+            <button onClick={onEnter} className="text-sm font-semibold px-4 min-h-[44px] rounded-xl text-white transition hover:opacity-90" style={{ background: BRAND }}>Entrar</button>
           </nav>
         </div>
       </header>
@@ -135,7 +135,7 @@ export default function Landing({ onEnter }) {
         <div className="grid sm:grid-cols-2 gap-4">
           {FEATURES.map(function(f) {
             return (
-              <div key={f.t} className="rounded-3xl p-7 transition hover:-translate-y-1" style={{ background: '#fff', border: '1px solid rgba(10,37,64,0.08)', boxShadow: '0 2px 10px rgba(10,37,64,0.04)' }}>
+              <div key={f.t} className="rounded-3xl p-7 transition duration-200 hover:-translate-y-1 hover:shadow-lg" style={{ background: '#fff', border: '1px solid rgba(10,37,64,0.08)', boxShadow: '0 2px 10px rgba(10,37,64,0.04)' }}>
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(15,157,108,0.1)' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={f.icon} /></svg>
                 </div>
@@ -196,8 +196,8 @@ export default function Landing({ onEnter }) {
         <div className="flex flex-col gap-3">
           {FAQ.map(function(item) {
             return (
-              <details key={item.q} className="rounded-2xl p-5 group" style={{ background: '#fff', border: '1px solid rgba(10,37,64,0.08)' }}>
-                <summary className="font-semibold text-sm cursor-pointer list-none flex items-center justify-between" style={{ color: INK }}>
+              <details key={item.q} className="rounded-2xl p-5 group transition duration-200 hover:border-black/15" style={{ background: '#fff', border: '1px solid rgba(10,37,64,0.08)' }}>
+                <summary className="font-semibold text-sm cursor-pointer list-none flex items-center justify-between min-h-[44px] -my-1.5 py-1.5" style={{ color: INK }}>
                   {item.q}
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 ml-3 transition-transform group-open:rotate-180" style={{ color: MUTED }}><path d="M19 9l-7 7-7-7" /></svg>
                 </summary>
@@ -217,7 +217,7 @@ export default function Landing({ onEnter }) {
             <p className="mt-3 text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>Conta grátis, sem cartão. Leva menos de um minuto.</p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
               <button onClick={onEnter} className="text-sm font-semibold px-8 py-4 rounded-2xl transition hover:opacity-90" style={{ background: ACCENT, color: '#fff' }}>Criar conta grátis</button>
-              <a href={waLink} target="_blank" rel="noreferrer" className="text-sm font-semibold px-8 py-4 rounded-2xl transition" style={{ border: '1px solid rgba(255,255,255,0.3)', color: '#fff' }}>Falar no WhatsApp</a>
+              <a href={waLink} target="_blank" rel="noreferrer" className="text-sm font-semibold px-8 py-4 rounded-2xl transition hover:bg-white/10" style={{ border: '1px solid rgba(255,255,255,0.3)', color: '#fff' }}>Falar no WhatsApp</a>
             </div>
           </div>
         </div>
