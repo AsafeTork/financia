@@ -7,7 +7,7 @@ export default function Header({ brand, onMenuOpen, syncStatus }) {
   var textColor = lum > 0.4 ? '#111827' : '#ffffff';
   var overlayAlpha = lum > 0.4 ? '0.08' : '0.18';
   return (
-    <header className="sticky top-0 z-20 lg:hidden shadow-sm" style={{background: brand.color}}>
+    <header className="sticky top-0 z-20 lg:hidden shadow-sm" style={{background: brand.color || '#002f59'}}>
       <div className="flex items-center justify-between px-4 h-14">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           {brand.logo_url
