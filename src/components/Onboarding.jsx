@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Inp, Spin } from './ui.jsx';
+import PhoneInput from './PhoneInput.jsx';
 import { safe } from '../lib/utils.js';
 
 export default function Onboarding({ brand, needsName, needsPhone, onSave }) {
   var [name, setName] = useState('');
-  var [phone, setPhone] = useState('');
+  var [phoneData, setPhoneData] = useState({ e164: '', national: '', valid: false });
+  var [phoneErr, setPhoneErr] = useState('');
   var [loading, setLoading] = useState(false);
   var [err, setErr] = useState('');
 
@@ -13,16 +15,20 @@ export default function Onboarding({ brand, needsName, needsPhone, onSave }) {
   var submit = async function(e) {
     e.preventDefault();
     var cleanName = safe(name).trim();
-    var cleanPhone = phone.replace(/\D/g, '');
     if (needsName && !cleanName) { setErr('Informe o nome da sua empresa.'); return; }
-    if (needsPhone && cleanPhone.length < 10) { setErr('Informe um telefone válido com DDD.'); return; }
-    setLoading(true); setErr('');
+    if (needsPhone && !phoneData.valid) { setPhoneErr('Informe um telefone válido com DDD.'); return; }
+    setLoading(true); setErr(''); setPhoneErr('');
     try {
-      await onSave({ name: cleanName, phone: cleanPhone });
+      await onSave({ name: cleanName, phone: phoneData.e164 });
     } catch (e2) {
       setErr('Erro ao salvar. Tente novamente.');
       setLoading(false);
     }
+  };
+
+  var onPhone = function(d) {
+    setPhoneData(d);
+    if (d.valid) setPhoneErr('');
   };
 
   return (
@@ -42,7 +48,7 @@ export default function Onboarding({ brand, needsName, needsPhone, onSave }) {
 
         <form onSubmit={submit} className="flex flex-col gap-4">
           {needsName && <Inp label="Nome da empresa" value={name} onChange={function(e) { setName(e.target.value); }} placeholder="Ex: Padaria do João" autoFocus />}
-          {needsPhone && <Inp label="Telefone (com DDD)" value={phone} onChange={function(e) { setPhone(e.target.value); }} placeholder="Ex: 11912345678" inputMode="numeric" autoFocus={!needsName} hint="Usamos só para contato sobre seu plano." />}
+          {needsPhone && <PhoneInput label="Telefone (com DDD)" value="" onChange={onPhone} error={phoneErr} autoFocus={!needsName} hint="Usamos só para contato sobre seu plano." />}
           {err && <p className="text-xs text-red-500">{err}</p>}
           <button disabled={loading} type="submit"
             className="w-full text-white rounded-xl py-3.5 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 transition hover:opacity-90 min-h-[44px]"
