@@ -33,7 +33,7 @@ export default function Onboarding({ brand, needsName, needsPhone, onSave }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--bg-page)' }}>
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm anim-up">
         <div className="flex flex-col items-center text-center mb-7">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'var(--brand-soft)' }}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={brandColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
