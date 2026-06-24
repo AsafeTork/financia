@@ -44,11 +44,24 @@ export function useSession(p) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(runSync, 800);
     };
+    // Reflete mudanca de plano na hora a partir do payload do realtime,
+    // sem depender do syncAll completo (que pode ser descartado por syncingRef
+    // ou demorar). Garante upgrade/downgrade visivel em <5s sem relogar.
+    var applyPlan = function(payload) {
+      var row = payload && payload['new'] ? payload['new'] : null;
+      if (!row || row.user_id !== uid) return;
+      setPlanInfo({
+        plan: row.plan || 'free',
+        plan_expires_at: row.plan_expires_at || null,
+        plan_activated_by: row.plan_activated_by || null
+      });
+    };
     channelRef.current = sb.channel('rt-' + uid)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, doSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, doSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'losses' }, doSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'company_profiles' }, doSync)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'company_profiles', filter: 'user_id=eq.' + uid }, applyPlan)
       .subscribe(function(status) {
         if (status === 'SUBSCRIBED') {
           retryDelayRef.current = 1000;
