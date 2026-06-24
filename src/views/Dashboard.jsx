@@ -93,7 +93,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
                   <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{background: brand.color}}>{step.n}</span>
                   <span className="text-sm flex-1 min-w-0" style={{color:'var(--text-main)'}}>{step.t}</span>
                   {step.act && (
-                    <button onClick={step.act} className="text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0 transition hover:opacity-90" style={{background: brandAlpha(brand.color, 0.12), color: brand.color}}>{step.btn}</button>
+                    <button onClick={step.act} className="text-xs font-semibold px-3 rounded-lg flex-shrink-0 inline-flex items-center justify-center min-h-[44px] hover:opacity-90" style={{background: brandAlpha(brand.color, 0.12), color: brand.color}}>{step.btn}</button>
                   )}
                 </div>
               );
@@ -109,7 +109,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
               <div className="w-1.5 h-1.5 rounded-full bg-amber-500"/>
               <p className="text-sm font-semibold text-amber-800">Estoque baixo</p>
             </div>
-            <button onClick={function() { onNav('inventory'); }} className="text-xs text-amber-600 font-semibold hover:underline">
+            <button onClick={function() { onNav('inventory'); }} className="text-xs text-amber-600 font-semibold hover:underline inline-flex items-center min-h-[44px] -my-2.5 px-1 flex-shrink-0">
               Ver estoque
             </button>
           </div>
@@ -246,7 +246,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
         <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
           <p className="text-sm font-semibold text-gray-800">Movimentações recentes</p>
           {recent.length > 0 && (
-            <button onClick={function() { onNav('report'); }} className="text-xs text-gray-400 hover:text-gray-600 font-medium">
+            <button onClick={function() { onNav('report'); }} className="text-xs text-gray-400 hover:text-gray-600 font-medium inline-flex items-center min-h-[44px] -my-4 px-1 flex-shrink-0">
               Ver relatório
             </button>
           )}
@@ -259,8 +259,8 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
               </svg>
               <p className="text-sm text-gray-400">Nenhuma movimentação</p>
               <div className="flex gap-3">
-                <button onClick={function() { onNav('income'); }} className="text-xs font-semibold px-4 py-3 rounded-lg text-white min-h-[44px]" style={{background:'#22c55e'}}>+ Venda</button>
-                <button onClick={function() { onNav('expense'); }} className="text-xs font-semibold px-4 py-3 rounded-lg text-white bg-red-400 min-h-[44px]">+ Despesa</button>
+                <button onClick={function() { onNav('income'); }} className="text-xs font-semibold px-4 py-3 rounded-lg text-white min-h-[44px] hover:opacity-90" style={{background:'#22c55e'}}>+ Venda</button>
+                <button onClick={function() { onNav('expense'); }} className="text-xs font-semibold px-4 py-3 rounded-lg text-white bg-red-400 min-h-[44px] hover:opacity-90">+ Despesa</button>
               </div>
             </div>
           )
@@ -280,7 +280,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-800 truncate">{t.desc}</p>
-                        <p className="text-xs text-gray-400">{fmtDate(t.date)}{t.method ? ' . ' + t.method : ''}{t.category ? ' . ' + t.category : ''}</p>
+                        <p className="text-xs text-gray-400 truncate">{fmtDate(t.date)}{t.method ? ' . ' + t.method : ''}{t.category ? ' . ' + t.category : ''}</p>
                       </div>
                     </div>
                     <span className="text-sm font-bold tabular flex-shrink-0 ml-3" style={{color: isInc ? brand.color : '#ef4444'}}>
