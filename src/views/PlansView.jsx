@@ -54,8 +54,8 @@ function PlanCard({ plan, brand, current }) {
         </span>
       )}
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-display text-lg font-semibold" style={{color:'var(--text-main)'}}>{plan.name}</p>
+        <div className="min-w-0">
+          <p className="font-display text-lg font-semibold truncate" style={{color:'var(--text-main)'}}>{plan.name}</p>
           <p className="text-xs mt-0.5" style={{color:'var(--text-sub)'}}>{plan.tagline}</p>
         </div>
         {current && <span className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0" style={{background:'var(--brand-soft)', color: brand.color}}>Seu plano</span>}
