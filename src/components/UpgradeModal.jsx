@@ -25,7 +25,7 @@ export default function UpgradeModal({ reason, brand, onClose }) {
                   : 'Mais espaço, mais recursos e suporte para o seu negócio crescer.'}
               </p>
             </div>
-            <button onClick={onClose} aria-label="Fechar" className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center">
+            <button onClick={onClose} aria-label="Fechar" className="p-2 rounded-lg flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center transition hover:opacity-70" style={{ color: 'var(--text-muted)' }}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
@@ -48,7 +48,7 @@ export default function UpgradeModal({ reason, brand, onClose }) {
                   {p.features.slice(0, 4).map(function(f) {
                     return (
                       <div key={f} className="flex items-start gap-2">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0f9d6c" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5"><path d="M5 13l4 4L19 7" /></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0f9d6c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5"><path d="M5 13l4 4L19 7" /></svg>
                         <span className="text-xs" style={{ color: 'var(--text-sub)' }}>{f}</span>
                       </div>
                     );
@@ -65,7 +65,7 @@ export default function UpgradeModal({ reason, brand, onClose }) {
         </div>
 
         <div className="px-6 py-4 flex-shrink-0">
-          <button onClick={onClose} className="w-full rounded-xl py-3 text-sm font-medium min-h-[44px] flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>
+          <button onClick={onClose} className="w-full rounded-xl py-3 text-sm font-medium min-h-[44px] flex items-center justify-center transition hover:opacity-70" style={{ color: 'var(--text-muted)' }}>
             Agora não
           </button>
         </div>
