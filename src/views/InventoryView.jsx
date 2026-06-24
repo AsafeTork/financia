@@ -169,8 +169,8 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
           var active = tab === t.key;
           return (
             <button key={t.key} onClick={function() { dispatch({type:'SET_TAB', v:t.key}); }}
-              className={'flex items-center gap-2 pb-3 px-1 mr-5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 rounded-sm ' + (active ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600')}
-              style={active ? {borderBottom: '2px solid ' + brand.color} : {}}>
+              className={'flex items-center gap-2 pb-3 px-1 mr-5 text-sm font-medium border-b-2 ' + (active ? 'text-gray-900' : 'text-gray-400 border-transparent hover:text-gray-600')}
+              style={active ? {borderColor: brand.color, color: brand.color} : {}}>
               {t.label}
               <span className={'text-xs font-semibold px-1.5 py-0.5 rounded-md ' + (active ? 'text-white' : 'text-gray-400 bg-gray-100')}
                 style={active ? {background: brand.color} : {}}>
@@ -243,8 +243,8 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
                               </div>
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 {p.stock != null && (
-                                  <button onClick={function() { dispatch({type:'SET_SM', v:p.id}); }}
-                                    className={'text-xs font-semibold px-2.5 py-1 min-h-[44px] rounded-lg mr-0.5 transition ' + (stockOut ? 'bg-red-50 text-red-600' : stockLow ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700')}>
+                                  <button onClick={function() { dispatch({type:'SET_SM', v:p.id}); }} title="Repor estoque"
+                                    className={'text-xs font-semibold px-2.5 py-1 min-h-[44px] rounded-lg mr-0.5 transition hover:opacity-80 ' + (stockOut ? 'bg-red-50 text-red-600' : stockLow ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700')}>
                                     {stockOut ? 'Esgotado' : p.stock + ' un'}
                                   </button>
                                 )}
