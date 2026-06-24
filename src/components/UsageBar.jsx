@@ -34,7 +34,7 @@ export function KpiCard({ label, value, variation, sub, color, accentBar, onClic
       onClick={hasClick ? onClick : undefined}
       accent={true}
       color={barColor}>
-      <p className="text-xs font-semibold uppercase tracking-wider mt-2" style={{color:'#94a3b8'}}>{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-wider mt-2" style={{color:'var(--text-muted)'}}>{label}</p>
       <p className="font-extrabold mt-2 text-gray-900 truncate tabular" style={{fontSize:22, letterSpacing:'-0.5px'}}>{value}</p>
       {variation !== null && variation !== undefined && (
         <div className="flex items-center gap-1 mt-1.5">
