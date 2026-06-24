@@ -57,7 +57,7 @@ function ColorField({ label, desc, value, onChange }) {
           className="w-9 h-9 rounded-xl border border-gray-200 cursor-pointer p-0.5 flex-shrink-0"/>
         <input value={value} onChange={function(e) { onChange(e.target.value); }}
           placeholder="#000000" maxLength={7}
-          className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-mono flex-1 focus:outline-none focus:border-gray-400 bg-white"/>
+          className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-mono flex-1 focus:outline-none focus:border-gray-400" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
         <div className="w-8 h-8 rounded-xl border border-gray-100 flex-shrink-0" style={{background: value}}/>
       </div>
     </div>
@@ -216,7 +216,7 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
       <div className="rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md flex flex-col anim-scale" style={{background:'var(--bg-card)', maxHeight:'92vh', overflowY:'auto', boxShadow:'var(--shadow-lg)'}}>
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
-          <p className="font-bold text-gray-800">Editar cliente</p>
+          <p className="font-bold" style={{color:'var(--text-main)'}}>Editar cliente</p>
           <button onClick={onClose} aria-label="Fechar" className="text-gray-400 hover:text-gray-600 p-1">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
@@ -228,7 +228,7 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Nome da empresa</label>
             <input value={name} onChange={function(e) { setName(e.target.value); }}
-              className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-gray-400"/>
+              className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-gray-400" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
           </div>
 
           {/* Logo */}
@@ -264,14 +264,14 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
                       <span className="text-xs text-gray-500 w-16 flex-shrink-0">{label}</span>
                       <span className="text-xs font-mono text-gray-400 flex-1">{c}</span>
                       <button onClick={apply}
-                        className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-white flex-shrink-0">
+                        className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-200 text-gray-600 flex-shrink-0" style={{background:'var(--bg-input)'}}>
                         Aplicar
                       </button>
                     </div>
                   );
                 })}
                 <button onClick={function() { applySuggestion(extractedColors); }}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-white self-start mt-1">
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 self-start mt-1" style={{background:'var(--bg-input)'}}>
                   Aplicar todas de uma vez
                 </button>
               </div>
@@ -289,7 +289,7 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             <p className="text-xs text-gray-500">Diga o ramo da empresa. A IA cria uma paleta harmônica com as 3 cores bem distribuídas (usa a logo/cor atual se houver).</p>
             <input value={aiSegment} onChange={function(e) { setAiSegment(e.target.value); }}
               placeholder="Ex: padaria, oficina, salão de beleza"
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gray-400 bg-white"/>
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gray-400" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
             <button onClick={runAI} disabled={aiLoading}
               className="text-sm font-semibold py-2.5 rounded-xl text-white transition hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
               style={{background: color}}>
