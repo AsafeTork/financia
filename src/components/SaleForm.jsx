@@ -63,7 +63,7 @@ export function CartRow({ item, idx, products, onChange, onSelect, onRemove }) {
 }
 
 export function SaleForm({ products, brand, onSave, onClose }) {
-  const [items, setItems] = useState([{desc:'', qty:'1', up:''}]);
+  const [items, setItems] = useState([{rid:uid(), desc:'', qty:'1', up:''}]);
   const [date, setDate] = useState(today());
   const [method, setMethod] = useState('PIX');
   const [saving, setSaving] = useState(false);
@@ -107,12 +107,12 @@ export function SaleForm({ products, brand, onSave, onClose }) {
           <div className="flex flex-col gap-3">
             {items.map(function(it, idx) {
               return (
-                <CartRow key={idx} item={it} idx={idx} products={products} onChange={ch} onSelect={sel}
+                <CartRow key={it.rid} item={it} idx={idx} products={products} onChange={ch} onSelect={sel}
                   onRemove={items.length > 1 ? function() { setItems(function(p) { return p.filter(function(_, i) { return i !== idx; }); }); } : null}
                 />
               );
             })}
-            <button onClick={function() { setItems(function(p) { return p.concat([{desc:'', qty:'1', up:''}]); }); }} className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 w-fit">
+            <button onClick={function() { setItems(function(p) { return p.concat([{rid:uid(), desc:'', qty:'1', up:''}]); }); }} className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 w-fit">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Adicionar item
             </button>
           </div>
@@ -129,7 +129,7 @@ export function SaleForm({ products, brand, onSave, onClose }) {
         </div>
         <div className="flex gap-2 px-6 pb-6 pt-3 flex-shrink-0">
           <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-3 text-sm font-medium hover:bg-gray-50">Cancelar</button>
-          <button onClick={save} disabled={saving} className="flex-1 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{background:brand.color}}>
+          <button onClick={save} disabled={saving || !total} className="flex-1 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition" style={{background:brand.color}}>
             {saving ? <Spin white/> : ('Confirmar . ' + fmt(total))}
           </button>
         </div>
