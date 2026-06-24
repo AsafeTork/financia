@@ -1,5 +1,5 @@
 import React, { useMemo, useReducer } from 'react';
-import { Card, Inp, Modal, EditBtn, DelBtn, Badge, PageHead } from '../components/ui.jsx';
+import { Card, Inp, Modal, EditBtn, DelBtn, Badge, Btn, PageHead } from '../components/ui.jsx';
 import { PSearch } from '../components/SaleForm.jsx';
 import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';
 
@@ -147,19 +147,16 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
         sub={products.length + ' produto' + (products.length !== 1 ? 's' : '') + ' . ' + losses.length + ' perda' + (losses.length !== 1 ? 's' : '')}
         right={<>
           {tab === 'products' && (
-            <button onClick={function() { dispatch({type:'OPEN_PM'}); }}
-              className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition"
-              style={{background: brand.color}}>
+            <Btn onClick={function() { dispatch({type:'OPEN_PM'}); }} style={{background: brand.color}}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/></svg>
               Adicionar
-            </button>
+            </Btn>
           )}
           {tab === 'losses' && (
-            <button onClick={function() { dispatch({type:'OPEN_LM'}); }}
-              className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition bg-red-500">
+            <Btn onClick={function() { dispatch({type:'OPEN_LM'}); }} style={{background:'#ef4444'}}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/></svg>
               Registrar perda
-            </button>
+            </Btn>
           )}
         </>}
       />
@@ -198,9 +195,9 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
               </div>
               <p className="text-sm font-semibold text-gray-700">Nenhum produto cadastrado</p>
               <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Adicione produtos ou serviços com preço, custo e controle de estoque.</p>
-              <button onClick={function() { dispatch({type:'OPEN_PM'}); }} className="mt-1 text-xs font-semibold px-5 py-2.5 rounded-xl text-white hover:opacity-90 transition" style={{background: brand.color}}>
+              <Btn onClick={function() { dispatch({type:'OPEN_PM'}); }} className="mt-1" style={{background: brand.color}}>
                 + Adicionar produto
-              </button>
+              </Btn>
             </div>
           ) : (
             grouped.map(function(pair) {
@@ -275,9 +272,9 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
               </div>
               <p className="text-sm font-semibold text-gray-700">Nenhuma perda registrada</p>
               <p className="text-xs text-gray-400 max-w-xs leading-relaxed">Registre produtos vencidos, cancelados ou danificados.</p>
-              <button onClick={function() { dispatch({type:'OPEN_LM'}); }} className="mt-1 text-xs font-semibold px-5 py-2.5 rounded-xl text-white bg-red-500 hover:opacity-90 transition">
+              <Btn onClick={function() { dispatch({type:'OPEN_LM'}); }} className="mt-1" style={{background:'#ef4444'}}>
                 + Registrar perda
-              </button>
+              </Btn>
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
