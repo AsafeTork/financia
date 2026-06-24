@@ -70,7 +70,7 @@ export default function PlansView({ brand, planInfo }) {
 
       <div className="flex flex-col gap-3">
         {PRICING_PLANS.map(function(p) {
-          return <PlanCard key={p.id} plan={p} brand={brand} current={plan === p.id || (plan === 'free' && p.id === 'free')}/>;
+          return <PlanCard key={p.id} plan={p} brand={brand} current={plan === p.id}/>;
         })}
       </div>
 
