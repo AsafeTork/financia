@@ -137,7 +137,7 @@ export default function Login({ brand }) {
               var active = mode === t[0] && !resetMode;
               return (
                 <button key={t[0]} type="button" onClick={function() { switchMode(t[0]); }}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
+                  className={'flex-1 min-h-[44px] rounded-xl text-sm font-semibold transition' + (active ? '' : ' hover:text-gray-600')}
                   style={active ? { background: '#fff', color: brandColor, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' } : { color: '#7a8794' }}>
                   {t[1]}
                 </button>
@@ -146,17 +146,17 @@ export default function Login({ brand }) {
           </div>
 
           {signupDone ? (
-            <div className="p-5 rounded-2xl text-center flex flex-col gap-2" style={{ background: 'rgba(15,157,108,0.08)', border: '1px solid rgba(15,157,108,0.25)' }}>
+            <div className="anim-scale p-5 rounded-2xl text-center flex flex-col gap-2" style={{ background: 'rgba(15,157,108,0.08)', border: '1px solid rgba(15,157,108,0.25)' }}>
               <p className="font-display text-lg font-semibold" style={{ color: ACCENT }}>Conta criada!</p>
               <p className="text-sm" style={{ color: '#4b5563' }}>Enviamos um e-mail de confirmação para <b>{suEmail}</b>. Confirme para entrar.</p>
-              <button type="button" onClick={function() { switchMode('login'); }} className="text-xs underline mt-1" style={{ color: '#6b7280' }}>Voltar para entrar</button>
+              <button type="button" onClick={function() { switchMode('login'); }} className="text-xs underline mt-1 min-h-[44px] inline-flex items-center justify-center self-center hover:text-gray-800" style={{ color: '#6b7280' }}>Voltar para entrar</button>
             </div>
           ) : resetMode ? (
             resetSent ? (
-              <div className="p-5 rounded-2xl text-center flex flex-col gap-2" style={{ background: 'rgba(15,157,108,0.08)', border: '1px solid rgba(15,157,108,0.25)' }}>
+              <div className="anim-scale p-5 rounded-2xl text-center flex flex-col gap-2" style={{ background: 'rgba(15,157,108,0.08)', border: '1px solid rgba(15,157,108,0.25)' }}>
                 <p className="font-semibold text-sm" style={{ color: ACCENT }}>Link enviado!</p>
                 <p className="text-xs" style={{ color: '#4b5563' }}>Verifique seu e-mail para redefinir a senha.</p>
-                <button type="button" onClick={function() { switchMode('login'); }} className="text-xs underline mt-1" style={{ color: '#6b7280' }}>Voltar ao login</button>
+                <button type="button" onClick={function() { switchMode('login'); }} className="text-xs underline mt-1 min-h-[44px] inline-flex items-center justify-center self-center hover:text-gray-800" style={{ color: '#6b7280' }}>Voltar ao login</button>
               </div>
             ) : (
               <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -164,8 +164,11 @@ export default function Login({ brand }) {
                 <Inp label="E-mail" type="email" value={resetEmail} onChange={function(e) { setResetEmail(e.target.value); }} placeholder="seu@email.com" />
                 {err && <p className="text-xs text-red-500">{err}</p>}
                 <div className="flex gap-2">
-                  <button type="button" onClick={function() { switchMode('login'); }} className="flex-1 py-3 rounded-xl border text-sm text-gray-600" style={{ borderColor: '#e2e8f0' }}>Voltar</button>
-                  <button disabled={loading || !resetEmail} className="flex-1 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40" style={{ background: brandColor }}>{loading ? 'Enviando...' : 'Enviar link'}</button>
+                  <button type="button" onClick={function() { switchMode('login'); }} className="flex-1 min-h-[44px] py-3 rounded-xl border text-sm text-gray-600 flex items-center justify-center gap-1.5 transition hover:bg-gray-50" style={{ borderColor: '#e2e8f0' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 19l-7-7 7-7" /></svg>
+                    Voltar
+                  </button>
+                  <button disabled={loading || !resetEmail} className="flex-1 min-h-[44px] py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition hover:opacity-90" style={{ background: brandColor }}>{loading ? 'Enviando...' : 'Enviar link'}</button>
                 </div>
               </form>
             )
@@ -214,14 +217,14 @@ export default function Login({ brand }) {
               </div>
 
               {err && (
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: '#fef2f2', border: '1px solid #fecaca' }}>
+                <div className="anim-up flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: '#fef2f2', border: '1px solid #fecaca' }}>
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="#ef4444" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
                   <p className="text-xs font-medium text-red-600">{err}</p>
                 </div>
               )}
 
               {mode === 'login' && (
-                <button type="button" onClick={function() { setResetMode(true); setErr(''); }} className="text-xs text-right self-end -mt-1" style={{ color: '#7a8794' }}>Esqueceu a senha?</button>
+                <button type="button" onClick={function() { setResetMode(true); setErr(''); }} className="text-xs self-end -mt-1 min-h-[44px] inline-flex items-center hover:text-gray-700" style={{ color: '#7a8794' }}>Esqueceu a senha?</button>
               )}
 
               <button disabled={loading} className="w-full text-white rounded-xl py-3.5 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 transition hover:opacity-90" style={{ background: brandColor }}>
