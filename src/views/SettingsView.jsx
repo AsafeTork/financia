@@ -74,7 +74,7 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
         );
       })()}
 
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b" style={{borderColor:'var(--border)'}}>
         {tabs.map(function(t) {
           var active = tab === t.key;
           return (
@@ -89,8 +89,8 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
 {tab === 'security' && (
         <Card className="p-6 flex flex-col gap-5">
           <div>
-            <p className="text-sm font-semibold text-gray-800 mb-1">Alterar senha</p>
-            <p className="text-xs text-gray-400 mb-4">Use uma senha forte com letras, números e símbolos.</p>
+            <p className="text-sm font-semibold mb-1" style={{color:'var(--text-main)'}}>Alterar senha</p>
+            <p className="text-xs mb-4" style={{color:'var(--text-muted)'}}>Use uma senha forte com letras, números e símbolos.</p>
             <div className="flex flex-col gap-3">
               <Inp label="Nova senha" type="password" value={pwForm.newPw} onChange={function(e) { setPwForm(function(f) { return Object.assign({}, f, {newPw:e.target.value}); }); }} placeholder="Mínimo 8 caracteres" hint={pwForm.newPw.length > 0 && pwForm.newPw.length < 8 ? 'Muito curta' : ''}/>
               <Inp label="Confirmar senha" type="password" value={pwForm.confirm} onChange={function(e) { setPwForm(function(f) { return Object.assign({}, f, {confirm:e.target.value}); }); }} placeholder="Repita a senha" hint={pwForm.confirm && pwForm.newPw !== pwForm.confirm ? 'Senhas diferentes' : ''}/>
@@ -133,7 +133,7 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
           </div>
           <div className="border-t pt-4" style={{borderColor:'var(--border)'}}>
             <PhoneInput label="Telefone de contato" value={brand.phone || ''} onChange={setPhoneData}/>
-            <button onClick={savePhone} disabled={phoneSaving || !phoneData.valid || phoneData.e164 === initE164} className="w-full mt-3 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40 min-h-12 active:scale-[0.98] transition" style={{background:brand.color}}>
+            <button onClick={savePhone} disabled={phoneSaving || !phoneData.valid || phoneData.e164 === initE164} className="w-full mt-3 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40 min-h-12" style={{background:brand.color}}>
               {phoneSaving ? <Spin white/> : 'Salvar telefone'}
             </button>
           </div>
