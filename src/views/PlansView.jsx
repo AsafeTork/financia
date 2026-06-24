@@ -27,7 +27,7 @@ function PlanCard({ plan, brand, current }) {
 
       <div className="flex items-end gap-1">
         <span className="font-display text-3xl font-bold" style={{color:'var(--text-main)'}}>
-          {plan.price === 0 ? 'Gratis' : fmt(plan.price)}
+          {plan.price === 0 ? 'Grátis' : fmt(plan.price)}
         </span>
         {plan.period && <span className="text-sm mb-1" style={{color:'var(--text-sub)'}}>{plan.period}</span>}
       </div>
