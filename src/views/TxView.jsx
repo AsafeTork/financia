@@ -1,5 +1,5 @@
 ﻿import React, { useState, useMemo } from 'react';
-import { Card, Inp, Sel, Modal, EditBtn, DelBtn, Spin, PageHead } from '../components/ui.jsx';
+import { Card, Inp, Sel, Modal, EditBtn, DelBtn, Spin, Btn, PageHead } from '../components/ui.jsx';
 import { SaleForm } from '../components/SaleForm.jsx';
 import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';
 
@@ -90,20 +90,17 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
         title={isIncome ? 'Vendas / Ganhos' : 'Despesas'}
         sub={<>{filtered.length} registro{filtered.length !== 1 ? 's' : ''}{' . '}<span className="font-semibold tabular" style={{color: accentColor}}>{fmt(total)}</span></>}
         right={<>
-          <button onClick={exportCSV} title="Exportar CSV" aria-label="Exportar CSV"
-            className="p-2.5 border border-gray-200 text-gray-400 rounded-xl hover:bg-gray-50 transition">
+          <Btn variant="secondary" onClick={exportCSV} title="Exportar CSV" aria-label="Exportar CSV">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
             </svg>
-          </button>
-          <button onClick={function() { setModal(true); }}
-            className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition"
-            style={{background: accentColor}}>
+          </Btn>
+          <Btn onClick={function() { setModal(true); }} style={{background: accentColor}}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/>
             </svg>
             {isIncome ? 'Nova Venda' : 'Nova Despesa'}
-          </button>
+          </Btn>
         </>}
       />
 
@@ -145,11 +142,9 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
             <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
               {isIncome ? 'Registre vendas com múltiplos itens e cálculo automático do total.' : 'Registre aluguel, energia, fornecedores e outras saídas.'}
             </p>
-            <button onClick={function() { setModal(true); }}
-              className="mt-1 text-xs font-semibold px-5 py-2.5 rounded-xl text-white hover:opacity-90 transition"
-              style={{background: accentColor}}>
+            <Btn onClick={function() { setModal(true); }} className="mt-1" style={{background: accentColor}}>
               {isIncome ? '+ Nova Venda' : '+ Nova Despesa'}
-            </button>
+            </Btn>
           </div>
         ) : (
           <div>
