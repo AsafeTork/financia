@@ -16,12 +16,17 @@ function PlanCard({ plan, brand, current }) {
   var msg = 'Olá! Tenho interesse no plano ' + plan.name + ' do Financia. Pode me ajudar?';
   return (
     <Card className="p-5 flex flex-col gap-4" accent={popular} color={brand.color}>
+      {popular && (
+        <span className="absolute top-0 right-5 text-[11px] font-bold px-3 py-1 rounded-b-md text-white shadow-sm"
+          style={{background: brand.color}}>
+          Mais escolhido
+        </span>
+      )}
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-display text-lg font-semibold" style={{color:'var(--text-main)'}}>{plan.name}</p>
           <p className="text-xs mt-0.5" style={{color:'var(--text-sub)'}}>{plan.tagline}</p>
         </div>
-        {popular && <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white flex-shrink-0" style={{background: brand.color}}>Popular</span>}
         {current && <span className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0" style={{background:'var(--brand-soft)', color: brand.color}}>Seu plano</span>}
       </div>
 

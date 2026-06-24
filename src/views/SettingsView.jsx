@@ -1,10 +1,11 @@
 ﻿import React, { useState, useRef } from 'react';
 import { Card, Inp, Spin, PageHead } from '../components/ui.jsx';
 import { updatePassword, uploadLogo as uploadToStorage, signOut as doSignOut } from '../lib/auth.js';
+import { effectivePlan, PRICING_PLANS } from '../lib/constants.js';
 import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
 
-export default function SettingsView({ brand, session, onSave, toast, confirm, isAdmin, onNav }) {
+export default function SettingsView({ brand, session, planInfo, onSave, toast, confirm, isAdmin, onNav }) {
   var [tab, setTab] = useState(isAdmin ? 'clients' : 'security');
   var [form, setForm] = useState(Object.assign({}, brand));
   var [saving, setSaving] = useState(false);
@@ -91,20 +92,30 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
         sub="Aparência, segurança e conta"
       />
 
-      {onNav && (
-        <button onClick={function() { onNav('planos'); }}
-          className="w-full text-left rounded-2xl p-4 flex items-center gap-3 transition hover:opacity-90 min-h-20"
-          style={{background:'var(--brand-soft)', border:'1px solid var(--border)'}}>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background: brand.color}}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"/></svg>
+      {onNav && (function() {
+        var planId = effectivePlan(planInfo || {});
+        var planMeta = PRICING_PLANS.filter(function(p) { return p.id === planId; })[0] || PRICING_PLANS[0];
+        return (
+          <div className="rounded-2xl p-4 flex flex-col gap-3" style={{background:'var(--brand-soft)', border:'1px solid var(--border)'}}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{brand.name}</p>
+                <p className="text-xs" style={{color:'var(--text-sub)'}}>Plano atual</p>
+              </div>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white flex-shrink-0" style={{background: brand.color}}>{planMeta.name}</span>
+            </div>
+            <button onClick={function() { onNav('planos'); }}
+              className="w-full text-left rounded-xl px-3 py-2.5 flex items-center gap-2 transition hover:opacity-80 min-h-[44px]"
+              style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{background: brand.color}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"/></svg>
+              </div>
+              <span className="text-sm font-semibold flex-1" style={{color:'var(--text-main)'}}>Gerenciar plano</span>
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="var(--text-sub)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+            </button>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold" style={{color:'var(--text-main)'}}>Planos e personalização</p>
-            <p className="text-xs" style={{color:'var(--text-sub)'}}>Ver planos, app da sua empresa e contato</p>
-          </div>
-          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="var(--text-sub)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
-        </button>
-      )}
+        );
+      })()}
 
       <div className="flex border-b border-gray-200">
         {tabs.map(function(t) {
