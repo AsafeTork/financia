@@ -1,6 +1,6 @@
 ﻿import React, { useState, useMemo } from 'react';
 import { Card, PageHead } from '../components/ui.jsx';
-import { fmt, today, monthLabel, brandAlpha } from '../lib/utils.js';
+import { fmt, today, brandAlpha } from '../lib/utils.js';
 
 export default function ReportView({ tx, brand, toast, onNav }) {
   var accentColor = (brand && brand.color) || '#1a6b5c';
@@ -16,8 +16,13 @@ export default function ReportView({ tx, brand, toast, onNav }) {
   var expense = filtered.filter(function(t) { return t.type === 'expense'; }).reduce(function(s, t) { return s + t.amount; }, 0);
   var bycat   = filtered.filter(function(t) { return t.type === 'expense'; }).reduce(function(a, t) { var k = t.category || 'Outro'; a[k] = (a[k] || 0) + t.amount; return a; }, {});
 
+  var csvEscape = function(v) {
+    var s = String(v == null ? '' : v);
+    if (/[",\n=+\-@]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  };
   var exportCSV = function() {
-    var rows = filtered.map(function(t) { return t.date + ',"' + t.desc + '",' + t.amount.toFixed(2) + ',' + (t.type === 'income' ? 'Entrada' : 'Saida') + ',' + (t.method || t.category || ''); });
+    var rows = filtered.map(function(t) { return csvEscape(t.date) + ',' + csvEscape(t.desc) + ',' + t.amount.toFixed(2) + ',' + (t.type === 'income' ? 'Entrada' : 'Saida') + ',' + csvEscape(t.method || t.category || ''); });
     var csv = 'Data,Descrição,Valor,Tipo,Método/Cat\n' + rows.join('\n');
     var a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
