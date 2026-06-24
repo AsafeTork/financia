@@ -13,7 +13,7 @@ var CheckIcon = function({ color }) {
 
 function PlanCard({ plan, brand, current }) {
   var popular = !!plan.popular;
-  var msg = 'Ola! Tenho interesse no plano ' + plan.name + ' do Financia. Pode me ajudar?';
+  var msg = 'Olá! Tenho interesse no plano ' + plan.name + ' do Financia. Pode me ajudar?';
   return (
     <Card className="p-5 flex flex-col gap-4" accent={popular} color={brand.color}>
       <div className="flex items-start justify-between gap-2">
@@ -56,8 +56,8 @@ function PlanCard({ plan, brand, current }) {
 
 export default function PlansView({ brand, planInfo }) {
   var plan = effectivePlan(planInfo);
-  var wlMsg = 'Ola! Quero o app personalizado da minha empresa (logo, nome e cores). Pode me passar como funciona?';
-  var duvidaMsg = 'Ola! Tenho uma duvida sobre o Financia.';
+  var wlMsg = 'Olá! Quero o app personalizado da minha empresa (logo, nome e cores). Pode me passar como funciona?';
+  var duvidaMsg = 'Olá! Tenho uma dúvida sobre o Financia.';
 
   return (
     <div className="flex flex-col gap-5 pb-20 lg:pb-0">
