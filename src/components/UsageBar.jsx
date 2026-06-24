@@ -85,7 +85,7 @@ export function BarChartSVG({ data, color }) {
         return (
           <g key={i}>
             <rect x={x} y={H - 28 - ih} width={bw} height={ih || 2} fill={barColor} rx={3} opacity="0.85"/>
-            <rect x={x + bw + 2} y={H - 28 - oh} width={bw} height={oh || 2} fill="#fca5a5" rx={3}/>
+            <rect x={x + bw + 2} y={H - 28 - oh} width={bw} height={oh || 2} fill="#ef4444" rx={3} opacity="0.85"/>
             <text x={x + bw + 1} y={H - 6} textAnchor="middle" fontSize={9} fill="var(--text-muted, #9ca3af)">{d.day}</text>
           </g>
         );

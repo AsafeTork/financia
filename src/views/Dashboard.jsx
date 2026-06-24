@@ -215,7 +215,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
               Entradas
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-red-200 inline-block"/>
+              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:'#ef4444'}}/>
               Saídas
             </span>
           </div>
