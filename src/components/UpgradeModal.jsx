@@ -25,7 +25,7 @@ export default function UpgradeModal({ reason, brand, onClose }) {
                   : 'Mais espaço, mais recursos e suporte para o seu negócio crescer.'}
               </p>
             </div>
-            <button onClick={onClose} aria-label="Fechar" className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 flex-shrink-0">
+            <button onClick={onClose} aria-label="Fechar" className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
@@ -55,7 +55,7 @@ export default function UpgradeModal({ reason, brand, onClose }) {
                   })}
                 </div>
                 <a href={wa} target="_blank" rel="noreferrer"
-                  className="block text-center text-sm font-semibold py-2.5 rounded-xl transition hover:opacity-90"
+                  className="block text-center text-sm font-semibold py-3 rounded-xl transition hover:opacity-90 min-h-[44px] flex items-center justify-center"
                   style={popular ? { background: c, color: '#fff' } : { border: '1px solid var(--border-md)', color: 'var(--text-main)' }}>
                   Quero o {p.name}
                 </a>
@@ -65,7 +65,7 @@ export default function UpgradeModal({ reason, brand, onClose }) {
         </div>
 
         <div className="px-6 py-4 flex-shrink-0">
-          <button onClick={onClose} className="w-full rounded-xl py-2.5 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+          <button onClick={onClose} className="w-full rounded-xl py-3 text-sm font-medium min-h-[44px] flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>
             Agora não
           </button>
         </div>
