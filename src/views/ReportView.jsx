@@ -35,7 +35,7 @@ export default function ReportView({ tx, brand, toast, onNav }) {
     {l:'Entradas', v:income, c:accentColor},
     {l:'Saídas',   v:expense, c:'#ef4444'},
     {l:'Resultado', v:income - expense, c: income - expense >= 0 ? accentColor : '#ef4444'},
-    {l:'Registros', v:filtered.length, c:'#64748b', isCount:true},
+    {l:'Registros', v:filtered.length, c:'var(--text-sub)', isCount:true},
   ];
 
   if (allMonths.length === 0) {
@@ -102,7 +102,7 @@ export default function ReportView({ tx, brand, toast, onNav }) {
         {kpis.map(function(item) {
           return (
             <Card key={item.l} className="px-4 py-3.5 overflow-hidden" accent={true} color={item.c}>
-              <p className="text-xs font-semibold uppercase tracking-wider mt-1.5" style={{color:'#94a3b8'}}>{item.l}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mt-1.5" style={{color:'var(--text-muted)'}}>{item.l}</p>
               <p className={'font-bold mt-1.5 tabular ' + (item.isCount ? 'text-xl' : 'text-lg')} style={{color: item.c, letterSpacing:'-0.5px'}}>
                 {item.isCount ? item.v : fmt(item.v)}
               </p>
