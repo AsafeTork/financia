@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { Card } from '../components/ui.jsx';
+import { Card, Empty, Skeleton } from '../components/ui.jsx';
 import { sb } from '../lib/supabase.js';
 import { triggerApkBuild, fetchClients, deleteClient, clearClientData, fetchClientUsage } from '../lib/db.js';
 import { genPwd, luminance, lightenHex, fmtDate } from '../lib/utils.js';
@@ -181,17 +181,17 @@ export default function AdminPanel({ toast, confirm, session }) {
           <div className="flex gap-1.5">
             {[['all','Todos'],['pro','Pro'],['free','Free']].map(function(f) {
               var active = planFilter === f[0];
-              return <button key={f[0]} onClick={function() { setPlanFilter(f[0]); }} className={'text-xs font-semibold px-3 py-1.5 rounded-lg border transition ' + (active ? 'text-white' : 'text-gray-500 border-gray-200 hover:bg-gray-50')} style={active ? {background:'var(--brand)', borderColor:'var(--brand)'} : {}}>{f[1]}</button>;
+              return <button key={f[0]} onClick={function() { setPlanFilter(f[0]); }} className={'text-xs font-semibold px-3 py-1.5 min-h-[36px] rounded-lg border transition ' + (active ? 'text-white' : 'text-gray-500 border-gray-200 hover:bg-gray-50')} style={active ? {background:'var(--brand)', borderColor:'var(--brand)'} : {}}>{f[1]}</button>;
             })}
           </div>
         </div>
 
         {loadingCli
-          ? <p className="text-xs text-gray-400">Carregando...</p>
+          ? <div className="flex flex-col gap-2">{[0,1,2].map(function(i) { return <Skeleton key={i} h={88} r={12}/>; })}</div>
           : clients.length === 0
-            ? <p className="text-xs text-gray-400">Nenhum cliente ainda.</p>
+            ? <Empty title="Nenhum cliente ainda" sub="Crie o primeiro cliente no formulario abaixo."/>
             : visibleClients.length === 0
-              ? <p className="text-xs text-gray-400 py-4 text-center">Nenhum cliente encontrado.</p>
+              ? <Empty title="Nenhum cliente encontrado" sub="Tente outro termo de busca ou limpe os filtros." action="Limpar filtros" onAction={function() { setSearch(''); setPlanFilter('all'); }}/>
               : (
               <div className="flex flex-col gap-2">
                 {visibleClients.map(function(c) {
@@ -236,19 +236,31 @@ export default function AdminPanel({ toast, confirm, session }) {
                             setTimeout(function() { localStorage.removeItem('_imp'); }, 30000);
                             toast('Abrindo conta de ' + c.name, 'success');
                           });
-                        }} className="py-2 text-xs font-semibold rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 min-h-[40px]">Entrar</button>
-                        <button onClick={function() { setEditClient(c); }} className="py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[40px]">Editar</button>
+                        }} className="py-2 text-xs font-semibold rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 min-h-[44px] flex items-center justify-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                          Entrar
+                        </button>
+                        <button onClick={function() { setEditClient(c); }} className="py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[44px] flex items-center justify-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                          Editar
+                        </button>
                         <button onClick={function() { triggerApkBuild(c.name, c.logo_url, c.color).then(function(r) {
                               if (r.ok) { toast('Build iniciado! Veja em Actions no GitHub.', 'success'); return; }
                               if (r.reason === 'no_token') { toast('Configure o token GitHub antes.', 'error'); return; }
                               if (r.reason === 'api_error' && r.status === 401) { toast('Token invalido ou expirado.', 'error'); return; }
                               if (r.reason === 'api_error' && r.status === 404) { toast('Repositorio ou workflow nao encontrado.', 'error'); return; }
                               toast('Erro ao acionar build (status ' + (r.status || 'rede') + ').', 'error');
-                            }); }} className="py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[40px]">Gerar APK</button>
-                        <button onClick={function() { handleDelete(c); }} className="py-2 text-xs font-semibold rounded-lg border border-red-200 text-red-500 hover:bg-red-50 min-h-[40px]">Excluir</button>
+                            }); }} className="py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[44px] flex items-center justify-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/></svg>
+                          Gerar APK
+                        </button>
+                        <button onClick={function() { handleDelete(c); }} className="py-2 text-xs font-semibold rounded-lg border border-red-200 text-red-500 hover:bg-red-50 min-h-[44px] flex items-center justify-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                          Excluir
+                        </button>
                       </div>
                       <button onClick={function() { setClearTarget(clearTarget === c.user_id ? null : c.user_id); }}
-                        className="w-full py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-500 hover:bg-orange-50 min-h-[40px]">
+                        className="w-full py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-500 hover:bg-orange-50 min-h-[44px]">
                         {clearTarget === c.user_id ? 'Cancelar' : 'Limpar dados'}
                       </button>
                       {clearTarget === c.user_id && (
@@ -256,13 +268,13 @@ export default function AdminPanel({ toast, confirm, session }) {
                           <p className="text-xs font-semibold text-orange-700">Selecione o que limpar:</p>
                           <div className="grid grid-cols-2 gap-1.5">
                             <button onClick={function() { handleClear(c, ['transactions']); }}
-                              className="py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-100 min-h-[40px]">Transacoes</button>
+                              className="py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-100 min-h-[44px]">Transacoes</button>
                             <button onClick={function() { handleClear(c, ['products']); }}
-                              className="py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-100 min-h-[40px]">Produtos</button>
+                              className="py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-100 min-h-[44px]">Produtos</button>
                             <button onClick={function() { handleClear(c, ['losses']); }}
-                              className="py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-100 min-h-[40px]">Perdas</button>
+                              className="py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-100 min-h-[44px]">Perdas</button>
                             <button onClick={function() { handleClear(c, ['transactions','products','losses']); }}
-                              className="py-2 text-xs font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 min-h-[40px]">Tudo</button>
+                              className="py-2 text-xs font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 min-h-[44px]">Tudo</button>
                           </div>
                         </div>
                       )}
@@ -290,15 +302,17 @@ export default function AdminPanel({ toast, confirm, session }) {
               <div className="w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden border-2 border-dashed border-gray-200" style={{background:form.primaryColor+'22'}}>
                 {form.logoUrl
                   ? <img src={form.logoUrl} className="w-full h-full object-contain p-1" alt=""/>
-                  : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xl">[E]</div>
+                  : <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
                 }
               </div>
               <div className="flex-1 flex flex-col gap-1.5">
                 <input ref={logoRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={function(e) { uploadLogo(e.target.files[0]); }}/>
-                <button onClick={function() { logoRef.current.click(); }} disabled={uploading} className="border border-gray-200 rounded-xl py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50">
+                <button onClick={function() { logoRef.current.click(); }} disabled={uploading} className="border border-gray-200 rounded-xl py-2 min-h-[44px] text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50">
                   {uploading ? 'Enviando...' : 'Upload de logo'}
                 </button>
-                {form.logoUrl && <button onClick={function() { setForm(function(f) { return Object.assign({}, f, {logoUrl:'', colors:['#002f59'], primaryColor:'#002f59', secondaryColor:'', accentColor:''}); }); }} className="text-xs text-red-400 text-center">Remover logo</button>}
+                {form.logoUrl && <button onClick={function() { setForm(function(f) { return Object.assign({}, f, {logoUrl:'', colors:['#002f59'], primaryColor:'#002f59', secondaryColor:'', accentColor:''}); }); }} className="text-xs text-red-400 text-center hover:text-red-500 py-1">Remover logo</button>}
               </div>
             </div>
           </div>
@@ -339,7 +353,7 @@ export default function AdminPanel({ toast, confirm, session }) {
                 className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
             </div>
             <button onClick={function() { setForm(function(f) { return Object.assign({}, f, {password:genPwd()}); }); }}
-              className="border border-gray-200 rounded-xl px-3 text-xs font-semibold text-gray-600 hover:bg-gray-50 flex-shrink-0 mt-6">Gerar</button>
+              className="border border-gray-200 rounded-xl px-3 min-h-[44px] text-xs font-semibold text-gray-600 hover:bg-gray-50 flex-shrink-0 mt-6">Gerar</button>
           </div>
           <button onClick={create} disabled={creating || building || !form.email || !form.password}
             className="w-full text-white rounded-xl py-3 text-sm font-bold hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
@@ -347,7 +361,7 @@ export default function AdminPanel({ toast, confirm, session }) {
             {(creating || building) ? 'Aguarde...' : 'Criar cliente + APK'}
           </button>
           {done && (
-            <div className="rounded-2xl p-4 flex flex-col gap-3" style={{background:'#f0fdf4', border:'1px solid #bbf7d0'}}>
+            <div className="rounded-2xl p-4 flex flex-col gap-3 anim-up" style={{background:'#f0fdf4', border:'1px solid #bbf7d0'}}>
               <p className="text-sm font-bold" style={{color:'var(--text-main)'}}>OK: {done.companyName || 'Cliente'} criado!</p>
               <div className="rounded-xl p-3 font-mono text-xs flex flex-col gap-1" style={{background:'var(--bg-input)', border:'1px solid var(--border)'}}>
                 <p><span className="text-gray-400">Email: </span><b>{done.email}</b></p>
@@ -355,11 +369,13 @@ export default function AdminPanel({ toast, confirm, session }) {
                 {done.buildOk && <p><span className="text-gray-400">APK: </span><a href={'https://github.com/' + GH_REPO + '/actions'} target="_blank" rel="noreferrer" className="text-blue-500 underline">github.com/.../actions</a></p>}
               </div>
               <button onClick={function() { copyWpp(null, done); }}
-                className="w-full text-white rounded-xl py-2.5 text-sm font-bold hover:opacity-90"
+                className="w-full text-white rounded-xl py-2.5 min-h-[44px] text-sm font-bold hover:opacity-90 flex items-center justify-center gap-2"
                 style={{background:'#002f59'}}>
-                {copied === done.email ? 'OK Copiado!' : 'Copiar para WhatsApp'}
+                {copied === done.email
+                  ? <React.Fragment><svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>Copiado!</React.Fragment>
+                  : 'Copiar para WhatsApp'}
               </button>
-              <button onClick={function() { setDone(null); }} className="text-xs text-gray-400 text-center hover:text-gray-600">Criar outro</button>
+              <button onClick={function() { setDone(null); }} className="text-xs text-gray-400 text-center hover:text-gray-600 min-h-[44px]">Criar outro</button>
             </div>
           )}
         </div>

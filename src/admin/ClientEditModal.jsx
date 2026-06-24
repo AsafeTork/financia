@@ -217,7 +217,7 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <p className="font-bold" style={{color:'var(--text-main)'}}>Editar cliente</p>
-          <button onClick={onClose} aria-label="Fechar" className="text-gray-400 hover:text-gray-600 p-1">
+          <button onClick={onClose} aria-label="Fechar" className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1 rounded-lg transition flex items-center justify-center w-9 h-9 flex-shrink-0">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
@@ -242,10 +242,10 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
               <div className="flex flex-col gap-1.5 flex-1">
                 <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={function(e) { uploadLogo(e.target.files[0]); }}/>
                 <button onClick={function() { fileRef.current.click(); }} disabled={uploading}
-                  className="text-sm border border-gray-200 rounded-xl py-2 font-medium text-gray-600 hover:bg-gray-50">
+                  className="text-sm border border-gray-200 rounded-xl py-2 min-h-[44px] font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
                   {uploading ? 'Enviando...' : 'Upload de logo'}
                 </button>
-                {logoUrl && <button onClick={function() { setLogoUrl(null); setExtractedColors([]); }} className="text-xs text-red-400 text-center">Remover</button>}
+                {logoUrl && <button onClick={function() { setLogoUrl(null); setExtractedColors([]); }} className="text-xs text-red-400 text-center hover:text-red-500 py-1">Remover</button>}
               </div>
             </div>
             {extractedColors.length > 0 && (
@@ -264,14 +264,14 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
                       <span className="text-xs text-gray-500 w-16 flex-shrink-0">{label}</span>
                       <span className="text-xs font-mono text-gray-400 flex-1">{c}</span>
                       <button onClick={apply}
-                        className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-200 text-gray-600 flex-shrink-0" style={{background:'var(--bg-input)'}}>
+                        className="text-xs font-semibold px-2 py-1 min-h-[44px] rounded-lg border border-gray-200 text-gray-600 flex-shrink-0 hover:bg-gray-50 transition" style={{background:'var(--bg-input)'}}>
                         Aplicar
                       </button>
                     </div>
                   );
                 })}
                 <button onClick={function() { applySuggestion(extractedColors); }}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 self-start mt-1" style={{background:'var(--bg-input)'}}>
+                  className="text-xs font-semibold px-3 py-1.5 min-h-[44px] rounded-lg border border-gray-200 text-gray-600 self-start mt-1 hover:bg-gray-50 transition" style={{background:'var(--bg-input)'}}>
                   Aplicar todas de uma vez
                 </button>
               </div>
@@ -310,7 +310,7 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
                 return (
                   <button key={p.name} type="button"
                     onClick={function() { setColorRaw(p.color); setSecondary(p.secondary); setAccent(p.accent); }}
-                    className="rounded-xl p-2.5 text-left transition hover:opacity-90"
+                    className="rounded-xl p-2.5 min-h-[44px] text-left transition hover:opacity-90"
                     style={{ border: (active ? '2px solid ' + p.color : '1px solid #e5e7eb') }}>
                     <div className="flex gap-1 mb-1.5">
                       <span className="w-5 h-5 rounded-md" style={{ background: p.color }} />
@@ -369,13 +369,13 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Tema</p>
             <div className="flex gap-2">
               <button onClick={function() { setTheme('light'); }}
-                className={'flex-1 py-2 rounded-xl text-sm font-semibold border transition ' + (theme === 'light' ? 'text-white' : 'text-gray-600 bg-white border-gray-200')}
-                style={theme === 'light' ? {background: color, borderColor: color} : {}}>
+                className={'flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold border transition hover:opacity-90 ' + (theme === 'light' ? 'text-white' : 'text-gray-600 border-gray-200')}
+                style={theme === 'light' ? {background: color, borderColor: color} : {background:'var(--bg-card)'}}>
                 Claro
               </button>
               <button onClick={function() { setTheme('dark'); }}
-                className={'flex-1 py-2 rounded-xl text-sm font-semibold border transition ' + (theme === 'dark' ? 'text-white' : 'text-gray-600 bg-white border-gray-200')}
-                style={theme === 'dark' ? {background:'#0f172a', borderColor:'#0f172a'} : {}}>
+                className={'flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold border transition hover:opacity-90 ' + (theme === 'dark' ? 'text-white' : 'text-gray-600 border-gray-200')}
+                style={theme === 'dark' ? {background:'#0f172a', borderColor:'#0f172a'} : {background:'var(--bg-card)'}}>
                 Escuro
               </button>
             </div>
@@ -386,13 +386,13 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Plano</label>
             <div className="flex gap-2">
               <button type="button" onClick={function() { setPlan('free'); }}
-                className={'flex-1 py-2 rounded-xl text-sm font-semibold border ' + (plan === 'free' ? 'text-white' : 'text-gray-600 bg-white border-gray-200')}
-                style={plan === 'free' ? {background:'#6b7280', borderColor:'#6b7280'} : {}}>
+                className={'flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold border transition hover:opacity-90 ' + (plan === 'free' ? 'text-white' : 'text-gray-600 border-gray-200')}
+                style={plan === 'free' ? {background:'#6b7280', borderColor:'#6b7280'} : {background:'var(--bg-card)'}}>
                 Free
               </button>
               <button type="button" onClick={function() { setPlan('pro'); }}
-                className={'flex-1 py-2 rounded-xl text-sm font-semibold border ' + (plan === 'pro' ? 'text-white' : 'text-gray-600 bg-white border-gray-200')}
-                style={plan === 'pro' ? {background: color, borderColor: color} : {}}>
+                className={'flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold border transition hover:opacity-90 ' + (plan === 'pro' ? 'text-white' : 'text-gray-600 border-gray-200')}
+                style={plan === 'pro' ? {background: color, borderColor: color} : {background:'var(--bg-card)'}}>
                 Pro
               </button>
             </div>
@@ -402,9 +402,9 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
         </div>
 
         <div className="flex gap-2 px-5 pb-6 pt-2 flex-shrink-0">
-          <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600">Cancelar</button>
+          <button onClick={onClose} className="flex-1 py-2.5 min-h-[44px] border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">Cancelar</button>
           <button onClick={save} disabled={saving}
-            className="flex-1 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-40"
+            className="flex-1 py-2.5 min-h-[44px] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition flex items-center justify-center gap-2"
             style={{background: color}}>
             {saving ? 'Salvando...' : 'Salvar'}
           </button>
