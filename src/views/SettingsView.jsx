@@ -1,5 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { Card, Inp, Spin, PageHead } from '../components/ui.jsx';
+import PhoneInput, { parsePhone, buildPhone } from '../components/PhoneInput.jsx';
 import { updatePassword, signOut as doSignOut } from '../lib/auth.js';
 import { effectivePlan, PRICING_PLANS } from '../lib/constants.js';
 import AdminPanel from '../admin/AdminPanel.jsx';
@@ -9,8 +10,10 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
   var [tab, setTab] = useState(isAdmin ? 'clients' : 'security');
   var [pwForm, setPwForm] = useState({newPw:'', confirm:''});
   var [pwSaving, setPwSaving] = useState(false);
-  var [phone, setPhone] = useState(brand.phone || '');
+  var [phoneData, setPhoneData] = useState(function() { var p = parsePhone(brand.phone); return buildPhone(p.iso, p.digits); });
   var [phoneSaving, setPhoneSaving] = useState(false);
+  var initParsed = parsePhone(brand.phone);
+  var initE164 = buildPhone(initParsed.iso, initParsed.digits).e164;
   React.useEffect(function() {
     if (isAdmin && tab === 'security') {
       setTab('clients');
@@ -21,7 +24,7 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
 
   const savePhone = async function() {
     setPhoneSaving(true);
-    await onSavePhone(phone);
+    await onSavePhone(phoneData.e164);
     setPhoneSaving(false);
   };
 
@@ -129,8 +132,8 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
             <div className="flex justify-between text-sm"><span style={{color:'var(--text-sub)'}}>Hospedagem</span><span className="font-medium" style={{color:'var(--text-main)'}}>Render</span></div>
           </div>
           <div className="border-t pt-4" style={{borderColor:'var(--border)'}}>
-            <Inp label="Telefone de contato" value={phone} onChange={function(e) { setPhone(e.target.value); }} placeholder="Ex: 11912345678" inputMode="numeric"/>
-            <button onClick={savePhone} disabled={phoneSaving || phone.replace(/\D/g,'') === (brand.phone||'')} className="w-full mt-3 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40 min-h-12" style={{background:brand.color}}>
+            <PhoneInput label="Telefone de contato" value={brand.phone || ''} onChange={setPhoneData}/>
+            <button onClick={savePhone} disabled={phoneSaving || !phoneData.valid || phoneData.e164 === initE164} className="w-full mt-3 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40 min-h-12 active:scale-[0.98] transition" style={{background:brand.color}}>
               {phoneSaving ? <Spin white/> : 'Salvar telefone'}
             </button>
           </div>
