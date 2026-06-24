@@ -54,7 +54,7 @@ export default function UpgradeModal({ reason, brand, onClose }) {
                     );
                   })}
                 </div>
-                <a href={wa} target="_blank" rel="noreferrer"
+                <a href={wa} target="_blank" rel="noopener noreferrer"
                   className="block text-center text-sm font-semibold py-3 rounded-xl transition hover:opacity-90 min-h-[44px] flex items-center justify-center"
                   style={popular ? { background: c, color: '#fff' } : { border: '1px solid var(--border-md)', color: 'var(--text-main)' }}>
                   Quero o {p.name}
