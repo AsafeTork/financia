@@ -1,5 +1,5 @@
 import React from 'react';
-import { PRICING_PLANS, WHATSAPP } from '../lib/constants.js';
+import { PRICING_PLANS, WHATSAPP, waLink as makeWaLink } from '../lib/constants.js';
 
 var INK = '#0a2540';
 var BRAND = '#002f59';
@@ -28,7 +28,7 @@ var FAQ = [
 ];
 
 export default function Landing({ onEnter }) {
-  var waLink = 'https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent('Quero conhecer o Financia para o meu negocio.');
+  var waLink = makeWaLink('Quero conhecer o Financia para o meu negócio.');
   var delay = function(ms) { return { animationDelay: ms + 'ms', animationFillMode: 'both' }; };
 
   return (
@@ -94,7 +94,7 @@ export default function Landing({ onEnter }) {
               </div>
               <div className="flex items-end gap-1.5 h-24 mb-4">
                 {[40, 62, 48, 80, 55, 92, 70].map(function(h, i) {
-                  return <div key={i} className="flex-1 rounded-md" style={{ height: h + '%', background: i === 5 ? ACCENT : 'rgba(0,47,89,0.14)' }} />;
+                  return <div key={String(i) + '-' + h} className="flex-1 rounded-md" style={{ height: h + '%', background: i === 5 ? ACCENT : 'rgba(0,47,89,0.14)' }} />;
                 })}
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -178,7 +178,7 @@ export default function Landing({ onEnter }) {
                   {p.features.map(function(feat) {
                     return (
                       <div key={feat} className="flex items-start gap-2.5">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={popular ? ACCENT : ACCENT} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5"><path d="M5 13l4 4L19 7" /></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5"><path d="M5 13l4 4L19 7" /></svg>
                         <span className="text-sm" style={{ color: popular ? 'rgba(255,255,255,0.85)' : MUTED }}>{feat}</span>
                       </div>
                     );
