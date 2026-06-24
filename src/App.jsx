@@ -14,6 +14,7 @@ import Confirm from './components/Confirm.jsx';
 import SyncBadge from './components/SyncBadge.jsx';
 import UpgradeModal from './components/UpgradeModal.jsx';
 import UpdateBanner from './components/UpdateBanner.jsx';
+import Onboarding from './components/Onboarding.jsx';
 import { PageSkeleton } from './components/ui.jsx';
 import Login from './views/Login.jsx';
 
@@ -141,6 +142,23 @@ export default function App() {
     </div>
   );
 
+  var uid = session.user.id;
+  var meta = session.user.user_metadata || {};
+  var googleName = meta.full_name || meta.name || '';
+  var onboarded = !!localStorage.getItem('financia_onboarded_' + uid);
+  var needsOnboarding = !onboarded && !!googleName && brand.name === googleName;
+  if (needsOnboarding) {
+    var finishOnboarding = function(companyName) {
+      var nb = Object.assign({}, brand, {name: companyName});
+      return Promise.resolve(saveBrand(nb)).then(function() {
+        localStorage.setItem('financia_onboarded_' + uid, '1');
+      });
+    };
+    return <Onboarding brand={brand} onSave={finishOnboarding}/>;
+  }
+
+  var currentView = (view === 'email' && !isAdminDB) ? 'dashboard' : view;
+
   const p = {brand:brand, toast:toast, confirm:confirm};
   const views = {
     dashboard: React.createElement(Dashboard, {tx:tx, products:products, brand:brand, onNav:navTo, planInfo:planInfo, lossesCount:losses.length, onUpgrade:function() { navTo('planos'); }}),
@@ -163,7 +181,7 @@ export default function App() {
         <Header brand={brand} syncStatus={syncStatus} onMenuOpen={function() { setSidebarOpen(true); }}/>
         <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto pb-24 lg:pb-8 min-w-0 overflow-x-hidden">
           <Suspense fallback={<PageSkeleton/>}>
-            {views[view]}
+            {views[currentView]}
           </Suspense>
         </main>
       </div>
