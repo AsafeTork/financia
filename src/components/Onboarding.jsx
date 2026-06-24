@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Inp, Spin } from './ui.jsx';
 import { safe } from '../lib/utils.js';
 
-export default function Onboarding({ brand, onSave }) {
+export default function Onboarding({ brand, needsName, needsPhone, onSave }) {
   var [name, setName] = useState('');
+  var [phone, setPhone] = useState('');
   var [loading, setLoading] = useState(false);
   var [err, setErr] = useState('');
 
@@ -11,11 +12,13 @@ export default function Onboarding({ brand, onSave }) {
 
   var submit = async function(e) {
     e.preventDefault();
-    var clean = safe(name).trim();
-    if (!clean) { setErr('Informe o nome da sua empresa.'); return; }
+    var cleanName = safe(name).trim();
+    var cleanPhone = phone.replace(/\D/g, '');
+    if (needsName && !cleanName) { setErr('Informe o nome da sua empresa.'); return; }
+    if (needsPhone && cleanPhone.length < 10) { setErr('Informe um telefone válido com DDD.'); return; }
     setLoading(true); setErr('');
     try {
-      await onSave(clean);
+      await onSave({ name: cleanName, phone: cleanPhone });
     } catch (e2) {
       setErr('Erro ao salvar. Tente novamente.');
       setLoading(false);
@@ -32,16 +35,19 @@ export default function Onboarding({ brand, onSave }) {
             </svg>
           </div>
           <h1 className="font-display text-2xl font-semibold" style={{ color: 'var(--text-main)', letterSpacing: '-0.5px' }}>Bem-vindo ao Financia</h1>
-          <p className="text-sm mt-2" style={{ color: 'var(--text-sub)' }}>Como se chama o seu negocio? Voce pode mudar depois nas configuracoes.</p>
+          <p className="text-sm mt-2" style={{ color: 'var(--text-sub)' }}>
+            {needsName && needsPhone ? 'Antes de começar, conte um pouco sobre você.' : needsPhone ? 'Falta só o seu telefone de contato.' : 'Como se chama o seu negócio?'}
+          </p>
         </div>
 
         <form onSubmit={submit} className="flex flex-col gap-4">
-          <Inp label="Nome da empresa" value={name} onChange={function(e) { setName(e.target.value); }} placeholder="Ex: Padaria do Joao" autoFocus />
+          {needsName && <Inp label="Nome da empresa" value={name} onChange={function(e) { setName(e.target.value); }} placeholder="Ex: Padaria do João" autoFocus />}
+          {needsPhone && <Inp label="Telefone (com DDD)" value={phone} onChange={function(e) { setPhone(e.target.value); }} placeholder="Ex: 11912345678" inputMode="numeric" autoFocus={!needsName} hint="Usamos só para contato sobre seu plano." />}
           {err && <p className="text-xs text-red-500">{err}</p>}
           <button disabled={loading} type="submit"
             className="w-full text-white rounded-xl py-3.5 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 transition hover:opacity-90 min-h-[44px]"
             style={{ background: brandColor }}>
-            {loading ? <Spin white /> : 'Comecar'}
+            {loading ? <Spin white /> : 'Começar'}
           </button>
         </form>
       </div>

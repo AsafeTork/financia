@@ -114,7 +114,7 @@ export default function App() {
   const {products, setProducts, addProduct, editProduct, deleteProduct, adjustStock}    = useProducts(session, enforceLimit, toast);
   const {losses, setLosses, addLoss, editLoss, deleteLoss}                             = useLosses(session, enforceLimit, toast);
 
-  const {saveBrand, loadData} = useSession({
+  const {saveBrand, savePhone, loadData} = useSession({
     toast, session, setSession,
     isAdminDB, setIsAdminDB,
     setAppLoading, setDataLoading, setDataError,
@@ -154,15 +154,22 @@ export default function App() {
   var meta = session.user.user_metadata || {};
   var googleName = meta.full_name || meta.name || '';
   var onboarded = !!localStorage.getItem('financia_onboarded_' + uid);
-  var needsOnboarding = !onboarded && !!googleName && brand.name === googleName;
+  var needsName = !!googleName && brand.name === googleName;
+  var needsPhone = !brand.phone;
+  var needsOnboarding = !onboarded && (needsName || needsPhone);
   if (needsOnboarding) {
-    var finishOnboarding = function(companyName) {
-      var nb = Object.assign({}, brand, {name: companyName});
-      return Promise.resolve(saveBrand(nb)).then(function() {
+    var finishOnboarding = function(data) {
+      var tasks = [];
+      if (needsName && data.name) {
+        var nb = Object.assign({}, brand, {name: data.name});
+        tasks.push(Promise.resolve(saveBrand(nb)));
+      }
+      if (data.phone) tasks.push(Promise.resolve(savePhone(data.phone)));
+      return Promise.all(tasks).then(function() {
         localStorage.setItem('financia_onboarded_' + uid, '1');
       });
     };
-    return <Onboarding brand={brand} onSave={finishOnboarding}/>;
+    return <Onboarding brand={brand} needsName={needsName} needsPhone={needsPhone} onSave={finishOnboarding}/>;
   }
 
   var currentView = (view === 'email' && !isAdminDB) ? 'dashboard' : view;
@@ -175,7 +182,7 @@ export default function App() {
     inventory: React.createElement(InventoryView, Object.assign({products:products, losses:losses, onAddProduct:addProduct, onEditProduct:editProduct, onDeleteProduct:deleteProduct, onAddLoss:addLoss, onEditLoss:editLoss, onDeleteLoss:deleteLoss, onAdjustStock:adjustStock}, p)),
     email:     React.createElement(EmailView, {brand:brand, toast:toast}),
     report:    React.createElement(ReportView, {tx:tx, brand:brand, toast:toast, onNav:navTo}),
-    settings:  React.createElement(SettingsView, {brand:brand, session:session, planInfo:planInfo, onSave:saveBrand, toast:toast, confirm:confirm, isAdmin:isAdminDB, onNav:navTo}),
+    settings:  React.createElement(SettingsView, {brand:brand, session:session, planInfo:planInfo, onSave:saveBrand, onSavePhone:savePhone, toast:toast, confirm:confirm, isAdmin:isAdminDB, onNav:navTo}),
     planos:    React.createElement(PlansView, {brand:brand, planInfo:planInfo}),
   };
 
