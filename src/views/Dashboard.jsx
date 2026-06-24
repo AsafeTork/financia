@@ -139,7 +139,8 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
           value={fmt(to)}
           color="#ef4444"
           accentBar="#ef4444"
-          variation={outVar !== null ? -outVar : null}
+          variation={outVar}
+          invert={true}
           onClick={function() { onNav('expense'); }}
           sub={outVar === null ? 'Sem dados anteriores' : undefined}/>
         <KpiCard label="Resultado"

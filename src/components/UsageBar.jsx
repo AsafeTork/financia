@@ -21,11 +21,14 @@ export function UsageBar({ label, used, limit, color, accentColor }) {
   );
 }
 
-export function KpiCard({ label, value, variation, sub, color, accentBar, onClick }) {
+export function KpiCard({ label, value, variation, sub, color, accentBar, onClick, invert }) {
   var hasClick = typeof onClick === 'function';
   var barColor = accentBar || color;
-  var varPositive = variation !== null && variation !== undefined && variation >= 0;
-  var varNegative = variation !== null && variation !== undefined && variation < 0;
+  var hasVar = variation !== null && variation !== undefined;
+  var up = hasVar && variation >= 0;
+  // Seta e numero sempre refletem a variacao real; `invert` so troca a cor
+  // (ex: despesa subindo = vermelho, mesmo com seta pra cima e numero positivo).
+  var good = invert ? (hasVar && variation <= 0) : up;
   return (
     <Card className={'p-4 overflow-hidden' + (hasClick ? ' cursor-pointer card-hover' : '')}
       onClick={hasClick ? onClick : undefined}
@@ -35,8 +38,8 @@ export function KpiCard({ label, value, variation, sub, color, accentBar, onClic
       <p className="font-extrabold mt-2 text-gray-900 truncate tabular" style={{fontSize:22, letterSpacing:'-0.5px'}}>{value}</p>
       {variation !== null && variation !== undefined && (
         <div className="flex items-center gap-1 mt-1.5">
-          <span className={'text-xs font-semibold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md ' + (varPositive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500')}>
-            {varPositive ? (
+          <span className={'text-xs font-semibold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md ' + (good ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500')}>
+            {up ? (
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M5 15l7-7 7 7"/></svg>
             ) : (
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M19 9l-7 7-7-7"/></svg>
