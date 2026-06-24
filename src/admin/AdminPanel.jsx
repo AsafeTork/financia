@@ -196,7 +196,7 @@ export default function AdminPanel({ toast, confirm, session }) {
               <div className="flex flex-col gap-2">
                 {visibleClients.map(function(c) {
                   return (
-                    <div key={c.user_id} className="rounded-xl border border-gray-100 p-3 flex flex-col gap-2.5 bg-white">
+                    <div key={c.user_id} className="rounded-xl border border-gray-100 p-3 flex flex-col gap-2.5" style={{background:'var(--bg-card)'}}>
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden" style={{background:c.color||'#002f59'}}>
                           {c.logo_url
@@ -279,12 +279,12 @@ export default function AdminPanel({ toast, confirm, session }) {
       <div>
         <p className="text-sm font-bold text-gray-800 mb-3">Novo cliente</p>
         <div className="flex flex-col gap-3">
-          <div className="rounded-2xl p-4 flex flex-col gap-3" style={{background:'#f8fafc'}}>
+          <div className="rounded-2xl p-4 flex flex-col gap-3" style={{background:'var(--bg-subtle)'}}>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Nome da empresa</label>
               <input value={form.companyName} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {companyName:e.target.value}); }); }}
                 placeholder="Ex: Padaria do Joao"
-                className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-400"/>
+                className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden border-2 border-dashed border-gray-200" style={{background:form.primaryColor+'22'}}>
@@ -319,7 +319,7 @@ export default function AdminPanel({ toast, confirm, session }) {
                   <input value={form[field.key] || ''}
                     onChange={function(e) { var v = e.target.value; setForm(function(f) { var upd = {}; upd[field.key] = v; return Object.assign({}, f, upd); }); }}
                     maxLength={7} placeholder="#000000"
-                    className="border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-mono flex-1 focus:outline-none focus:border-gray-400 bg-white"/>
+                    className="border border-gray-200 rounded-xl px-2 py-1.5 text-xs font-mono flex-1 focus:outline-none" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
                   <div className="w-7 h-7 rounded-lg border border-gray-100 flex-shrink-0" style={{background:val}}/>
                 </div>
               );
@@ -329,14 +329,14 @@ export default function AdminPanel({ toast, confirm, session }) {
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Email</label>
             <input type="email" value={form.email} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {email:e.target.value}); }); }}
               placeholder="cliente@email.com"
-              className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-400"/>
+              className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
           </div>
           <div className="flex gap-2">
             <div className="flex flex-col gap-1.5 flex-1">
               <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Senha</label>
               <input type="text" value={form.password} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {password:e.target.value}); }); }}
                 placeholder="Minimo 8 chars"
-                className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-gray-400"/>
+                className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
             </div>
             <button onClick={function() { setForm(function(f) { return Object.assign({}, f, {password:genPwd()}); }); }}
               className="border border-gray-200 rounded-xl px-3 text-xs font-semibold text-gray-600 hover:bg-gray-50 flex-shrink-0 mt-6">Gerar</button>
