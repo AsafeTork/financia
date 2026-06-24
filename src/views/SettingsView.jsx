@@ -93,7 +93,7 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
 
       {onNav && (
         <button onClick={function() { onNav('planos'); }}
-          className="w-full text-left rounded-2xl p-4 flex items-center gap-3 transition hover:opacity-90"
+          className="w-full text-left rounded-2xl p-4 flex items-center gap-3 transition hover:opacity-90 min-h-20"
           style={{background:'var(--brand-soft)', border:'1px solid var(--border)'}}>
           <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background: brand.color}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"/></svg>
@@ -131,15 +131,15 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
               </button>
             </div>
           </div>
-          <div className="border-t border-gray-100 pt-4">
-            <p className="text-sm font-semibold text-gray-800 mb-2">Segurança do sistema</p>
+          <div className="border-t pt-4" style={{borderColor:'var(--border)'}}>
+            <p className="text-sm font-semibold mb-2" style={{color:'var(--text-main)'}}>Segurança do sistema</p>
             {['Dados criptografados no Supabase','Cada usuário acessa apenas seus dados (RLS)','Conexão sempre via HTTPS','Sessão expira automaticamente','Nunca compartilhe sua senha'].map(function(s, i) {
               return (
                 <div key={i} className="flex items-center gap-2.5 mb-2">
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{background:'#dcfce7'}}>
                     <svg className="w-3 h-3" fill="none" stroke="#16a34a" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
                   </div>
-                  <p className="text-sm text-gray-600">{s}</p>
+                  <p className="text-sm" style={{color:'var(--text-sub)'}}>{s}</p>
                 </div>
               );
             })}
@@ -149,31 +149,31 @@ export default function SettingsView({ brand, session, onSave, toast, confirm, i
 
       {tab === 'account' && (
         <Card className="p-6 flex flex-col gap-4">
-          <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+          <div className="flex items-center gap-3 p-4 rounded-xl" style={{background:'var(--bg-subtle)'}}>
             <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden" style={{background:brand.color}}>
               {brand.logo_url
                 ? <img src={brand.logo_url} alt="logo" className="w-full h-full object-cover"/>
                 : <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">{brand.name ? brand.name[0].toUpperCase() : (session && session.user && session.user.email ? session.user.email[0].toUpperCase() : 'U')}</div>
               }
             </div>
-            <div><p className="text-sm font-semibold text-gray-800">{brand.name || (session && session.user ? session.user.email : '')}</p><p className="text-xs text-gray-400">{session && session.user ? session.user.email : 'Usuário ativo'}</p></div>
+            <div className="min-w-0"><p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{brand.name || (session && session.user ? session.user.email : '')}</p><p className="text-xs truncate" style={{color:'var(--text-sub)'}}>{session && session.user ? session.user.email : 'Usuário ativo'}</p></div>
           </div>
-          <div className="border-t border-gray-100 pt-2">
-            <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Versão</span><span className="font-medium">5.0</span></div>
-            <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Banco</span><span className="font-medium">Supabase (PostgreSQL)</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-500">Hospedagem</span><span className="font-medium">Render</span></div>
+          <div className="border-t pt-2" style={{borderColor:'var(--border)'}}>
+            <div className="flex justify-between text-sm mb-1.5"><span style={{color:'var(--text-sub)'}}>Versão</span><span className="font-medium" style={{color:'var(--text-main)'}}>5.0</span></div>
+            <div className="flex justify-between text-sm mb-1.5"><span style={{color:'var(--text-sub)'}}>Banco</span><span className="font-medium" style={{color:'var(--text-main)'}}>Supabase (PostgreSQL)</span></div>
+            <div className="flex justify-between text-sm"><span style={{color:'var(--text-sub)'}}>Hospedagem</span><span className="font-medium" style={{color:'var(--text-main)'}}>Render</span></div>
           </div>
-          <div className="rounded-xl bg-gray-50 border border-gray-100 p-4 flex flex-col gap-3">
+          <div className="rounded-xl border p-4 flex flex-col gap-3" style={{background:'var(--bg-subtle)', borderColor:'var(--border)'}}>
             <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-              <p className="text-sm font-semibold text-gray-700">Instalar como app</p>
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="var(--text-sub)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              <p className="text-sm font-semibold" style={{color:'var(--text-main)'}}>Instalar como app</p>
             </div>
             <div className="flex flex-col gap-2">
-              <div className="flex items-start gap-2"><span className="text-xs font-bold text-gray-400 flex-shrink-0 mt-0.5">Android</span><p className="text-xs text-gray-500">Toque nos 3 pontinhos do Chrome e escolha "Adicionar a tela inicial"</p></div>
-              <div className="flex items-start gap-2"><span className="text-xs font-bold text-gray-400 flex-shrink-0 mt-0.5">iPhone</span><p className="text-xs text-gray-500">Toque no ícone de compartilhar do Safari e escolha "Adicionar à tela de início"</p></div>
+              <div className="flex items-start gap-2"><span className="text-xs font-bold flex-shrink-0 mt-0.5" style={{color:'var(--text-muted)'}}>Android</span><p className="text-xs" style={{color:'var(--text-sub)'}}>Toque nos 3 pontinhos do Chrome e escolha "Adicionar a tela inicial"</p></div>
+              <div className="flex items-start gap-2"><span className="text-xs font-bold flex-shrink-0 mt-0.5" style={{color:'var(--text-muted)'}}>iPhone</span><p className="text-xs" style={{color:'var(--text-sub)'}}>Toque no ícone de compartilhar do Safari e escolha "Adicionar à tela de início"</p></div>
             </div>
           </div>
-          <button onClick={function() { confirm('Sair da conta?', function() { doSignOut(); }); }} className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50">Sair da conta</button>
+          <button onClick={function() { confirm('Sair da conta?', function() { doSignOut(); }); }} className="w-full rounded-xl py-3 text-sm font-medium transition min-h-12" style={{border:'1px solid var(--border)', color:'var(--text-sub)', background:'var(--bg-card)'}} onMouseEnter={function(e) { e.target.style.background = 'var(--bg-subtle)'; }} onMouseLeave={function(e) { e.target.style.background = 'var(--bg-card)'; }}>Sair da conta</button>
         </Card>
       )}
 
