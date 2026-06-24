@@ -19,7 +19,7 @@ export function PSearch({ products, value, onSelect, onChange, placeholder }) {
         style={{background:'var(--bg-input)', color:'var(--text-main)'}}
       />
       {open && products.length > 0 && filtered.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-gray-200 z-30 overflow-hidden max-h-48 overflow-y-auto" style={{background:'var(--bg-card)', boxShadow:'0 8px 24px rgba(0,0,0,0.1)'}}>
+        <div className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-gray-200 z-30 overflow-hidden max-h-48 overflow-y-auto anim-down" style={{background:'var(--bg-card)', boxShadow:'0 8px 24px rgba(0,0,0,0.1)'}}>
           {filtered.map(function(p) {
             return (
               <button key={p.id} onPointerDown={function() { onSelect(p); setOpen(false); }} className="flex items-center justify-between w-full px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0">
@@ -45,7 +45,7 @@ export function CartRow({ item, idx, products, onChange, onSelect, onRemove, sho
       <div className="flex items-center gap-2">
         <PSearch products={products} value={item.desc} onSelect={function(p) { onSelect(idx, p.name, p.price); }} onChange={function(v) { onChange(idx, 'desc', v); }}/>
         {onRemove && (
-          <button onClick={onRemove} className="text-gray-300 hover:text-red-400 p-1 flex-shrink-0">
+          <button onClick={onRemove} aria-label="Remover item" title="Remover item" className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition flex-shrink-0">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         )}
@@ -100,7 +100,7 @@ export function SaleForm({ products, brand, onSave, onClose }) {
       <div className="rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg flex flex-col anim-scale" style={{background:'var(--bg-card)', maxHeight:'90vh', boxShadow:'var(--shadow-lg)'}}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <span className="font-semibold text-gray-900">Nova Venda</span>
-          <button onClick={onClose} aria-label="Fechar" className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
+          <button onClick={onClose} aria-label="Fechar" className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
@@ -114,7 +114,7 @@ export function SaleForm({ products, brand, onSave, onClose }) {
                 />
               );
             })}
-            <button onClick={function() { setItems(function(p) { return p.concat([{rid:uid(), desc:'', qty:'1', up:''}]); }); }} className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 w-fit">
+            <button onClick={function() { setItems(function(p) { return p.concat([{rid:uid(), desc:'', qty:'1', up:''}]); }); }} className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-gray-600 w-fit min-h-[44px] px-2 -mx-2 rounded-lg">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>Adicionar item
             </button>
           </div>
