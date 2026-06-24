@@ -29,6 +29,7 @@ const PlansView     = lazy(function() { return import('./views/PlansView.jsx'); 
 
 const VALID_VIEWS = ['dashboard','income','expense','inventory','email','report','settings','planos'];
 const hashView = function() { const h = window.location.hash.replace('#',''); return VALID_VIEWS.includes(h) ? h : 'dashboard'; };
+const isLandingPreview = function() { return window.location.hash.replace('#','') === 'landing'; };
 
 function Loader({ text }) {
   return (
@@ -122,6 +123,13 @@ export default function App() {
   });
 
   if (appLoading) return <Loader/>;
+  if (isLandingPreview()) {
+    return (
+      <Suspense fallback={<Loader/>}>
+        <Landing brand={brand} onEnter={function() { window.location.hash = ''; setShowLogin(true); }}/>
+      </Suspense>
+    );
+  }
   if (!session) {
     var seen = !!localStorage.getItem('financia_seen');
     if (!seen && !showLogin) {
@@ -167,7 +175,7 @@ export default function App() {
     inventory: React.createElement(InventoryView, Object.assign({products:products, losses:losses, onAddProduct:addProduct, onEditProduct:editProduct, onDeleteProduct:deleteProduct, onAddLoss:addLoss, onEditLoss:editLoss, onDeleteLoss:deleteLoss, onAdjustStock:adjustStock}, p)),
     email:     React.createElement(EmailView, {brand:brand, toast:toast}),
     report:    React.createElement(ReportView, {tx:tx, brand:brand, toast:toast, onNav:navTo}),
-    settings:  React.createElement(SettingsView, {brand:brand, session:session, onSave:saveBrand, toast:toast, confirm:confirm, isAdmin:isAdminDB, onNav:navTo}),
+    settings:  React.createElement(SettingsView, {brand:brand, session:session, planInfo:planInfo, onSave:saveBrand, toast:toast, confirm:confirm, isAdmin:isAdminDB, onNav:navTo}),
     planos:    React.createElement(PlansView, {brand:brand, planInfo:planInfo}),
   };
 
