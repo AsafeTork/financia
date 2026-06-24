@@ -96,9 +96,21 @@ export const syncTable = async function(uid, table, ldbTable, mapLocal) {
   });
   if (rowsToPut.length > 0) await ldbTable.bulkPut(rowsToPut);
 
-  const { data: allIds } = await sb.from(table).select('id').eq('user_id', uid);
-  if (allIds) {
-    const remoteSet = new Set(allIds.map(function(r) { return r.id; }));
+  // Coleta TODOS os ids remotos paginando — sem range, o PostgREST limita em 1000
+  // e linhas alem disso seriam tratadas como orfas e apagadas localmente (perda de dados em contas Pro grandes).
+  const PAGE = 1000;
+  const remoteSet = new Set();
+  let from = 0;
+  let complete = true;
+  while (true) {
+    const { data: idPage, error: idErr } = await sb.from(table).select('id').eq('user_id', uid).range(from, from + PAGE - 1);
+    if (idErr) { complete = false; break; }
+    if (!idPage || idPage.length === 0) break;
+    idPage.forEach(function(r) { remoteSet.add(r.id); });
+    if (idPage.length < PAGE) break;
+    from += PAGE;
+  }
+  if (complete) {
     const localAll = await ldbTable.where('user_id').equals(uid).toArray();
     const orphans = localAll
       .filter(function(r) { return r._synced === 1 && !r._deleted && !remoteSet.has(r.id); })
