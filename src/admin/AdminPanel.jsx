@@ -196,7 +196,7 @@ export default function AdminPanel({ toast, confirm, session }) {
               <div className="flex flex-col gap-2">
                 {visibleClients.map(function(c) {
                   return (
-                    <div key={c.user_id} className="rounded-xl border border-gray-100 p-3 flex flex-col gap-2.5" style={{background:'var(--bg-card)'}}>
+                    <div key={c.user_id} className="rounded-xl p-3 flex flex-col gap-2.5" style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden" style={{background:c.color||'#002f59'}}>
                           {c.logo_url
@@ -206,7 +206,7 @@ export default function AdminPanel({ toast, confirm, session }) {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <p className="text-sm font-semibold text-gray-800 truncate">{c.name || 'Sem nome'}</p>
+                            <p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{c.name || 'Sem nome'}</p>
                             <span className={'text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 ' + (effectivePlan(c) === 'pro' ? 'text-white' : 'text-gray-600 bg-gray-100')} style={effectivePlan(c) === 'pro' ? {background:'#1a6b5c'} : {}}>
                               {effectivePlan(c) === 'pro' ? 'PRO' : 'FREE'}
                             </span>
@@ -274,10 +274,10 @@ export default function AdminPanel({ toast, confirm, session }) {
         }
       </div>
 
-      <hr className="border-gray-100"/>
+      <hr style={{borderColor:'var(--border)'}}/>
 
       <div>
-        <p className="text-sm font-bold text-gray-800 mb-3">Novo cliente</p>
+        <p className="text-sm font-bold mb-3" style={{color:'var(--text-main)'}}>Novo cliente</p>
         <div className="flex flex-col gap-3">
           <div className="rounded-2xl p-4 flex flex-col gap-3" style={{background:'var(--bg-subtle)'}}>
             <div className="flex flex-col gap-1.5">
@@ -348,8 +348,8 @@ export default function AdminPanel({ toast, confirm, session }) {
           </button>
           {done && (
             <div className="rounded-2xl p-4 flex flex-col gap-3" style={{background:'#f0fdf4', border:'1px solid #bbf7d0'}}>
-              <p className="text-sm font-bold text-gray-800">OK: {done.companyName || 'Cliente'} criado!</p>
-              <div className="bg-white rounded-xl p-3 font-mono text-xs flex flex-col gap-1 border border-gray-100">
+              <p className="text-sm font-bold" style={{color:'var(--text-main)'}}>OK: {done.companyName || 'Cliente'} criado!</p>
+              <div className="rounded-xl p-3 font-mono text-xs flex flex-col gap-1" style={{background:'var(--bg-input)', border:'1px solid var(--border)'}}>
                 <p><span className="text-gray-400">Email: </span><b>{done.email}</b></p>
                 <p><span className="text-gray-400">Senha: </span><b>{done.password}</b></p>
                 {done.buildOk && <p><span className="text-gray-400">APK: </span><a href={'https://github.com/' + GH_REPO + '/actions'} target="_blank" rel="noreferrer" className="text-blue-500 underline">github.com/.../actions</a></p>}
