@@ -38,7 +38,7 @@ export function PSearch({ products, value, onSelect, onChange, placeholder }) {
   );
 }
 
-export function CartRow({ item, idx, products, onChange, onSelect, onRemove }) {
+export function CartRow({ item, idx, products, onChange, onSelect, onRemove, showError }) {
   const lt = (Number(item.qty) || 0) * (Number(item.up) || 0);
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 flex flex-col gap-2">
@@ -52,7 +52,7 @@ export function CartRow({ item, idx, products, onChange, onSelect, onRemove }) {
       </div>
       <div className="flex items-end gap-2">
         <Inp label="Qtd" type="number" min="1" value={item.qty} onChange={function(e) { onChange(idx, 'qty', e.target.value); }} className="w-16 flex-shrink-0"/>
-        <Inp label="Preço unit." type="number" step="0.01" min="0" value={item.up} onChange={function(e) { onChange(idx, 'up', e.target.value); }} className="flex-1"/>
+        <Inp label="Preço unit." type="number" step="0.01" min="0" value={item.up} onChange={function(e) { onChange(idx, 'up', e.target.value); }} className="flex-1" hint={showError && (!item.up || Number(item.up) <= 0) ? 'Valor deve ser maior que zero' : ''}/>
         <div className="flex flex-col gap-1.5 w-24 flex-shrink-0">
           <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</label>
           <div className="border border-gray-100 rounded-xl px-3 py-2.5 text-sm font-semibold" style={{background:'var(--bg-input)', color:'var(--text-main)'}}>{lt > 0 ? fmt(lt) : '-'}</div>
@@ -67,6 +67,7 @@ export function SaleForm({ products, brand, onSave, onClose }) {
   const [date, setDate] = useState(today());
   const [method, setMethod] = useState('PIX');
   const [saving, setSaving] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
   const total = items.reduce(function(s, i) { return s + (Number(i.qty) || 0) * (Number(i.up) || 0); }, 0);
 
   const ch = function(idx, f, v) {
@@ -77,7 +78,7 @@ export function SaleForm({ products, brand, onSave, onClose }) {
   };
   const save = async function() {
     const valid = items.filter(function(i) { return i.desc && i.up; });
-    if (!valid.length || !total) return;
+    if (!valid.length || total <= 0) { setShowErrors(true); return; }
     setSaving(true);
     var ok = await onSave({
       id: uid(),
@@ -109,6 +110,7 @@ export function SaleForm({ products, brand, onSave, onClose }) {
               return (
                 <CartRow key={it.rid} item={it} idx={idx} products={products} onChange={ch} onSelect={sel}
                   onRemove={items.length > 1 ? function() { setItems(function(p) { return p.filter(function(_, i) { return i !== idx; }); }); } : null}
+                  showError={showErrors}
                 />
               );
             })}
@@ -129,7 +131,7 @@ export function SaleForm({ products, brand, onSave, onClose }) {
         </div>
         <div className="flex gap-2 px-6 pb-6 pt-3 flex-shrink-0">
           <button onClick={onClose} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-3 text-sm font-medium hover:bg-gray-50">Cancelar</button>
-          <button onClick={save} disabled={saving || !total} className="flex-1 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition" style={{background:brand.color}}>
+          <button onClick={save} disabled={saving} className="flex-1 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition" style={{background:brand.color}}>
             {saving ? <Spin white/> : ('Confirmar . ' + fmt(total))}
           </button>
         </div>
