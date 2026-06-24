@@ -1,0 +1,1 @@
+isLandingPreview (rota de preview da landing): nunca commitado — ausente em git log --all -S, reflog e 29 commits soltos do fsck. Nao e cache, e feature que nao chegou a ser salva. Ribbon PlansView e badge de plano em Settings estavam presentes com nomes diferentes dos buscados.
