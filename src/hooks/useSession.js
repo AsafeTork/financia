@@ -87,7 +87,7 @@ export function useSession(p) {
     ]);
     var profile = results[0], prods = results[1], txs = results[2], lss = results[3], roleMeta = results[4];
     if (profile) {
-      setBrand({name:profile.name, logo:profile.logo, color:profile.color, color_secondary:profile.color_secondary||null, color_accent:profile.color_accent||null, theme:profile.theme||'light', logo_url:profile.logo_url||null});
+      setBrand({name:profile.name, logo:profile.logo, color:profile.color, color_secondary:profile.color_secondary||null, color_accent:profile.color_accent||null, theme:profile.theme||'light', logo_url:profile.logo_url||null, phone:profile.phone||''});
       setPlanInfo({plan:profile.plan||'free', plan_expires_at:profile.plan_expires_at||null, plan_activated_by:profile.plan_activated_by||null});
     }
     setProducts(prods);
@@ -162,7 +162,7 @@ export function useSession(p) {
           var pr = allRes[0], pdr = allRes[1], txr = allRes[2], lr = allRes[3], roleRes = allRes[4];
           if (pr.data) {
             var prof = pr.data;
-            setBrand({name:prof.name, logo:prof.logo, color:prof.color, color_secondary:prof.color_secondary||null, color_accent:prof.color_accent||null, theme:prof.theme||'light', logo_url:prof.logo_url||null});
+            setBrand({name:prof.name, logo:prof.logo, color:prof.color, color_secondary:prof.color_secondary||null, color_accent:prof.color_accent||null, theme:prof.theme||'light', logo_url:prof.logo_url||null, phone:prof.phone||''});
             setPlanInfo({plan:prof.plan||'free', plan_expires_at:prof.plan_expires_at||null, plan_activated_by:prof.plan_activated_by||null});
             await ldb.profiles.put(toLocal(prof));
           }
@@ -338,5 +338,25 @@ export function useSession(p) {
     return function() { window.removeEventListener('storage', handler); };
   }, [isAdminDB]);
 
-  return {saveBrand, loadData};
+  var savePhone = async function(newPhone) {
+    var userId = session.user.id;
+    var clean = (newPhone || '').replace(/\D/g, '');
+    try {
+      var existing = await ldb.profiles.get(userId);
+      if (existing) await ldb.profiles.update(userId, {phone:clean, _synced:0, _updated_at:now()});
+    } catch(e) {}
+    setBrand(function(b) { return Object.assign({}, b, {phone:clean}); });
+    if (navigator.onLine) {
+      try {
+        var res = await sb.from('company_profiles').update({phone:clean}).eq('user_id', userId);
+        if (!res.error) { await ldb.profiles.update(userId, {_synced:1}); toast('Telefone atualizado', 'success'); }
+        else toast('Não sincronizado — tentaremos em breve', 'warning');
+      } catch(e) { toast('Não sincronizado — tentaremos em breve', 'warning'); }
+    } else {
+      toast('Telefone salvo — sincroniza quando online', 'success');
+    }
+    return true;
+  };
+
+  return {saveBrand, savePhone, loadData};
 }
