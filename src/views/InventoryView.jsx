@@ -229,7 +229,7 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
                                   <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
                                   {p.category && (
-                                    <Badge color="#6b7280" bg="#f3f4f6">{p.category}</Badge>
+                                    <Badge color="var(--text-sub)" bg="var(--bg-subtle)">{p.category}</Badge>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-3 flex-wrap">
