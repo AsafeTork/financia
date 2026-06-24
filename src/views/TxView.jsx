@@ -1,5 +1,5 @@
 ﻿import React, { useState, useMemo } from 'react';
-import { Card, Inp, Sel, Modal, EditBtn, DelBtn, Spin, Btn, PageHead } from '../components/ui.jsx';
+import { Card, Inp, Sel, Modal, EditBtn, DelBtn, Spin, Btn, PageHead, Empty } from '../components/ui.jsx';
 import { SaleForm } from '../components/SaleForm.jsx';
 import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';
 
@@ -111,7 +111,7 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
           </svg>
           <input value={search} onChange={function(e) { setSearch(e.target.value); }}
             placeholder={'Buscar ' + (isIncome ? 'vendas' : 'despesas') + '...'}
-            className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl"
+            className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl transition"
             style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -123,7 +123,7 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
         )}
         {(search || dateFrom || dateTo) && (
           <button onClick={function() { setSearch(''); setDateFrom(''); setDateTo(''); }}
-            className="mt-2 text-xs font-medium text-gray-400 hover:text-gray-600 flex items-center gap-1">
+            className="mt-2 text-xs font-medium text-gray-400 hover:text-gray-600 inline-flex items-center gap-1 min-h-[44px] -my-2.5 rounded-lg">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
             Limpar filtros
           </button>
@@ -132,20 +132,18 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
 
       <Card>
         {filtered.length === 0 ? (
-          <div className="py-14 flex flex-col items-center gap-3 text-center px-6">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{background: accentBg}}>
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <Empty
+            color={accentColor}
+            icon={(
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d={isIncome ? 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' : 'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6'}/>
               </svg>
-            </div>
-            <p className="text-sm font-semibold text-gray-700">{isIncome ? 'Nenhuma venda registrada' : 'Nenhuma despesa registrada'}</p>
-            <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
-              {isIncome ? 'Registre vendas com múltiplos itens e cálculo automático do total.' : 'Registre aluguel, energia, fornecedores e outras saídas.'}
-            </p>
-            <Btn onClick={function() { setModal(true); }} className="mt-1" style={{background: accentColor}}>
-              {isIncome ? '+ Nova Venda' : '+ Nova Despesa'}
-            </Btn>
-          </div>
+            )}
+            title={isIncome ? 'Nenhuma venda registrada' : 'Nenhuma despesa registrada'}
+            sub={isIncome ? 'Registre vendas com múltiplos itens e cálculo automático do total.' : 'Registre aluguel, energia, fornecedores e outras saídas.'}
+            action={isIncome ? 'Nova Venda' : 'Nova Despesa'}
+            onAction={function() { setModal(true); }}
+          />
         ) : (
           <div>
             {groupOrder.map(function(date) {
