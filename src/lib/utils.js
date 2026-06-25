@@ -23,6 +23,22 @@ export const luminance = function(hex) {
   var toLinear = function(v) { v = v / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
   return 0.2126 * toLinear(c.r) + 0.7152 * toLinear(c.g) + 0.0722 * toLinear(c.b);
 };
+// Cor de texto legivel SOBRE um fundo solido `hex` (branco ou tinta escura).
+export const onColor = function(hex) {
+  return luminance(hex) > 0.4 ? '#0a2540' : '#ffffff';
+};
+// Versao da cor da marca escurecida o suficiente para ser legivel como TEXTO
+// sobre fundos claros (abas, links). Garante contraste WCAG AA aproximado.
+export const readableBrand = function(hex) {
+  var hsl = hexToHsl(hex);
+  var l = hsl.l;
+  var out = hex || '#002f59';
+  for (var i = 0; i < 14 && luminance(out) > 0.16; i++) {
+    l = Math.max(0, l - 0.06);
+    out = hslToHex(hsl.h, hsl.s, l);
+  }
+  return out;
+};
 export const lightenHex = function(hex, factor) {
   var c = hexToRgb(hex);
   var r = Math.round(c.r + (255 - c.r) * factor);

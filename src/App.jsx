@@ -8,6 +8,7 @@ import { useSession } from './hooks/useSession.js';
 import Sidebar from './components/Sidebar.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import Header from './components/Header.jsx';
+import ThemeToggle from './components/ThemeToggle.jsx';
 import Toast from './components/Toast.jsx';
 import Offline from './components/Offline.jsx';
 import Confirm from './components/Confirm.jsx';
@@ -58,7 +59,20 @@ export default function App() {
   const [confirmData, setConfirmData]   = useState(null);
   const [showLogin, setShowLogin]       = useState(false);
   const [showUpgrade, setShowUpgrade]   = useState(false);
+  const [themePref, setThemePref]       = useState(function() { try { return localStorage.getItem('financia_theme'); } catch (e) { return null; } });
   const toastId                         = useRef(0);
+
+  // Tema efetivo: preferência salva do usuário tem prioridade sobre o tema da marca.
+  var effectiveTheme = themePref || (brand && brand.theme) || 'light';
+
+  const toggleTheme = useCallback(function() {
+    setThemePref(function(prev) {
+      var current = prev || (brand && brand.theme) || 'light';
+      var next = current === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem('financia_theme', next); } catch (e) {}
+      return next;
+    });
+  }, [brand]);
 
   const navTo = useCallback(function(v) { setView(v); window.location.hash = v; }, []);
 
@@ -74,9 +88,13 @@ export default function App() {
     el.style.setProperty('--brand-accent', accent);
     el.style.setProperty('--brand-accent-soft', brandAlpha(accent, 0.12));
     el.style.setProperty('--brand-grad', 'linear-gradient(135deg, ' + primary + ' 0%, ' + accent + ' 100%)');
-    el.setAttribute('data-theme', b.theme || 'light');
   }, []);
   useEffect(function() { applyBrandVars(brand); }, [brand]);
+
+  // data-theme aplicado separado: respeita a preferência do usuário (persistida).
+  useEffect(function() {
+    document.documentElement.setAttribute('data-theme', effectiveTheme);
+  }, [effectiveTheme]);
 
   useEffect(function() {
     if (!dataLoading) return;
@@ -169,7 +187,8 @@ export default function App() {
   var googleName = meta.full_name || meta.name || '';
   var onboarded = !!localStorage.getItem('financia_onboarded_' + uid);
   var needsName = !!googleName && brand.name === googleName;
-  var needsPhone = !brand.phone;
+  // Telefone ja informado no cadastro (metadata) nao deve ser pedido de novo no onboarding.
+  var needsPhone = !brand.phone && !meta.phone;
   var needsOnboarding = !onboarded && (needsName || needsPhone);
   if (needsOnboarding) {
     var finishOnboarding = function(data) {
@@ -206,8 +225,11 @@ export default function App() {
       <UpdateBanner brand={brand}/>
       <SyncBadge status={syncStatus}/>
       <Sidebar view={view} onNav={navTo} brand={brand} open={sidebarOpen} isAdmin={isAdminDB} session={session} onClose={function() { setSidebarOpen(false); }}/>
+      <div className="hidden lg:block fixed top-4 right-4 z-30">
+        <ThemeToggle theme={effectiveTheme} onToggle={toggleTheme} variant="floating"/>
+      </div>
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 w-full">
-        <Header brand={brand} syncStatus={syncStatus} onMenuOpen={function() { setSidebarOpen(true); }}/>
+        <Header brand={brand} syncStatus={syncStatus} theme={effectiveTheme} onToggleTheme={toggleTheme} onMenuOpen={function() { setSidebarOpen(true); }}/>
         <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto pb-24 lg:pb-8 min-w-0 overflow-x-hidden">
           <Suspense fallback={<PageSkeleton/>}>
             {views[currentView]}

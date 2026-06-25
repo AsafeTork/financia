@@ -20,6 +20,11 @@ export const GH_REPO = 'AsafeTork/financia';
 
 export const WHATSAPP = '5591992086829';
 
+// E-mail oficial de suporte e recuperacao de senha.
+// IMPORTANTE: o remetente real dos e-mails de recuperacao e definido no SMTP do
+// Supabase (Auth > Emails). Esta constante alimenta a UI (suporte, contato, ajuda).
+export const SUPPORT_EMAIL = 'gestao.financia@gmail.com';
+
 // Monta link wa.me com mensagem pre-preenchida (abre conversa pronta).
 export const waLink = function(msg) {
   return 'https://wa.me/' + WHATSAPP + (msg ? '?text=' + encodeURIComponent(msg) : '');

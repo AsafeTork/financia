@@ -347,6 +347,25 @@ button:active {
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
+/* ==================== LANDING — GRÁFICOS E ORBES ==================== */
+
+/* Barras do mini-gráfico crescendo a partir da base */
+@keyframes growBar { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+.lp-bar { transform-origin: bottom; animation: growBar 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Orbes de luz que respiram/flutuam atrás do herói */
+@keyframes orbDrift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(18px, -22px, 0) scale(1.08); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+.lp-orb { position: absolute; border-radius: 9999px; filter: blur(46px); pointer-events: none; will-change: transform; animation: orbDrift 11s ease-in-out infinite; }
+.lp-orb-2 { animation-duration: 14s; animation-direction: reverse; }
+
+/* Anel cônico girando devagar ao redor do mockup */
+@keyframes spinSlow { to { transform: rotate(360deg); } }
+.lp-ring { animation: spinSlow 26s linear infinite; will-change: transform; }
+
 /* ==================== MEDIA QUERIES PARA REDUÇÃO DE MOVIMENTO === */
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -354,4 +373,6 @@ button:active {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  .lp-orb, .lp-ring { animation: none !important; }
+  .scroll-reveal { opacity: 1 !important; transform: none !important; }
 }

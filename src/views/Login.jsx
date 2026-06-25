@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Inp, Spin } from '../components/ui.jsx';
 import { signIn, sendPasswordReset, signUp, signInWithGoogle } from '../lib/auth.js';
-import { passwordStrength, validPhone, maskPhone, safe } from '../lib/utils.js';
+import { passwordStrength, safe, onColor, readableBrand } from '../lib/utils.js';
+import { SUPPORT_EMAIL } from '../lib/constants.js';
+import PhoneInput from '../components/PhoneInput.jsx';
 
 var ACCENT = '#0f9d6c';
 
@@ -22,8 +24,9 @@ export default function Login({ brand }) {
   var [pass, setPass] = useState('');
   var [suName, setSuName] = useState('');
   var [suEmail, setSuEmail] = useState('');
-  var [suPhone, setSuPhone] = useState('');
+  var [suPhone, setSuPhone] = useState({ e164: '', national: '', valid: false });
   var [suPass, setSuPass] = useState('');
+  var [accept, setAccept] = useState(false);
   var [err, setErr] = useState('');
   var [loading, setLoading] = useState(false);
   var [signupDone, setSignupDone] = useState(false);
@@ -35,6 +38,17 @@ export default function Login({ brand }) {
   var brandName = (brand && brand.name) || 'Financia';
   var brandLogo = (brand && brand.logo_url) || null;
   var pwSt = passwordStrength(suPass);
+
+  // Contraste acessível: o painel da marca pode ter qualquer cor (white-label).
+  var onBrand = onColor(brandColor);                 // texto sobre o painel da marca
+  var lightOnBrand = onBrand === '#ffffff';
+  var onBrandSoft = lightOnBrand ? 'rgba(255,255,255,0.86)' : 'rgba(10,37,64,0.74)';
+  var onBrandFaint = lightOnBrand ? 'rgba(255,255,255,0.46)' : 'rgba(10,37,64,0.5)';
+  var onBrandChip = lightOnBrand ? 'rgba(255,255,255,0.15)' : 'rgba(10,37,64,0.1)';
+  var onBrandBorder = lightOnBrand ? 'rgba(255,255,255,0.25)' : 'rgba(10,37,64,0.18)';
+  var brandGlow = lightOnBrand ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.5)';
+  var brandText = readableBrand(brandColor);          // cor da marca legível sobre fundo claro
+  var revealDelay = function(ms) { return { animationDelay: ms + 'ms', animationFillMode: 'both' }; };
 
   var switchMode = function(m) { setMode(m); setErr(''); setResetMode(false); setResetSent(false); setSignupDone(false); };
 
@@ -51,11 +65,12 @@ export default function Login({ brand }) {
   var doSignup = async function() {
     if (!suName.trim()) { setErr('Informe o nome da empresa ou o seu nome.'); return; }
     if (!suEmail.trim()) { setErr('Informe o e-mail.'); return; }
-    if (!validPhone(suPhone)) { setErr('Informe um telefone válido com DDD.'); return; }
+    if (!suPhone.valid) { setErr('Informe um telefone válido com DDD e código do país.'); return; }
     if (pwSt.score < 2) { setErr('Escolha uma senha mais forte (8+ caracteres, com números e letras).'); return; }
+    if (!accept) { setErr('Você precisa aceitar as Políticas e os Termos de Uso para criar a conta.'); return; }
     setLoading(true); setErr('');
     try {
-      var res = await signUp(suEmail.trim(), suPass, { name: safe(suName), phone: suPhone.replace(/\D/g, '') });
+      var res = await signUp(suEmail.trim(), suPass, { name: safe(suName), phone: (suPhone.e164 || '').replace(/\D/g, '') });
       if (res.error) {
         setErr(res.error.message.indexOf('already') !== -1 ? 'Já existe uma conta com este e-mail.' : 'Não foi possível criar a conta. Tente novamente.');
       } else if (!(res.data && res.data.session)) {
@@ -66,6 +81,7 @@ export default function Login({ brand }) {
   };
 
   var doGoogle = async function() {
+    if (mode === 'signup' && !accept) { setErr('Aceite as Políticas e os Termos de Uso para continuar.'); return; }
     setErr('');
     try {
       var res = await signInWithGoogle();
@@ -91,33 +107,35 @@ export default function Login({ brand }) {
   return (
     <div className="min-h-screen flex" style={{ background: '#fbfaf7' }}>
 
-      {/* Painel de marca */}
-      <div className="hidden lg:flex flex-col justify-between w-2/5 p-12 relative overflow-hidden" style={{ background: brandColor }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(90% 70% at 80% 10%, rgba(255,255,255,0.12), transparent 55%)' }} />
-        <div className="relative">
+      {/* Painel de marca — metade esquerda (50/50 no desktop) */}
+      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden" style={{ background: brandColor }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(90% 70% at 80% 10%, ' + brandGlow + ', transparent 55%)' }} />
+        <div className="lp-orb" style={{ width: '320px', height: '320px', top: '-80px', right: '-60px', background: brandGlow, opacity: lightOnBrand ? 0.5 : 0.7 }} />
+        <div className="lp-orb lp-orb-2" style={{ width: '260px', height: '260px', bottom: '-70px', left: '-50px', background: brandGlow, opacity: lightOnBrand ? 0.35 : 0.5 }} />
+        <div className="relative anim-up">
           {brandLogo
-            ? <img src={brandLogo} alt="logo" className="w-12 h-12 rounded-2xl object-cover" style={{ border: '2px solid rgba(255,255,255,0.25)' }} />
+            ? <img src={brandLogo} alt="logo" className="w-12 h-12 rounded-2xl object-cover" style={{ border: '2px solid ' + onBrandBorder }} />
             : <img src="/icon-192.svg" alt="" className="w-12 h-12" />}
-          <p className="font-display text-white font-semibold text-2xl mt-4" style={{ letterSpacing: '-0.3px' }}>{brandName}</p>
+          <p className="font-display font-semibold text-2xl mt-4" style={{ color: onBrand, letterSpacing: '-0.3px' }}>{brandName}</p>
         </div>
         <div className="relative">
-          <p className="font-display text-white font-semibold" style={{ fontSize: '2.25rem', lineHeight: 1.1, letterSpacing: '-1px' }}>
+          <p className="font-display font-semibold anim-up" style={Object.assign({ color: onBrand, fontSize: '2.25rem', lineHeight: 1.1, letterSpacing: '-1px' }, revealDelay(80))}>
             O controle do seu negócio começa aqui.
           </p>
           <div className="mt-7 flex flex-col gap-3">
-            {['Vendas, despesas e estoque num app só', 'Funciona offline, sincroniza sozinho', 'Relatórios que mostram o seu lucro'].map(function(t) {
+            {['Vendas, despesas e estoque num app só', 'Funciona offline, sincroniza sozinho', 'Relatórios que mostram o seu lucro'].map(function(t, i) {
               return (
-                <div key={t} className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                <div key={t} className="flex items-center gap-3 anim-up" style={revealDelay(180 + i * 90)}>
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: onBrandChip }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={onBrand} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
                   </span>
-                  <span className="text-sm" style={{ color: 'rgba(255,255,255,0.85)' }}>{t}</span>
+                  <span className="text-sm" style={{ color: onBrandSoft }}>{t}</span>
                 </div>
               );
             })}
           </div>
         </div>
-        <p className="relative text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Gestão financeira para pequenos negócios</p>
+        <p className="relative text-xs" style={{ color: onBrandFaint }}>Gestão financeira para pequenos negócios</p>
       </div>
 
       {/* Formulário */}
@@ -128,7 +146,7 @@ export default function Login({ brand }) {
             {brandLogo
               ? <img src={brandLogo} alt="logo" className="w-16 h-16 rounded-2xl object-cover mx-auto" style={{ border: '3px solid rgba(0,0,0,0.06)' }} />
               : <img src="/icon-192.svg" alt="" className="w-16 h-16 mx-auto" />}
-            <p className="font-display font-semibold text-2xl mt-3" style={{ color: brandColor, letterSpacing: '-0.3px' }}>{brandName}</p>
+            <p className="font-display font-semibold text-2xl mt-3" style={{ color: brandText, letterSpacing: '-0.3px' }}>{brandName}</p>
           </div>
 
           {/* Abas */}
@@ -138,7 +156,7 @@ export default function Login({ brand }) {
               return (
                 <button key={t[0]} type="button" onClick={function() { switchMode(t[0]); }}
                   className={'flex-1 min-h-[44px] rounded-xl text-sm font-semibold transition' + (active ? '' : ' hover:text-gray-600')}
-                  style={active ? { background: '#fff', color: brandColor, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' } : { color: '#7a8794' }}>
+                  style={active ? { background: '#fff', color: brandText, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' } : { color: '#7a8794' }}>
                   {t[1]}
                 </button>
               );
@@ -156,6 +174,7 @@ export default function Login({ brand }) {
               <div className="anim-scale p-5 rounded-2xl text-center flex flex-col gap-2" style={{ background: 'rgba(15,157,108,0.08)', border: '1px solid rgba(15,157,108,0.25)' }}>
                 <p className="font-semibold text-sm" style={{ color: ACCENT }}>Link enviado!</p>
                 <p className="text-xs" style={{ color: '#4b5563' }}>Verifique seu e-mail para redefinir a senha.</p>
+                <p className="text-xs" style={{ color: '#6b7280' }}>Não recebeu? Veja o spam ou fale com <a href={'mailto:' + SUPPORT_EMAIL} className="underline font-medium" style={{ color: brandText }}>{SUPPORT_EMAIL}</a>.</p>
                 <button type="button" onClick={function() { switchMode('login'); }} className="text-xs underline mt-1 min-h-[44px] inline-flex items-center justify-center self-center hover:text-gray-800" style={{ color: '#6b7280' }}>Voltar ao login</button>
               </div>
             ) : (
@@ -168,7 +187,7 @@ export default function Login({ brand }) {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 19l-7-7 7-7" /></svg>
                     Voltar
                   </button>
-                  <button disabled={loading || !resetEmail} className="flex-1 min-h-[44px] py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition hover:opacity-90" style={{ background: brandColor }}>{loading ? 'Enviando...' : 'Enviar link'}</button>
+                  <button disabled={loading || !resetEmail} className="flex-1 min-h-[44px] py-3 rounded-xl text-sm font-semibold disabled:opacity-40 transition hover:opacity-90" style={{ background: brandColor, color: onBrand }}>{loading ? 'Enviando...' : 'Enviar link'}</button>
                 </div>
               </form>
             )
@@ -196,9 +215,7 @@ export default function Login({ brand }) {
                 placeholder="seu@email.com" />
 
               {mode === 'signup' && (
-                <Inp label="Telefone (com DDD)" type="tel" value={suPhone}
-                  onChange={function(e) { setSuPhone(maskPhone(e.target.value)); }}
-                  placeholder="(11) 91234-5678" />
+                <PhoneInput label="Telefone (com código do país)" value={suPhone.e164 || ''} onChange={setSuPhone} />
               )}
 
               <div>
@@ -227,13 +244,19 @@ export default function Login({ brand }) {
                 <button type="button" onClick={function() { setResetMode(true); setErr(''); }} className="text-xs self-end -mt-1 min-h-[44px] inline-flex items-center hover:text-gray-700" style={{ color: '#7a8794' }}>Esqueceu a senha?</button>
               )}
 
-              <button disabled={loading} className="w-full text-white rounded-xl py-3.5 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 transition hover:opacity-90" style={{ background: brandColor }}>
-                {loading ? <Spin white /> : (mode === 'login' ? 'Entrar' : 'Criar conta grátis')}
-              </button>
-
               {mode === 'signup' && (
-                <p className="text-xs text-center leading-relaxed" style={{ color: '#9aa5b1' }}>Ao criar a conta você concorda em usar o Financia para o seu negócio.</p>
+                <label className="flex items-start gap-2.5 cursor-pointer select-none py-1">
+                  <input type="checkbox" checked={accept} onChange={function(e) { setAccept(e.target.checked); setErr(''); }}
+                    className="mt-0.5 w-4 h-4 flex-shrink-0 cursor-pointer" style={{ accentColor: brandColor }} />
+                  <span className="text-xs leading-relaxed" style={{ color: '#5b6b7c' }}>
+                    Li e aceito as <a href="#privacidade" className="underline font-medium" style={{ color: brandText }}>Políticas de Privacidade</a> e os <a href="#termos" className="underline font-medium" style={{ color: brandText }}>Termos de Uso</a>.
+                  </span>
+                </label>
               )}
+
+              <button disabled={loading || (mode === 'signup' && !accept)} className="w-full rounded-xl py-3.5 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 transition hover:opacity-90" style={{ background: brandColor, color: onBrand }}>
+                {loading ? <Spin white={lightOnBrand} /> : (mode === 'login' ? 'Entrar' : 'Criar conta grátis')}
+              </button>
             </form>
           )}
         </div>

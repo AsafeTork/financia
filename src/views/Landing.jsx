@@ -1,5 +1,6 @@
 import React from 'react';
 import { PRICING_PLANS, WHATSAPP, waLink as makeWaLink } from '../lib/constants.js';
+import { useScrollReveal } from '../hooks/useScrollReveal.js';
 
 var INK = '#0a2540';
 var BRAND = '#002f59';
@@ -30,6 +31,11 @@ var FAQ = [
 export default function Landing({ onEnter }) {
   var waLink = makeWaLink('Quero conhecer o Financia para o meu negócio.');
   var delay = function(ms) { return { animationDelay: ms + 'ms', animationFillMode: 'both' }; };
+  var statsRef = useScrollReveal();
+  var featRef = useScrollReveal();
+  var priceRef = useScrollReveal();
+  var faqRef = useScrollReveal();
+  var ctaRef = useScrollReveal();
 
   return (
     <div style={{ background: WARM, color: INK, minHeight: '100vh' }}>
@@ -48,8 +54,12 @@ export default function Landing({ onEnter }) {
       </header>
 
       {/* Hero */}
-      <section className="max-w-6xl mx-auto px-5 pt-12 pb-16 lg:pt-20 lg:pb-24">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+      <section className="max-w-6xl mx-auto px-5 pt-12 pb-16 lg:pt-20 lg:pb-24 relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <div className="lp-orb" style={{ width: '460px', height: '460px', top: '-140px', right: '-120px', background: 'radial-gradient(circle, rgba(15,157,108,0.20), transparent 65%)' }} />
+          <div className="lp-orb lp-orb-2" style={{ width: '380px', height: '380px', bottom: '-160px', left: '-120px', background: 'radial-gradient(circle, rgba(0,47,89,0.16), transparent 65%)' }} />
+        </div>
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center relative z-10">
           <div>
             <div className="anim-up inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6" style={{ background: 'rgba(15,157,108,0.1)', color: ACCENT }}>
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} />
@@ -84,7 +94,8 @@ export default function Landing({ onEnter }) {
           {/* Mockup do produto */}
           <div className="anim-up relative" style={delay(180)}>
             <div className="absolute -inset-6 rounded-3xl" style={{ background: 'radial-gradient(120% 120% at 70% 20%, rgba(15,157,108,0.16), transparent 60%)' }} />
-            <div className="relative rounded-3xl p-5 sm:p-6" style={{ background: '#fff', border: '1px solid rgba(10,37,64,0.08)', boxShadow: '0 30px 70px rgba(10,37,64,0.18)' }}>
+            <div className="lp-ring absolute -inset-8 rounded-full pointer-events-none" aria-hidden="true" style={{ background: 'conic-gradient(from 0deg, transparent 0deg, rgba(15,157,108,0.12) 80deg, transparent 170deg, rgba(0,47,89,0.12) 260deg, transparent 360deg)', opacity: 0.65 }} />
+            <div className="relative rounded-3xl p-5 sm:p-6 float-slow" style={{ background: '#fff', border: '1px solid rgba(10,37,64,0.08)', boxShadow: '0 30px 70px rgba(10,37,64,0.18)' }}>
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-xs font-medium" style={{ color: MUTED }}>Resultado do mês</p>
@@ -94,7 +105,7 @@ export default function Landing({ onEnter }) {
               </div>
               <div className="flex items-end gap-1.5 h-24 mb-4">
                 {[40, 62, 48, 80, 55, 92, 70].map(function(h, i) {
-                  return <div key={String(i) + '-' + h} className="flex-1 rounded-md" style={{ height: h + '%', background: i === 5 ? ACCENT : 'rgba(0,47,89,0.14)' }} />;
+                  return <div key={String(i) + '-' + h} className="flex-1 rounded-md lp-bar" style={{ height: h + '%', background: i === 5 ? ACCENT : 'rgba(0,47,89,0.14)', animationDelay: (300 + i * 90) + 'ms' }} />;
                 })}
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -113,7 +124,7 @@ export default function Landing({ onEnter }) {
       </section>
 
       {/* Prova / faixa */}
-      <section className="max-w-6xl mx-auto px-5 py-10">
+      <section ref={statsRef} className="max-w-6xl mx-auto px-5 py-10 scroll-reveal">
         <div className="rounded-3xl px-6 py-8 grid grid-cols-3 gap-4 text-center" style={{ background: '#fff', border: '1px solid rgba(10,37,64,0.08)' }}>
           {[['100%', 'no seu controle, online ou offline'], ['1 min', 'pra criar a conta e começar'], ['R$ 0', 'pra usar o plano grátis']].map(function(s) {
             return (
@@ -127,7 +138,7 @@ export default function Landing({ onEnter }) {
       </section>
 
       {/* Features */}
-      <section className="max-w-6xl mx-auto px-5 py-14">
+      <section ref={featRef} className="max-w-6xl mx-auto px-5 py-14 scroll-reveal">
         <div className="max-w-xl mb-10">
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: ACCENT }}>Por que o Financia</p>
           <h2 className="font-display font-semibold mt-2" style={{ color: INK, fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', letterSpacing: '-1px', lineHeight: 1.1 }}>Tudo que o seu negócio precisa, nada que ele não usa</h2>
@@ -148,7 +159,7 @@ export default function Landing({ onEnter }) {
       </section>
 
       {/* Pricing */}
-      <section id="planos" className="max-w-6xl mx-auto px-5 py-16 scroll-mt-20">
+      <section ref={priceRef} id="planos" className="max-w-6xl mx-auto px-5 py-16 scroll-mt-20 scroll-reveal">
         <div className="text-center mb-12">
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: ACCENT }}>Planos</p>
           <h2 className="font-display font-semibold mt-2" style={{ color: INK, fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', letterSpacing: '-1px' }}>Um preço justo pra cada fase</h2>
@@ -191,7 +202,7 @@ export default function Landing({ onEnter }) {
       </section>
 
       {/* FAQ */}
-      <section className="max-w-2xl mx-auto px-5 py-14">
+      <section ref={faqRef} className="max-w-2xl mx-auto px-5 py-14 scroll-reveal">
         <h2 className="font-display font-semibold text-center mb-10" style={{ color: INK, fontSize: 'clamp(1.6rem, 4vw, 2.25rem)', letterSpacing: '-0.5px' }}>Perguntas frequentes</h2>
         <div className="flex flex-col gap-3">
           {FAQ.map(function(item) {
@@ -209,7 +220,7 @@ export default function Landing({ onEnter }) {
       </section>
 
       {/* CTA final */}
-      <section className="max-w-6xl mx-auto px-5 py-12">
+      <section ref={ctaRef} className="max-w-6xl mx-auto px-5 py-12 scroll-reveal">
         <div className="rounded-[2rem] px-6 py-16 text-center relative overflow-hidden" style={{ background: INK }}>
           <div className="absolute inset-0" style={{ background: 'radial-gradient(80% 120% at 50% 0%, rgba(15,157,108,0.22), transparent 55%)' }} />
           <div className="relative">

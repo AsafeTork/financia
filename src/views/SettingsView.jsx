@@ -2,7 +2,7 @@
 import { Card, Inp, Spin, PageHead } from '../components/ui.jsx';
 import PhoneInput, { parsePhone, buildPhone } from '../components/PhoneInput.jsx';
 import { updatePassword, signOut as doSignOut } from '../lib/auth.js';
-import { effectivePlan, PRICING_PLANS } from '../lib/constants.js';
+import { effectivePlan, PRICING_PLANS, waLink, SUPPORT_EMAIL } from '../lib/constants.js';
 import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
 
@@ -126,17 +126,43 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
             </div>
             <div className="min-w-0"><p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{brand.name || (session && session.user ? session.user.email : '')}</p><p className="text-xs truncate" style={{color:'var(--text-sub)'}}>{session && session.user ? session.user.email : 'Usuário ativo'}</p></div>
           </div>
-          <div className="border-t pt-2" style={{borderColor:'var(--border)'}}>
-            <div className="flex justify-between text-sm mb-1.5"><span style={{color:'var(--text-sub)'}}>Versão</span><span className="font-medium" style={{color:'var(--text-main)'}}>5.0</span></div>
-            <div className="flex justify-between text-sm mb-1.5"><span style={{color:'var(--text-sub)'}}>Banco</span><span className="font-medium" style={{color:'var(--text-main)'}}>Supabase (PostgreSQL)</span></div>
-            <div className="flex justify-between text-sm"><span style={{color:'var(--text-sub)'}}>Hospedagem</span><span className="font-medium" style={{color:'var(--text-main)'}}>Render</span></div>
+          <div className="flex flex-col gap-2">
+            {[
+              { label:'Alterar senha', desc:'Defina uma nova senha de acesso', icon:'M8 11V7a4 4 0 118 0v4m-9 0h10a1 1 0 011 1v7a1 1 0 01-1 1H7a1 1 0 01-1-1v-7a1 1 0 011-1z', act:function() { setTab('security'); } },
+              { label:'Gerenciar forma de pagamento', desc:'Cartão e cobrança da assinatura', icon:'M3 10h18M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z', act:function() { if (onNav) onNav('planos'); } },
+              { label:'Alterar plano', desc:'Compare e troque de plano', icon:'M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z', act:function() { if (onNav) onNav('planos'); } },
+            ].map(function(a) {
+              return (
+                <button key={a.label} onClick={a.act}
+                  className="w-full text-left rounded-xl px-3 py-2.5 flex items-center gap-3 transition hover:opacity-80 min-h-[44px]"
+                  style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{background:'var(--brand-soft)'}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={brand.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={a.icon}/></svg>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{a.label}</p>
+                    <p className="text-xs truncate" style={{color:'var(--text-sub)'}}>{a.desc}</p>
+                  </div>
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="var(--text-sub)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+                </button>
+              );
+            })}
           </div>
-          <div className="border-t pt-4" style={{borderColor:'var(--border)'}}>
-            <PhoneInput label="Telefone de contato" value={brand.phone || ''} onChange={setPhoneData}/>
+
+          <div className="pt-1">
+            <PhoneInput label="Atualizar número de telefone" value={brand.phone || ''} onChange={setPhoneData}/>
             <button onClick={savePhone} disabled={phoneSaving || !phoneData.valid || phoneData.e164 === initE164} className="w-full mt-3 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40 min-h-12" style={{background:brand.color}}>
               {phoneSaving ? <Spin white/> : 'Salvar telefone'}
             </button>
           </div>
+
+          <a href={waLink('Olá! Preciso de ajuda com o Financia.')} target="_blank" rel="noreferrer"
+            className="w-full rounded-xl py-3 text-sm font-semibold text-white flex items-center justify-center gap-2 transition hover:opacity-90 min-h-12" style={{background:'#16a34a'}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.4A10 10 0 1012 2zm0 1.8a8.2 8.2 0 11-4.2 15.2l-.3-.2-2.8.8.8-2.7-.2-.3A8.2 8.2 0 0112 3.8zm4.7 10.3c-.3-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1-.2.3-.6.8-.8 1-.1.2-.3.2-.5.1-.7-.3-1.4-.7-2-1.4-.4-.5 0-.5.4-1.5.1-.2 0-.4 0-.5l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.8.8-.8 1.9-.1 3 .7 1.1 1.7 2.6 3.7 3.4 1.3.6 1.8.6 2.5.5.4-.1 1.2-.5 1.4-1 .2-.5.2-.9.1-1-.1-.1-.2-.1-.4-.2z"/></svg>
+            Falar com o Suporte
+          </a>
+          <p className="text-xs text-center -mt-1" style={{color:'var(--text-muted)'}}>Ou por e-mail: <a href={'mailto:' + SUPPORT_EMAIL} className="underline" style={{color:'var(--text-sub)'}}>{SUPPORT_EMAIL}</a></p>
+
           <button onClick={function() { confirm('Sair da conta?', function() { doSignOut(); }); }} className="w-full rounded-xl py-3 text-sm font-medium transition min-h-12" style={{border:'1px solid var(--border)', color:'var(--text-sub)', background:'var(--bg-card)'}} onMouseEnter={function(e) { e.target.style.background = 'var(--bg-subtle)'; }} onMouseLeave={function(e) { e.target.style.background = 'var(--bg-card)'; }}>Sair da conta</button>
         </Card>
       )}
