@@ -1,0 +1,357 @@
+/* ==================== ANIMAÇÕES AVANÇADAS PARA LANDING & PLANOS ==================== */
+
+/* === ANIMAÇÕES DE ENTRADA === */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleUpIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* === HOVER EFFECTS === */
+@keyframes hoverFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes hoverGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(0, 47, 89, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(0, 47, 89, 0.25);
+  }
+}
+
+/* === SCROLL ANIMATIONS === */
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes revealFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* === DECORATIVE ANIMATIONS === */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-25px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(15, 157, 108, 0.5);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(15, 157, 108, 0.8);
+  }
+}
+
+@keyframes shimmerText {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* === GRADIENT ANIMATIONS === */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* === ICON ANIMATIONS === */
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes checkmark {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* === CARD ANIMATIONS === */
+@keyframes cardPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) rotateX(-20deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotateX(0);
+  }
+}
+
+@keyframes cardLift {
+  0% {
+    transform: translateY(0);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+  100% {
+    transform: translateY(-12px);
+    box-shadow: 0 20px 40px rgba(0, 47, 89, 0.15);
+  }
+}
+
+/* === PROGRESS BAR === */
+@keyframes fillProgress {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--progress-width, 60%);
+  }
+}
+
+/* === PARALLAX & SCROLL-TRIGGERED === */
+@keyframes staggerIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* === SVG PATH ANIMATIONS === */
+@keyframes drawStroke {
+  from {
+    stroke-dasharray: var(--stroke-length, 100);
+    stroke-dashoffset: var(--stroke-length, 100);
+  }
+  to {
+    stroke-dasharray: var(--stroke-length, 100);
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes wavePath {
+  0% {
+    d: path('M0,50 Q25,25 50,50 T100,50');
+  }
+  100% {
+    d: path('M0,40 Q25,15 50,40 T100,40');
+  }
+}
+
+/* ==================== UTILITY CLASSES ==================== */
+
+/* Entrada suave ao aparecer */
+.anim-fade-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.anim-fade-down {
+  animation: fadeInDown 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.anim-fade-left {
+  animation: fadeInLeft 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.anim-fade-right {
+  animation: fadeInRight 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.anim-scale-in {
+  animation: scaleUpIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Float suave ao hover */
+.hover-float:hover {
+  animation: hoverFloat 0.6s ease-in-out infinite;
+}
+
+.hover-glow:hover {
+  animation: hoverGlow 0.6s ease-in-out infinite;
+}
+
+/* Elevação de card ao hover */
+.card-hover-lift:hover {
+  animation: cardLift 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Flutuação contínua */
+.float-slow {
+  animation: floatSlow 4s ease-in-out infinite;
+}
+
+.float-medium {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Pulsação */
+.pulse-glow {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.glow-text {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Entrada de grupos com delay (para stagger effect) */
+.stagger-item-1 { animation: fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both; }
+.stagger-item-2 { animation: fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both; }
+.stagger-item-3 { animation: fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both; }
+.stagger-item-4 { animation: fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both; }
+.stagger-item-5 { animation: fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s both; }
+
+/* Scroll reveal (combinado com JS) */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.scroll-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ==================== RESPOSTA À AÇÃO DO USUÁRIO ==================== */
+
+/* Button click feedback */
+button:active {
+  animation: none;
+  transform: scale(0.97);
+}
+
+/* Transição suave de cor */
+.transition-colors-smooth {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ==================== MEDIA QUERIES PARA REDUÇÃO DE MOVIMENTO === */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
