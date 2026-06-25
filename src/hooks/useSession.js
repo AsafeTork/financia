@@ -3,6 +3,7 @@ import { sb } from '../lib/supabase.js';
 import { ldb, syncAll, toLocal, setLastSync } from '../lib/db.js';
 import { now } from '../lib/utils.js';
 import { INIT_BRAND, INIT_PLAN } from '../lib/constants.js';
+import { getRecurring, periodOf, pendingRecurring } from '../lib/recurring.js';
 
 export function useSession(p) {
   var toast         = p.toast;
@@ -91,7 +92,22 @@ export function useSession(p) {
       setPlanInfo({plan:profile.plan||'free', plan_expires_at:profile.plan_expires_at||null, plan_activated_by:profile.plan_activated_by||null});
     }
     setProducts(prods);
-    setTx(txs.map(function(t) { return Object.assign({}, t, {desc:t.description||t.desc, cat:t.category||t.cat}); }));
+
+    // Despesas recorrentes: gera as do mes atual que ainda nao existem (idempotente).
+    var allTx = txs;
+    try {
+      var rlist = await getRecurring(userId);
+      var pend = await pendingRecurring(userId, rlist, periodOf(new Date()), function(id) {
+        return ldb.transactions.get(id).then(function(r) { return !!r; });
+      });
+      if (pend.length > 0) {
+        for (var gi = 0; gi < pend.length; gi++) { pend[gi].registered_by = (profile && profile.name) || 'Recorrente'; }
+        await ldb.transactions.bulkPut(pend);
+        allTx = pend.concat(txs);
+      }
+    } catch (e) {}
+
+    setTx(allTx.map(function(t) { return Object.assign({}, t, {desc:t.description||t.desc, cat:t.category||t.cat}); }));
     setLosses(lss.map(function(l) { return Object.assign({}, l, {desc:l.description||l.desc}); }));
     var roleVal = roleMeta ? roleMeta.val : null;
     setIsAdminDB(roleVal === 'admin');

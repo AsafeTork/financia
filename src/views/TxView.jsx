@@ -1,14 +1,17 @@
 ﻿import React, { useState, useMemo } from 'react';
 import { Card, Inp, NumInp, Sel, Modal, EditBtn, DelBtn, Spin, Btn, PageHead, Empty } from '../components/ui.jsx';
 import { SaleForm } from '../components/SaleForm.jsx';
+import RecurringManager from '../components/RecurringManager.jsx';
 import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';
+import { isRecurringId } from '../lib/recurring.js';
 
-export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, onDeductStock, brand, toast, confirm }) {
+export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, onDeductStock, onAddGenerated, uid: userId, brand, toast, confirm }) {
   var isIncome = type === 'income';
   var accentColor = isIncome ? brand.color : '#ef4444';
   var accentBg    = isIncome ? brandAlpha(brand.color, 0.08) : 'rgba(239,68,68,0.06)';
 
   var [modal, setModal]       = useState(false);
+  var [recurModal, setRecurModal] = useState(false);
   var [editItem, setEditItem] = useState(null);
   var [saving, setSaving]     = useState(false);
   var [search, setSearch]     = useState('');
@@ -90,6 +93,13 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
         title={isIncome ? 'Vendas / Ganhos' : 'Despesas'}
         sub={<>{filtered.length} registro{filtered.length !== 1 ? 's' : ''}{' . '}<span className="font-semibold tabular" style={{color: accentColor}}>{fmt(total)}</span></>}
         right={<>
+          {!isIncome && (
+            <Btn variant="secondary" onClick={function() { setRecurModal(true); }} title="Despesas recorrentes" aria-label="Despesas recorrentes">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M19 9a8 8 0 00-14.9-3M5 15a8 8 0 0014.9 3"/>
+              </svg>
+            </Btn>
+          )}
           <Btn variant="secondary" onClick={exportCSV} title="Exportar CSV" aria-label="Exportar CSV">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -165,10 +175,17 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
                             </svg>
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-gray-800 truncate">{t.desc}</p>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <p className="text-sm font-semibold text-gray-800 truncate">{t.desc}</p>
+                              {t.items && t.items.length > 1 && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{background: accentBg, color: accentColor}}>{t.items.length} itens</span>
+                              )}
+                              {isRecurringId(t.id) && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 bg-violet-50 text-violet-600">recorrente</span>
+                              )}
+                            </div>
                             <p className="text-xs text-gray-400 truncate">
                               {t.method || t.category || ''}
-                              {t.items && t.items.length > 1 ? ' . ' + t.items.length + ' itens' : ''}
                               {t.registered_by ? ' . ' + t.registered_by : ''}
                             </p>
                           </div>
@@ -233,6 +250,12 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
             : <Sel label="Categoria" value={editItem.cat}    onChange={function(e) { setEditItem(function(f) { return Object.assign({}, f, {cat:e.target.value}); }); }}>{cats.map(function(c) { return <option key={c}>{c}</option>; })}</Sel>
           }
         </Modal>
+      )}
+
+      {recurModal && (
+        <RecurringManager uid={userId} color={accentColor} toast={toast}
+          onApply={onAddGenerated}
+          onClose={function() { setRecurModal(false); }}/>
       )}
     </div>
   );

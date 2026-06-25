@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { sb } from '../lib/supabase.js';
 import { ldb } from '../lib/db.js';
 import { now } from '../lib/utils.js';
+import { isRecurringId, addSkip } from '../lib/recurring.js';
 
 export function useTx(session, enforceLimit, toast) {
   var [tx, setTx] = useState([]);
@@ -44,7 +45,29 @@ export function useTx(session, enforceLimit, toast) {
     return true;
   };
 
+  // Insere uma transacao gerada (recorrente) SEM o gate de limite — a despesa fixa
+  // ja foi configurada pelo usuario e nao pode ser silenciosamente descartada.
+  // Disponivel para todos os planos. Idempotente pelo id deterministico.
+  var addGenerated = async function(row) {
+    var existing = await ldb.transactions.get(row.id);
+    if (existing) return false;
+    try { await ldb.transactions.put(row); }
+    catch (e) { return false; }
+    setTx(function(p) {
+      if (p.some(function(t) { return t.id === row.id; })) return p;
+      return [Object.assign({}, row, {desc:row.description||row.desc, cat:row.category||row.cat})].concat(p);
+    });
+    if (navigator.onLine) {
+      try {
+        var res = await sb.from('transactions').upsert({id:row.id, type:row.type, description:row.description, amount:row.amount, date:row.date, method:row.method, category:row.category, items:row.items, user_id:row.user_id, registered_by:row.registered_by, updated_at:row.updated_at});
+        if (!res.error) await ldb.transactions.update(row.id, {_synced:1});
+      } catch (e) {}
+    }
+    return true;
+  };
+
   var deleteTx = async function(id) {
+    if (isRecurringId(id)) { try { var r = await ldb.transactions.get(id); if (r) await addSkip(r.user_id, id); } catch (e) {} }
     try { await ldb.transactions.update(id, {_deleted:1, _synced:0, _updated_at:now()}); }
     catch(e) { toast('Erro ao excluir: ' + (e.message || 'tente novamente'), 'error'); return false; }
     setTx(function(p) { return p.filter(function(t) { return t.id !== id; }); });
@@ -57,5 +80,5 @@ export function useTx(session, enforceLimit, toast) {
     return true;
   };
 
-  return {tx, setTx, addTx, editTx, deleteTx};
+  return {tx, setTx, addTx, addGenerated, editTx, deleteTx};
 }
