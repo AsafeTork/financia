@@ -3,15 +3,23 @@ import { Card } from './ui.jsx';
 import { brandAlpha } from '../lib/utils.js';
 
 export function UsageBar({ label, used, limit, color, accentColor }) {
-  var pct = Math.min(Math.round((used / limit) * 100), 100);
-  var warn = pct >= 80;
-  var barColor = warn ? '#f59e0b' : (accentColor || color || 'var(--brand, #1a6b5c)');
+  var unlimited = limit === Infinity;
+  var pct = unlimited ? 0 : Math.min(Math.round((used / limit) * 100), 100);
+  var reached = !unlimited && used >= limit;
+  var warn = !reached && pct >= 80;
+  var dotColor = accentColor || color || 'var(--brand, #1a6b5c)';
+  var barColor = reached ? '#ef4444' : warn ? '#f59e0b' : dotColor;
+  var countCls = reached ? 'text-red-600' : warn ? 'text-amber-600' : 'text-gray-400';
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex justify-between items-center">
-        <span className="text-xs text-gray-500">{label}</span>
-        <span className={'text-xs font-semibold tabular ' + (warn ? 'text-amber-600' : 'text-gray-400')}>
-          {used}/{limit === Infinity ? 'ilimitado' : limit}
+      <div className="flex justify-between items-center gap-2">
+        <span className="flex items-center gap-1.5 text-xs text-gray-500 min-w-0">
+          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{background: dotColor}}/>
+          <span className="truncate">{label}</span>
+          {reached && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-red-600 bg-red-50 flex-shrink-0">no limite</span>}
+        </span>
+        <span className={'text-xs font-semibold tabular flex-shrink-0 ' + countCls}>
+          {used}/{unlimited ? 'ilimitado' : limit}
         </span>
       </div>
       <div className="h-1.5 rounded-full overflow-hidden" style={{background:'var(--bg-subtle)'}}>

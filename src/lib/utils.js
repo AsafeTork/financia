@@ -119,6 +119,26 @@ export const passwordStrength = function(pw) {
   return Object.assign({ score: s }, PW_LEVELS[idx]);
 };
 
+// Sanitiza entrada numerica: remove caracteres invalidos, normaliza separador
+// decimal para ".", mantem um unico ponto e limita o comprimento (anti-overflow).
+// Retorna { value, invalid } — invalid=true quando o usuario digitou algum simbolo
+// nao permitido (usado para exibir "Caracteres nao permitidos").
+export const cleanNumeric = function(raw, opts) {
+  opts = opts || {};
+  var decimals = opts.decimals !== false;
+  var maxLen = opts.maxLen || (decimals ? 12 : 7);
+  var s = String(raw == null ? '' : raw);
+  var invalid = decimals ? /[^0-9.,]/.test(s) : /[^0-9]/.test(s);
+  var clean = decimals ? s.replace(/[^0-9.,]/g, '') : s.replace(/[^0-9]/g, '');
+  if (decimals) {
+    clean = clean.replace(/,/g, '.');
+    var fd = clean.indexOf('.');
+    if (fd !== -1) clean = clean.slice(0, fd + 1) + clean.slice(fd + 1).replace(/\./g, '');
+  }
+  if (clean.length > maxLen) clean = clean.slice(0, maxLen);
+  return { value: clean, invalid: invalid };
+};
+
 export const validPhone = function(s) {
   const digits = String(s || '').replace(/\D/g, '');
   return digits.length >= 10 && digits.length <= 13;

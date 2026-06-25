@@ -43,11 +43,14 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
 
   var plan     = effectivePlan(planInfo);
   var lowStock = products.filter(function(p) { return p.stock != null && p.stock <= 5; });
-  var atAnyLimit = plan === 'free' && (
-    tx.length >= PLAN_LIMITS.free.transactions ||
-    products.length >= PLAN_LIMITS.free.products ||
-    (lossesCount || 0) >= PLAN_LIMITS.free.losses
-  );
+  // Uso por categoria (cada uma com seu proprio limite e cor — independentes).
+  var usage = [
+    { key: 'transactions', label: 'Transações', used: tx.length,        limit: PLAN_LIMITS.free.transactions, color: brand.color },
+    { key: 'products',     label: 'Produtos',   used: products.length,  limit: PLAN_LIMITS.free.products,     color: '#0f9d6c' },
+    { key: 'losses',       label: 'Perdas',     used: lossesCount || 0, limit: PLAN_LIMITS.free.losses,       color: '#8b5cf6' },
+  ];
+  var reachedCats = usage.filter(function(u) { return u.used >= u.limit; });
+  var anyReached = plan === 'free' && reachedCats.length > 0;
   var recent   = tx.slice().sort(function(a, b) { return b.date.localeCompare(a.date); }).slice(0, 8);
   var hour     = new Date().getHours();
   var greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
@@ -188,20 +191,28 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Plano gratuito</p>
             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full text-white" style={{background: brand.color}}>FREE</span>
           </div>
-          <UsageBar label="Transações" used={tx.length} limit={PLAN_LIMITS.free.transactions} color={brand.color} accentColor={brand.color}/>
-          <UsageBar label="Produtos"   used={products.length} limit={PLAN_LIMITS.free.products} color={brand.color} accentColor={brand.color}/>
-          <UsageBar label="Perdas"     used={lossesCount || 0} limit={PLAN_LIMITS.free.losses} color={brand.color} accentColor={brand.color}/>
-          {atAnyLimit && (
-            <div className="flex items-center gap-2 rounded-lg px-3 py-2.5 border border-red-200" style={{background:'rgba(239,68,68,0.06)'}}>
-              <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"/>
-              <p className="text-xs font-semibold text-red-700">Plano gratuito esgotado — novos registros bloqueados</p>
+          <div className="flex flex-col gap-3">
+            {usage.map(function(u, i) {
+              return (
+                <div key={u.key} className={i > 0 ? 'pt-3 border-t' : ''} style={i > 0 ? {borderColor:'var(--border)'} : {}}>
+                  <UsageBar label={u.label} used={u.used} limit={u.limit} color={u.color}/>
+                </div>
+              );
+            })}
+          </div>
+          {anyReached && (
+            <div className="flex items-start gap-2 rounded-lg px-3 py-2.5 border border-amber-200" style={{background:'rgba(245,158,11,0.07)'}}>
+              <div className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 mt-1"/>
+              <p className="text-xs font-semibold text-amber-700">
+                {'Limite de ' + reachedCats.map(function(c) { return c.label.toLowerCase(); }).join(' e ') + ' atingido. As demais categorias continuam liberadas.'}
+              </p>
             </div>
           )}
           <button onClick={onUpgrade}
             className="flex items-center justify-center gap-2 text-sm font-semibold text-white rounded-xl py-3 min-h-[44px] transition hover:opacity-90"
             style={{background: brand.color}}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/></svg>
-            {atAnyLimit ? 'Fazer upgrade para continuar' : 'Ver planos e fazer upgrade'}
+            {anyReached ? 'Liberar tudo — fazer upgrade' : 'Ver planos e fazer upgrade'}
           </button>
         </Card>
       )}

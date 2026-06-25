@@ -1,4 +1,5 @@
 import React from 'react';
+import { cleanNumeric } from '../lib/utils.js';
 
 export const Card = function({ children, className, hover, variant, accent, color }) {
   var base = 'rounded-2xl ';
@@ -32,6 +33,37 @@ export const Inp = function({ label, hint, error, success, className, icon, ...p
       )}
     </div>
   );
+};
+
+// Input numerico com tratamento estrito:
+// - bloqueia caracteres invalidos (so digitos + 1 separador decimal quando decimals)
+// - limita o comprimento (maxLen) para evitar estouro de layout
+// - ao digitar simbolo invalido, exibe "Caracteres nao permitidos" em vez do erro de valor
+export const NumInp = function(props) {
+  var decimals = props.decimals !== false;
+  var maxLen = props.maxLen || (decimals ? 12 : 7);
+  var onChange = props.onChange;
+  var st = React.useState(false);
+  var charErr = st[0], setCharErr = st[1];
+
+  var handle = function(e) {
+    var res = cleanNumeric(e.target.value, { decimals: decimals, maxLen: maxLen });
+    setCharErr(res.invalid);
+    if (onChange) onChange({ target: { value: res.value } });
+  };
+
+  var rest = Object.assign({}, props);
+  delete rest.decimals; delete rest.maxLen; delete rest.onChange;
+  delete rest.error; delete rest.type; delete rest.min; delete rest.step;
+  var err = charErr ? 'Caracteres não permitidos' : (props.error || '');
+
+  return React.createElement(Inp, Object.assign({}, rest, {
+    type: 'text',
+    inputMode: decimals ? 'decimal' : 'numeric',
+    maxLength: maxLen,
+    onChange: handle,
+    error: err,
+  }));
 };
 
 export const Sel = function({ label, className, children, ...p }) {
