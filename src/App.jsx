@@ -25,11 +25,14 @@ const InventoryView = lazy(function() { return import('./views/InventoryView.jsx
 const ReportView    = lazy(function() { return import('./views/ReportView.jsx'); });
 const EmailView     = lazy(function() { return import('./views/EmailView.jsx'); });
 const SettingsView  = lazy(function() { return import('./views/SettingsView.jsx'); });
-const PlansView     = lazy(function() { return import('./views/PlansView.jsx'); });
+const PlansView      = lazy(function() { return import('./views/PlansView.jsx'); });
+const PrivacyPolicy  = lazy(function() { return import('./views/PrivacyPolicy.jsx'); });
+const TermsOfService = lazy(function() { return import('./views/TermsOfService.jsx'); });
 
 const VALID_VIEWS = ['dashboard','income','expense','inventory','email','report','settings','planos'];
 const hashView = function() { const h = window.location.hash.replace('#',''); return VALID_VIEWS.includes(h) ? h : 'dashboard'; };
 const isLandingPreview = function() { return window.location.hash.replace('#','') === 'landing'; };
+const isLegalPage = function() { var h = window.location.hash.replace('#',''); return h === 'privacidade' || h === 'termos'; };
 
 function Loader({ text }) {
   return (
@@ -123,6 +126,17 @@ export default function App() {
   });
 
   if (appLoading) return <Loader/>;
+
+  // Páginas legais — acessíveis sem autenticação
+  if (isLegalPage()) {
+    var legalHash = window.location.hash.replace('#','');
+    return (
+      <Suspense fallback={<Loader/>}>
+        {legalHash === 'privacidade' ? <PrivacyPolicy/> : <TermsOfService/>}
+      </Suspense>
+    );
+  }
+
   if (isLandingPreview()) {
     return (
       <Suspense fallback={<Loader/>}>

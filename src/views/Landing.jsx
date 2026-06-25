@@ -223,12 +223,18 @@ export default function Landing({ onEnter }) {
         </div>
       </section>
 
-      <footer className="max-w-6xl mx-auto px-5 py-10 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ borderTop: '1px solid rgba(10,37,64,0.08)' }}>
-        <div className="flex items-center gap-2">
-          <img src="/icon-192.svg" alt="" className="w-6 h-6" />
-          <span className="font-display text-sm font-semibold" style={{ color: INK }}>Financia</span>
+      <footer className="max-w-6xl mx-auto px-5 py-10" style={{ borderTop: '1px solid rgba(10,37,64,0.08)' }}>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <img src="/icon-192.svg" alt="" className="w-6 h-6" />
+            <span className="font-display text-sm font-semibold" style={{ color: INK }}>Financia</span>
+          </div>
+          <p className="text-xs" style={{ color: MUTED }}>Gestão financeira para pequenos negócios</p>
+          <div className="flex items-center gap-4 text-xs" style={{ color: MUTED }}>
+            <a href="#privacidade" className="transition hover:opacity-70" style={{ color: MUTED }}>Privacidade</a>
+            <a href="#termos" className="transition hover:opacity-70" style={{ color: MUTED }}>Termos de Uso</a>
+          </div>
         </div>
-        <p className="text-xs" style={{ color: MUTED }}>Gestão financeira para pequenos negócios</p>
       </footer>
 
     </div>
