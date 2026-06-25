@@ -4,7 +4,47 @@ services:
     env: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
+
+    # ── Headers de seguranca (injetados em TODAS as respostas HTTP) ──
+    headers:
+      # Content-Security-Policy: scripts/estilos apenas de fontes confiaveis.
+      # connect-src cobre Supabase (REST/Auth/Storage/Functions + Realtime wss),
+      # Stripe, GitHub API (build de APK) e Cloudflare. style-src usa 'unsafe-inline'
+      # porque a UI usa atributos style={{...}} (atributos inline, nao <script>).
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self' https://*.supabase.co; script-src 'self' https://js.stripe.com https://challenges.cloudflare.com https://*.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co https://lh3.googleusercontent.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.github.com https://fonts.googleapis.com https://fonts.gstatic.com https://challenges.cloudflare.com https://*.cloudflare.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com; worker-src 'self'; manifest-src 'self'; upgrade-insecure-requests"
+      # Clickjacking: bloqueia framing por terceiros (alinhado a frame-ancestors 'self').
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      # Evita vazamento de URL/token em query string para origens externas.
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      # Impede MIME sniffing.
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      # Desliga APIs sensiveis do navegador por padrao.
+      - path: /*
+        name: Permissions-Policy
+        value: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(self), usb=()
+      # Forca HTTPS por 1 ano.
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+
+    # ── Roteamento ──
+    # Bloqueia arquivos de build sensiveis ANTES do fallback SPA.
+    # Destino inexistente => Render responde 404 (o arquivo tambem nunca e copiado p/ dist).
     routes:
+      - type: rewrite
+        source: /package.json
+        destination: /_blocked
+      - type: rewrite
+        source: /package-lock.json
+        destination: /_blocked
       - type: rewrite
         source: /*
         destination: /index.html

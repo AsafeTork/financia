@@ -1,0 +1,8 @@
+# Financia — Responsible Disclosure (RFC 9116)
+# Reporte falhas de seguranca de forma privada pelo canal abaixo.
+
+Contact: mailto:gestao.financia@gmail.com
+Expires: 2027-06-25T00:00:00.000Z
+Preferred-Languages: pt-BR, en
+Canonical: https://financia-gestao.onrender.com/.well-known/security.txt
+Policy: https://financia-gestao.onrender.com/#termos

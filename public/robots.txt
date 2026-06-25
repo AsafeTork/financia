@@ -1,0 +1,30 @@
+# Financia — politica de indexacao
+# A landing publica pode ser indexada; a area logada e rotas internas, nao.
+
+User-agent: *
+Allow: /$
+Allow: /index.html
+Allow: /manifest.json
+
+# Area logada / rotas internas do app (evita indexacao acidental)
+Disallow: /dashboard
+Disallow: /income
+Disallow: /expense
+Disallow: /inventory
+Disallow: /email
+Disallow: /report
+Disallow: /settings
+Disallow: /planos
+Disallow: /admin
+
+# Parametros sensiveis (ex.: impersonacao de admin)
+Disallow: /*?imp=
+Disallow: /*&imp=
+
+# Arquivos de build/infra nunca devem ser rastreados
+Disallow: /package.json
+Disallow: /package-lock.json
+Disallow: /vite.config.js
+Disallow: /sw.js
+
+Sitemap: https://financia-gestao.onrender.com/sitemap.xml
