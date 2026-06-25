@@ -1,0 +1,21 @@
+{
+  "$schema": "https://repomix.com",
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "compress": true,
+    "removeComments": true,
+    "removeEmptyLines": true,
+    "topFilesLength": 3
+  },
+  "ignore": {
+    "useGitignore": true,
+    "customPatterns": [
+      "*.log",
+      "dist/**",
+      "android/**",
+      "node_modules/**",
+      "CLAUDE_HANDOFF.md"
+    ]
+  }
+}
