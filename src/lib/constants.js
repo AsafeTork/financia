@@ -2,14 +2,19 @@ export const INIT_BRAND = { name: 'Financia', color: '#002f59', color_secondary:
 export const INIT_PLAN = { plan: 'free', plan_expires_at: null, plan_activated_by: null };
 
 export const PLAN_LIMITS = {
-  free: { transactions: 50, products: 20, losses: 10 },
-  pro:  { transactions: Infinity, products: Infinity, losses: Infinity },
+  free:    { transactions: 50, products: 20, losses: 10 },
+  pro:     { transactions: Infinity, products: Infinity, losses: Infinity },
+  premium: { transactions: Infinity, products: Infinity, losses: Infinity },
 };
 
+// Plano efetivo considerando expiracao. Reconhece pro e premium (ambos pagos);
+// expirado ou desconhecido cai para free. premium e superset de pro.
 export const effectivePlan = function(p) {
-  if (!p || p.plan !== 'pro') return 'free';
-  if (!p.plan_expires_at) return 'pro';
-  return new Date(p.plan_expires_at) > new Date() ? 'pro' : 'free';
+  if (!p) return 'free';
+  var plan = p.plan;
+  if (plan !== 'pro' && plan !== 'premium') return 'free';
+  if (!p.plan_expires_at) return plan;
+  return new Date(p.plan_expires_at) > new Date() ? plan : 'free';
 };
 
 export const limitFor = function(p, kind) { return PLAN_LIMITS[effectivePlan(p)][kind]; };
@@ -58,12 +63,12 @@ export const PRICING_PLANS = [
     id: 'pro', name: 'Pro', price: 49.9, period: '/mês', popular: true,
     tagline: 'Para o negócio que cresce',
     cta: 'Assinar Pro',
-    features: ['Transações ilimitadas', 'Produtos ilimitados', 'Perdas ilimitadas', 'Sincroniza em tempo real entre celulares', 'Relatórios e exportação CSV', 'Suporte prioritário'],
+    features: ['Tudo do Grátis', 'Transações ilimitadas', 'Produtos ilimitados', 'Perdas ilimitadas', 'Sincroniza em tempo real entre celulares', 'Relatórios e exportação CSV', 'Suporte prioritário'],
   },
   {
     id: 'premium', name: 'Premium', price: 99.9, period: '/mês',
     tagline: 'Para quem quer escalar',
-    cta: 'Falar com vendas',
+    cta: 'Assinar Premium',
     features: ['Tudo do Pro', 'Vários usuários na mesma conta', 'Metas e orçamento mensal', 'Marca personalizada (white-label)', 'Relatórios avançados', 'Suporte dedicado'],
   },
 ];

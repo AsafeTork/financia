@@ -168,29 +168,55 @@ export default function Landing({ onEnter }) {
         <div className="grid md:grid-cols-3 gap-5 items-stretch">
           {PRICING_PLANS.map(function(p) {
             var popular = !!p.popular;
-            var isPremium = p.id === 'premium';
+            var isFree = p.id === 'free';
+            var isPremiumCard = p.id === 'premium';
+            var priceNote = isFree ? 'grátis para sempre, sem cartão' : 'cobrado mensalmente, cancele quando quiser';
+            var btnStyle = popular ? { background: ACCENT, color: '#fff' } : (isFree ? { background: 'rgba(10,37,64,0.06)', color: INK } : { background: BRAND, color: '#fff' });
+            var cardBorder = popular ? ('1px solid ' + INK) : ('1px solid ' + (isPremiumCard ? 'rgba(15,157,108,0.35)' : 'rgba(10,37,64,0.1)'));
             return (
-              <div key={p.id} className="rounded-3xl p-7 flex flex-col gap-6 relative"
-                style={{ background: popular ? INK : '#fff', border: popular ? ('1px solid ' + INK) : '1px solid rgba(10,37,64,0.1)', boxShadow: popular ? '0 30px 60px rgba(10,37,64,0.25)' : '0 2px 10px rgba(10,37,64,0.04)' }}>
-                {popular && <span className="absolute -top-3 left-7 text-xs font-bold px-3 py-1 rounded-full" style={{ background: ACCENT, color: '#fff' }}>Mais escolhido</span>}
+              <div key={p.id}
+                className={'rounded-3xl p-7 flex flex-col gap-5 relative transition duration-200' + (popular ? ' md:-translate-y-3' : '')}
+                style={{ background: popular ? INK : '#fff', border: cardBorder, boxShadow: popular ? '0 30px 70px rgba(10,37,64,0.30)' : '0 2px 14px rgba(10,37,64,0.05)' }}>
+
+                {popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1 rounded-full whitespace-nowrap" style={{ background: ACCENT, color: '#fff', boxShadow: '0 6px 16px rgba(15,157,108,0.4)' }}>Mais escolhido</span>}
+
+                {/* Nome + para quem e */}
                 <div>
-                  <p className="font-display font-semibold text-2xl" style={{ color: popular ? '#fff' : INK }}>{p.name}</p>
-                  <p className="text-xs mt-1" style={{ color: popular ? 'rgba(255,255,255,0.6)' : MUTED }}>{p.tagline}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-display font-semibold text-2xl" style={{ color: popular ? '#fff' : INK }}>{p.name}</p>
+                    {isPremiumCard && <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: 'rgba(15,157,108,0.12)', color: ACCENT }}>Completo</span>}
+                  </div>
+                  <p className="text-xs mt-1.5" style={{ color: popular ? 'rgba(255,255,255,0.65)' : MUTED }}>{p.tagline}</p>
                 </div>
-                <div className="flex items-end gap-1">
-                  <span className="font-display font-semibold tabular" style={{ color: popular ? '#fff' : INK, fontSize: '2.5rem', letterSpacing: '-1px' }}>{money(p.price)}</span>
-                  {p.period && <span className="text-sm mb-2" style={{ color: popular ? 'rgba(255,255,255,0.6)' : MUTED }}>{p.period}</span>}
+
+                {/* Preco + microcopy de confianca */}
+                <div>
+                  <div className="flex items-end gap-1">
+                    <span className="font-display font-semibold tabular" style={{ color: popular ? '#fff' : INK, fontSize: '2.6rem', letterSpacing: '-1px', lineHeight: 1 }}>{money(p.price)}</span>
+                    {p.period && <span className="text-sm mb-1.5" style={{ color: popular ? 'rgba(255,255,255,0.6)' : MUTED }}>{p.period}</span>}
+                  </div>
+                  <p className="text-xs mt-2.5" style={{ color: popular ? 'rgba(255,255,255,0.5)' : MUTED }}>{priceNote}</p>
                 </div>
-                {isPremium
-                  ? <a href={waLink} target="_blank" rel="noreferrer" className="text-center text-sm font-semibold py-3.5 rounded-2xl transition hover:opacity-90" style={{ border: '1px solid rgba(10,37,64,0.15)', color: INK }}>{p.cta}</a>
-                  : <button onClick={onEnter} className="text-sm font-semibold py-3.5 rounded-2xl transition hover:opacity-90" style={popular ? { background: ACCENT, color: '#fff' } : { background: BRAND, color: '#fff' }}>{p.cta}</button>
-                }
-                <div className="flex flex-col gap-3 pt-1">
+
+                {/* CTA */}
+                <button onClick={onEnter} className="text-sm font-semibold py-3.5 rounded-2xl transition hover:opacity-90 min-h-[44px]" style={btnStyle}>{p.cta}</button>
+
+                {/* Beneficios */}
+                <div className="flex flex-col gap-2.5 pt-1">
                   {p.features.map(function(feat) {
+                    var ladder = feat.indexOf('Tudo do') === 0;
+                    if (ladder) {
+                      return (
+                        <div key={feat} className="flex items-center gap-2 pb-2 mb-1" style={{ borderBottom: '1px dashed ' + (popular ? 'rgba(255,255,255,0.2)' : 'rgba(10,37,64,0.12)') }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+                          <span className="text-sm font-bold" style={{ color: popular ? '#fff' : INK }}>{feat}</span>
+                        </div>
+                      );
+                    }
                     return (
                       <div key={feat} className="flex items-start gap-2.5">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5"><path d="M5 13l4 4L19 7" /></svg>
-                        <span className="text-sm" style={{ color: popular ? 'rgba(255,255,255,0.85)' : MUTED }}>{feat}</span>
+                        <span className="text-sm" style={{ color: popular ? 'rgba(255,255,255,0.9)' : 'rgba(10,37,64,0.82)' }}>{feat}</span>
                       </div>
                     );
                   })}
@@ -198,6 +224,21 @@ export default function Landing({ onEnter }) {
               </div>
             );
           })}
+        </div>
+
+        {/* Garantias + canal sob medida */}
+        <div className="mt-9 flex flex-col items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs" style={{ color: MUTED }}>
+            {['Sem fidelidade', 'Troque ou cancele quando quiser', 'Pagamento seguro pela Stripe'].map(function(t) {
+              return (
+                <span key={t} className="flex items-center gap-1.5">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                  {t}
+                </span>
+              );
+            })}
+          </div>
+          <a href={waLink} target="_blank" rel="noreferrer" className="text-xs font-semibold transition hover:opacity-70" style={{ color: BRAND }}>Precisa de algo sob medida? Fale no WhatsApp</a>
         </div>
       </section>
 

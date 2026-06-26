@@ -50,6 +50,25 @@ Deno.serve(async function (req) {
           p_expires: expires,
         });
       }
+    } else if (event.type === 'invoice.payment_succeeded') {
+      // Fluxo in-app (Stripe Elements): a assinatura default_incomplete so confirma
+      // aqui, quando a primeira fatura e paga. Ativa o plano lido do metadata da sub.
+      const invoice = event.data.object;
+      const subId = invoice.subscription ? invoice.subscription : null;
+      if (subId) {
+        const sub = await stripe.subscriptions.retrieve(subId);
+        const m = sub.metadata ? sub.metadata : {};
+        const userId = m.user_id ? m.user_id : null;
+        const planId = m.plan_id ? m.plan_id : 'pro';
+        if (userId) {
+          const expires = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString();
+          await supabase.rpc('stripe_activate_plan', {
+            p_user: userId,
+            p_plan: planId,
+            p_expires: expires,
+          });
+        }
+      }
     } else if (event.type === 'customer.subscription.deleted') {
       const sub = event.data.object;
       const subMeta = sub.metadata ? sub.metadata : {};

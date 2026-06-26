@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, PageHead } from '../components/ui.jsx';
 import { PRICING_PLANS, WHITELABEL, waLink, effectivePlan } from '../lib/constants.js';
 import { fmt } from '../lib/utils.js';
-import { sb } from '../lib/supabase.js';
+import StripeCheckout from '../components/StripeCheckout.jsx';
 
 var CheckIcon = function({ color }) {
   return (
@@ -12,38 +12,9 @@ var CheckIcon = function({ color }) {
   );
 };
 
-function PlanCard({ plan, brand, current }) {
+function PlanCard({ plan, brand, current, onSubscribe }) {
   var popular = !!plan.popular;
-  var msg = 'Olá! Tenho interesse no plano ' + plan.name + ' do Financia. Pode me ajudar?';
-  var loadingState = useState(false);
-  var loading = loadingState[0];
-  var setLoading = loadingState[1];
-  var errorState = useState('');
-  var checkoutError = errorState[0];
-  var setCheckoutError = errorState[1];
-
-  var startCheckout = async function() {
-    setCheckoutError('');
-    setLoading(true);
-    try {
-      var result = await sb.functions.invoke('create-checkout-session', { body: { plan_id: 'pro' } });
-      var data = result && result.data ? result.data : null;
-      if (result && result.error) {
-        setCheckoutError('Não foi possível iniciar o pagamento. Tente novamente.');
-        setLoading(false);
-        return;
-      }
-      if (data && data.url) {
-        window.location.href = data.url;
-        return;
-      }
-      setCheckoutError('Não foi possível iniciar o pagamento. Tente novamente.');
-      setLoading(false);
-    } catch (err) {
-      setCheckoutError('Não foi possível iniciar o pagamento. Tente novamente.');
-      setLoading(false);
-    }
-  };
+  var paid = plan.id === 'pro' || plan.id === 'premium';
 
   return (
     <Card className="p-5 flex flex-col gap-4" accent={popular} color={brand.color}>
@@ -79,32 +50,27 @@ function PlanCard({ plan, brand, current }) {
         })}
       </div>
 
-      {plan.id === 'pro' && (
-        <div className="flex flex-col gap-1.5">
-          <button type="button" onClick={startCheckout} disabled={loading}
-            className="mt-1 w-full text-center text-sm font-semibold px-4 py-3 rounded-xl text-white transition hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed min-h-[44px] flex items-center justify-center"
-            style={{background: brand.color}}>
-            {loading ? 'Abrindo pagamento...' : plan.cta}
-          </button>
-          {checkoutError && (
-            <p className="text-xs text-center" style={{color:'#dc2626'}}>{checkoutError}</p>
-          )}
-        </div>
-      )}
-
-      {plan.id === 'premium' && (
-        <a href={waLink(msg)} target="_blank" rel="noopener noreferrer"
-          className="mt-1 text-center text-sm font-semibold px-4 py-3 rounded-xl text-white transition hover:opacity-90 min-h-[44px] flex items-center justify-center"
+      {current ? (
+        <div className="mt-1 text-center text-sm font-semibold px-4 py-3 rounded-xl min-h-[44px] flex items-center justify-center" style={{background:'var(--brand-soft)', color: brand.color}}>Seu plano atual</div>
+      ) : paid ? (
+        <button type="button" onClick={function() { onSubscribe(plan); }}
+          className="mt-1 w-full text-sm font-semibold px-4 py-3 rounded-xl text-white transition hover:opacity-90 min-h-[44px] flex items-center justify-center gap-2"
           style={{background: brand.color}}>
-          {plan.cta}
-        </a>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+          Assinar {plan.name}
+        </button>
+      ) : (
+        <div className="mt-1 text-center text-xs px-4 py-3" style={{color:'var(--text-sub)'}}>Plano inicial, gratuito para sempre</div>
       )}
     </Card>
   );
 }
 
-export default function PlansView({ brand, planInfo }) {
+export default function PlansView({ brand, planInfo, toast }) {
   var plan = effectivePlan(planInfo);
+  var checkoutState = useState(null);
+  var checkoutPlan = checkoutState[0];
+  var setCheckoutPlan = checkoutState[1];
   var wlMsg = 'Olá! Quero o app personalizado da minha empresa (logo, nome e cores). Pode me passar como funciona?';
   var duvidaMsg = 'Olá! Tenho uma dúvida sobre o Financia.';
 
@@ -119,9 +85,14 @@ export default function PlansView({ brand, planInfo }) {
 
       <div className="flex flex-col gap-3">
         {PRICING_PLANS.map(function(p) {
-          return <PlanCard key={p.id} plan={p} brand={brand} current={plan === p.id}/>;
+          return <PlanCard key={p.id} plan={p} brand={brand} current={plan === p.id} onSubscribe={setCheckoutPlan}/>;
         })}
       </div>
+
+      {checkoutPlan && (
+        <StripeCheckout plan={checkoutPlan} brand={brand} toast={toast}
+          onClose={function() { setCheckoutPlan(null); }}/>
+      )}
 
       {/* Pacote white-label — pagamento unico */}
       <Card className="p-5 flex flex-col gap-4" variant="raised" accent={true} color={brand.color}>

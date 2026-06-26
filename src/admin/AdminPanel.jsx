@@ -31,16 +31,16 @@ export default function AdminPanel({ toast, confirm, session }) {
   };
   useEffect(function() { reload(); }, [done]);
 
-  const proPrice = (function() { var p = PRICING_PLANS.find(function(x) { return x.id === 'pro'; }); return p ? p.price : 49.9; })();
+  const priceOf = function(id) { var p = PRICING_PLANS.find(function(x) { return x.id === id; }); return p ? p.price : 0; };
   const nowMonth = new Date().toISOString().slice(0, 7);
   const stats = clients.reduce(function(a, c) {
-    var isPro = effectivePlan(c) === 'pro';
+    var ep = effectivePlan(c);
     a.total += 1;
-    if (isPro) a.pro += 1; else a.free += 1;
+    if (ep === 'free') { a.free += 1; } else { a.pro += 1; a.mrr += priceOf(ep); }
     if (c.created_at && String(c.created_at).slice(0, 7) === nowMonth) a.novos += 1;
     return a;
-  }, { total: 0, pro: 0, free: 0, novos: 0 });
-  var mrr = stats.pro * proPrice;
+  }, { total: 0, pro: 0, free: 0, novos: 0, mrr: 0 });
+  var mrr = stats.mrr;
   var moneyBR = function(v) { return 'R$ ' + v.toFixed(2).replace('.', ','); };
 
   const visibleClients = clients.filter(function(c) {
@@ -207,8 +207,8 @@ export default function AdminPanel({ toast, confirm, session }) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{c.name || 'Sem nome'}</p>
-                            <span className={'text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 ' + (effectivePlan(c) === 'pro' ? 'text-white' : 'text-gray-600 bg-gray-100')} style={effectivePlan(c) === 'pro' ? {background:'#1a6b5c'} : {}}>
-                              {effectivePlan(c) === 'pro' ? 'PRO' : 'FREE'}
+                            <span className={'text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 ' + (effectivePlan(c) !== 'free' ? 'text-white' : 'text-gray-600 bg-gray-100')} style={effectivePlan(c) !== 'free' ? {background:'#1a6b5c'} : {}}>
+                              {effectivePlan(c) === 'premium' ? 'PREMIUM' : (effectivePlan(c) === 'pro' ? 'PRO' : 'FREE')}
                             </span>
                           </div>
                           <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0, 8)}{c.updated_at ? ' · ativo ' + fmtDate(String(c.updated_at).slice(0, 10)) : ''}</p>

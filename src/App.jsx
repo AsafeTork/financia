@@ -216,7 +216,7 @@ export default function App() {
     email:     React.createElement(EmailView, {brand:brand, toast:toast}),
     report:    React.createElement(ReportView, {tx:tx, brand:brand, toast:toast, onNav:navTo}),
     settings:  React.createElement(SettingsView, {brand:brand, session:session, planInfo:planInfo, onSave:saveBrand, onSavePhone:savePhone, toast:toast, confirm:confirm, isAdmin:isAdminDB, onNav:navTo}),
-    planos:    React.createElement(PlansView, {brand:brand, planInfo:planInfo}),
+    planos:    React.createElement(PlansView, {brand:brand, planInfo:planInfo, toast:toast}),
   };
 
   return (

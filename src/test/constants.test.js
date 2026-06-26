@@ -21,6 +21,9 @@ describe('PLAN_LIMITS', function() {
   it('pro transactions = Infinity', function() { expect(PLAN_LIMITS.pro.transactions).toBe(Infinity); });
   it('pro products = Infinity', function() { expect(PLAN_LIMITS.pro.products).toBe(Infinity); });
   it('pro losses = Infinity', function() { expect(PLAN_LIMITS.pro.losses).toBe(Infinity); });
+  it('premium transactions = Infinity', function() { expect(PLAN_LIMITS.premium.transactions).toBe(Infinity); });
+  it('premium products = Infinity', function() { expect(PLAN_LIMITS.premium.products).toBe(Infinity); });
+  it('premium losses = Infinity', function() { expect(PLAN_LIMITS.premium.losses).toBe(Infinity); });
 });
 
 // ---------------------------------------------------------------------------
@@ -43,7 +46,10 @@ describe('effectivePlan', function() {
   it('pro sem expiração → pro', function() { expect(effectivePlan(PRO)).toBe('pro'); });
   it('pro com expiração futura → pro', function() { expect(effectivePlan(PRO_FUTURE)).toBe('pro'); });
   it('pro expirado → free', function() { expect(effectivePlan(PRO_EXPIRED)).toBe('free'); });
-  it('plano "premium" não reconhecido → free', function() { expect(effectivePlan({ plan: 'premium' })).toBe('free'); });
+  it('premium sem expiração → premium', function() { expect(effectivePlan({ plan: 'premium', plan_expires_at: null })).toBe('premium'); });
+  it('premium com expiração futura → premium', function() { expect(effectivePlan({ plan: 'premium', plan_expires_at: '2099-12-31T00:00:00Z' })).toBe('premium'); });
+  it('premium expirado → free', function() { expect(effectivePlan({ plan: 'premium', plan_expires_at: '2000-01-01T00:00:00Z' })).toBe('free'); });
+  it('plano desconhecido → free', function() { expect(effectivePlan({ plan: 'enterprise' })).toBe('free'); });
   it('plan_expires_at null com pro → pro', function() {
     expect(effectivePlan({ plan: 'pro', plan_expires_at: null })).toBe('pro');
   });
