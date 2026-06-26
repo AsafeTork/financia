@@ -63,7 +63,7 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
   var stripePromise = getStripe();
 
   useEffect(function() {
-    if (!stripeConfigured) { setLoadErr('Pagamento online ainda não configurado. Fale com o suporte.'); setLoading(false); return; }
+    if (!stripeConfigured) { setLoadErr('Chave pública do Stripe ausente. Defina VITE_STRIPE_PUBLISHABLE_KEY (pk_...) no ambiente e refaça o build.'); setLoading(false); return; }
     var alive = true;
     setLoading(true);
     setLoadErr('');

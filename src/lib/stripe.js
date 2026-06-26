@@ -1,7 +1,8 @@
 import { loadStripe } from '@stripe/stripe-js';
 
 // Chave publicavel (pk_...) — segura no front. A secret fica so no servidor.
-var PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
+// Aceita os dois nomes de variavel para evitar mismatch de configuracao no deploy.
+var PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || import.meta.env.VITE_STRIPE_PUBLIC_KEY || '';
 
 export var stripeConfigured = !!PUBLISHABLE_KEY;
 

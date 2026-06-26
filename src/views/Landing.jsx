@@ -83,6 +83,9 @@ export default function Landing({ onEnter }) {
         })}
       </div>
 
+      {/* Conteudo no nivel mais alto (acima do gradiente e das notas), em coluna flex. */}
+      <div className="relative z-10 flex flex-col min-h-screen w-full">
+
       <header className="sticky top-0 z-30" style={{ background: 'rgba(251,250,247,0.85)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(10,37,64,0.08)' }}>
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -332,6 +335,7 @@ export default function Landing({ onEnter }) {
         </div>
       </footer>
 
+      </div>
     </div>
   );
 }

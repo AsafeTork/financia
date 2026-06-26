@@ -130,10 +130,10 @@ export default function App() {
     var meta2 = session.user.user_metadata || {};
     var gName = meta2.full_name || meta2.name || '';
     var doneFlag = !!localStorage.getItem('financia_onboarded_' + session.user.id);
-    var digits = function(s) { return String(s || '').replace(/\D/g, ''); };
-    var hasPhone = digits(brand.phone).length > 0 || digits(meta2.phone).length > 0;
     var needName = !!gName && brand.name === gName;
-    var needs = !doneFlag && (needName || !hasPhone);
+    // Telefone NAO bloqueia mais a renderizacao do app. O usuario navega normalmente
+    // e informa o telefone depois em Configuracoes (Supabase sincroniza em segundo plano).
+    var needs = !doneFlag && needName;
     if (onboardingRef.current === null) {
       onboardingRef.current = needs;
       setOnboardingNeeded(needs);
@@ -220,10 +220,9 @@ export default function App() {
   var uid = session.user.id;
   var meta = session.user.user_metadata || {};
   var googleName = meta.full_name || meta.name || '';
-  var phoneDigits = String(brand.phone || '').replace(/\D/g, '');
-  var metaPhoneDigits = String(meta.phone || '').replace(/\D/g, '');
   var needsName = !!googleName && brand.name === googleName;
-  var needsPhone = phoneDigits.length === 0 && metaPhoneDigits.length === 0;
+  // Telefone removido do onboarding bloqueante (preenchivel em Configuracoes).
+  var needsPhone = false;
   if (onboardingNeeded) {
     var finishOnboarding = function(data) {
       var tasks = [];
@@ -252,7 +251,7 @@ export default function App() {
     email:     React.createElement(EmailView, {brand:brand, toast:toast}),
     report:    React.createElement(ReportView, {tx:tx, brand:brand, toast:toast, onNav:navTo, planInfo:planInfo}),
     settings:  React.createElement(SettingsView, {brand:brand, session:session, planInfo:planInfo, onSave:saveBrand, onSavePhone:savePhone, toast:toast, confirm:confirm, isAdmin:isAdminDB, onNav:navTo}),
-    planos:    React.createElement(PlansView, {brand:brand, planInfo:planInfo, toast:toast}),
+    planos:    React.createElement(PlansView, {brand:brand, planInfo:planInfo, toast:toast, onNav:navTo}),
   };
 
   return (

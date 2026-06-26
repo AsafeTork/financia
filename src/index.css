@@ -137,18 +137,18 @@ input:focus, select:focus, textarea:focus {
    antiga, que recua levemente por baixo. Os pseudo-elementos ::view-transition-*
    ja sao posicionados em tela cheia (fixed) pelo navegador; basta animar. */
 @media (prefers-reduced-motion: no-preference) {
-  ::view-transition-group(root) { animation-duration: .4s; }
+  ::view-transition-group(root) { animation-duration: .6s; }
   ::view-transition-old(root) {
-    animation: slideOldUnder .4s ease-in-out both;
+    animation: slideOldUnder .6s ease-in-out both;
     z-index: 1;
   }
   ::view-transition-new(root) {
-    animation: slideInOver .4s ease-in-out both;
+    animation: slideInOver .6s ease-in-out both;
     z-index: 999;
   }
 }
 @keyframes slideInOver  { from { transform: translateX(100%); } to { transform: translateX(0); } }
-@keyframes slideOldUnder { from { transform: translateX(0); filter: brightness(1); } to { transform: translateX(-6%); filter: brightness(0.92); } }
+@keyframes slideOldUnder { from { transform: translateX(0); filter: brightness(1); } to { transform: translateX(-8%); filter: brightness(0.9); } }
 
 /* ── Botao duplo de exportacao: [PDF] vermelho | [Excel] verde ── */
 .exp-split {
