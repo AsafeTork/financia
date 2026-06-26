@@ -109,11 +109,34 @@ export default function AdminPanel({ toast, confirm, session }) {
     if (form.password.length < 8) { toast('Senha mínimo 8 chars.', 'error'); return; }
     if (!form.companyName) { toast('Informe o nome da empresa.', 'error'); return; }
     setCreating(true);
-    const authRes = await sb.auth.signUp({email:form.email, password:form.password});
-    if (authRes.error) { toast(authRes.error.message.includes('already') ? 'E-mail já cadastrado.' : 'Erro: ' + authRes.error.message, 'error'); setCreating(false); return; }
-    const newUid = authRes.data && authRes.data.user ? authRes.data.user.id : null;
-    if (newUid) {
-      await sb.from('company_profiles').upsert({user_id:newUid, name:form.companyName, color:form.primaryColor||'#002f59', color_secondary:form.secondaryColor||null, color_accent:form.accentColor||null, theme:form.theme||'light', logo:'G', logo_url:form.logoUrl||null});
+    let invokeRes = null;
+    try {
+      invokeRes = await sb.functions.invoke('admin-create-client', {body:{
+        email:form.email,
+        password:form.password,
+        company_name:form.companyName,
+        primary_color:form.primaryColor || '#002f59',
+        secondary_color:form.secondaryColor || null,
+        accent_color:form.accentColor || null,
+        theme:form.theme || 'light',
+        logo_url:form.logoUrl || null
+      }});
+    } catch (invokeErr) {
+      toast('Erro de rede ao criar cliente.', 'error'); setCreating(false); return;
+    }
+    if (invokeRes.error) {
+      const detail = invokeRes.data && invokeRes.data.error ? invokeRes.data.error : '';
+      toast(detail === 'email_exists' ? 'E-mail já cadastrado.' : 'Erro ao criar cliente: ' + (detail || invokeRes.error.message), 'error');
+      setCreating(false); return;
+    }
+    const data = invokeRes.data || {};
+    if (data.error) {
+      toast(data.error === 'email_exists' ? 'E-mail já cadastrado.' : 'Erro: ' + data.error, 'error');
+      setCreating(false); return;
+    }
+    const newUid = data.user_id || null;
+    if (data.profile_error) {
+      toast('Cliente criado, mas o perfil falhou: ' + data.profile_error, 'error');
     }
     const tok = localStorage.getItem('nancia_gh_token') || '';
     if (!tok) { toast('Cliente criado! Configure o token GitHub.', 'error'); setDone(Object.assign({}, form, {buildOk:false, newUid:newUid})); setForm(BLANK); setCreating(false); return; }
@@ -139,7 +162,7 @@ export default function AdminPanel({ toast, confirm, session }) {
     var label = tables.length === 3 ? 'TODOS os dados' : tables.join(', ');
     confirm('Limpar ' + label + ' de "' + (c.name || c.user_id) + '"? Isso nao pode ser desfeito.', async function() {
       const ok = await clearClientData(c.user_id, tables);
-      if (ok) { toast('Dados limpos.'); setClearTarget(null); }
+      if (ok) { toast('Dados limpos.'); setClearTarget(null); reload(); }
       else toast('Erro ao limpar dados.', 'error');
     });
   };
@@ -200,7 +223,7 @@ export default function AdminPanel({ toast, confirm, session }) {
                             return <span key={col + '-' + i} className="flex items-center gap-1 text-[10px] font-mono px-1.5 py-1 rounded-md" style={{background:'var(--bg-card)', border:'1px solid var(--border)', color:'var(--text-sub)'}}><span className="w-3 h-3 rounded-sm inline-block" style={{background: col}}/>{String(col).toUpperCase()}</span>;
                           })
                         : <span className="text-xs" style={{color:'var(--text-muted)'}}>Cores não definidas</span>}
-                      <button onClick={function() { setEditClient(c); }} className="text-xs font-semibold px-2.5 py-1.5 min-h-[36px] rounded-lg text-white ml-auto" style={{background:'var(--brand)'}}>Abrir setup</button>
+                      <button onClick={function() { setEditClient(c); }} className="text-xs font-semibold px-2.5 py-1.5 min-h-[44px] rounded-lg text-white ml-auto" style={{background:'var(--brand)'}}>Abrir setup</button>
                     </div>
                   </div>
                 );
@@ -221,7 +244,7 @@ export default function AdminPanel({ toast, confirm, session }) {
           <div className="flex gap-1.5">
             {[['all','Todos'],['pro','Pro'],['free','Free']].map(function(f) {
               var active = planFilter === f[0];
-              return <button key={f[0]} onClick={function() { setPlanFilter(f[0]); }} className={'text-xs font-semibold px-3 py-1.5 min-h-[36px] rounded-lg border transition ' + (active ? 'text-white' : 'text-gray-500 border-gray-200 hover:bg-gray-50')} style={active ? {background:'var(--brand)', borderColor:'var(--brand)'} : {}}>{f[1]}</button>;
+              return <button key={f[0]} onClick={function() { setPlanFilter(f[0]); }} className={'text-xs font-semibold px-3 py-1.5 min-h-[44px] rounded-lg border transition ' + (active ? 'text-white' : 'text-gray-500 border-gray-200 hover:bg-gray-50')} style={active ? {background:'var(--brand)', borderColor:'var(--brand)'} : {}}>{f[1]}</button>;
             })}
           </div>
         </div>
@@ -275,7 +298,7 @@ export default function AdminPanel({ toast, confirm, session }) {
                             window.open(window.location.origin + window.location.pathname + '?imp=1', '_blank');
                             setTimeout(function() { localStorage.removeItem('_imp'); }, 30000);
                             toast('Abrindo conta de ' + c.name, 'success');
-                          });
+                          }).catch(function() { toast('Erro ao iniciar acesso ao cliente.', 'error'); });
                         }} className="py-2 text-xs font-semibold rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 min-h-[44px] flex items-center justify-center gap-1.5">
                           <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
                           Entrar
