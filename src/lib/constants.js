@@ -37,7 +37,7 @@ export const waLink = function(msg) {
 
 // Pacote de personalizacao (white-label) — pagamento unico.
 // Cliente recebe o app com a logo, nome, cores e interface da empresa dele,
-// entregue para Android (APK), Windows (.exe) e iPhone/web (PWA instalavel).
+// entregue para Android (APK) e Windows (.exe). Sem homologacao iOS no momento.
 export const WHITELABEL = {
   price: 497,
   tagline: 'O app com a cara da sua empresa, entregue pronto',
@@ -46,7 +46,6 @@ export const WHITELABEL = {
     'Cores e identidade visual da sua marca',
     'Interface ajustada ao seu negocio (com ajuda de IA)',
     'App para Android (APK) e Windows (.exe)',
-    'Instalavel no iPhone e no navegador (PWA)',
     'Entrega completa e configurada por mim',
   ],
 };
@@ -63,13 +62,13 @@ export const PRICING_PLANS = [
     id: 'pro', name: 'Pro', price: 49.9, period: '/mês', popular: true,
     tagline: 'Para o negócio que cresce',
     cta: 'Assinar Pro',
-    features: ['Tudo do Grátis', 'Transações ilimitadas', 'Produtos ilimitados', 'Perdas ilimitadas', 'Sincroniza em tempo real entre celulares', 'Relatórios e exportação CSV', 'Suporte prioritário'],
+    features: ['Tudo do Grátis', 'Transações ilimitadas', 'Produtos ilimitados', 'Perdas ilimitadas', 'Relatórios e exportação em PDF e Excel', 'Suporte prioritário'],
   },
   {
     id: 'premium', name: 'Premium', price: 99.9, period: '/mês',
     tagline: 'Para quem quer escalar',
     cta: 'Assinar Premium',
-    features: ['Tudo do Pro', 'Vários usuários na mesma conta', 'Metas e orçamento mensal', 'Marca personalizada (white-label)', 'Relatórios avançados', 'Suporte dedicado'],
+    features: ['Tudo do Pro', 'Vários usuários na mesma conta', 'Sincronização em tempo real entre dispositivos', 'Metas e orçamento mensal', 'Marca personalizada (white-label) — requer pacote de personalização', 'Relatórios avançados', 'Suporte dedicado'],
   },
 ];
 

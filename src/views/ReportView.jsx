@@ -9,11 +9,23 @@ export default function ReportView({ tx, brand, toast, onNav, planInfo }) {
   var accentColor = (brand && brand.color) || '#1a6b5c';
   var paid = effectivePlan(planInfo) !== 'free';
 
+  var curRealMonth = today().slice(0, 7);
   var allMonths = useMemo(function() {
     return Array.from(new Set(tx.map(function(t) { return t.date.slice(0, 7); }))).sort(function(a, b) { return b.localeCompare(a); });
   }, [tx]);
+  // Meses navegaveis: meses com registro + mes atual (sempre), nunca futuros.
+  // Bloqueia retroceder para meses passados sem nenhum registro financeiro.
+  var navMonths = useMemo(function() {
+    var set = {};
+    tx.forEach(function(t) { var m = t.date.slice(0, 7); if (m <= curRealMonth) set[m] = 1; });
+    set[curRealMonth] = 1;
+    return Object.keys(set).sort();
+  }, [tx]);
 
-  var [month, setMonth] = useState(today().slice(0, 7));
+  var [month, setMonth] = useState(curRealMonth);
+  React.useEffect(function() {
+    if (navMonths.indexOf(month) === -1) setMonth(curRealMonth);
+  }, [navMonths]);
 
   var filtered = tx.filter(function(t) { return t.date.startsWith(month); });
   var income  = filtered.filter(function(t) { return t.type === 'income'; }).reduce(function(s, t) { return s + t.amount; }, 0);
@@ -21,14 +33,14 @@ export default function ReportView({ tx, brand, toast, onNav, planInfo }) {
   var bycat   = filtered.filter(function(t) { return t.type === 'expense'; }).reduce(function(a, t) { var k = t.category || 'Outro'; a[k] = (a[k] || 0) + t.amount; return a; }, {});
 
   var monthLabel = function(m) { return new Date(m + '-15').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); };
-  var curRealMonth = today().slice(0, 7);
-  var nextDisabled = month >= curRealMonth;
+  var monthIdx = navMonths.indexOf(month);
+  var prevDisabled = monthIdx <= 0;
+  var nextDisabled = monthIdx < 0 || monthIdx >= navMonths.length - 1;
   var shiftMonth = function(delta) {
-    var p = month.split('-');
-    var d = new Date(Number(p[0]), Number(p[1]) - 1 + delta, 1);
-    var mm = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-    if (mm > curRealMonth) return;
-    setMonth(mm);
+    var i = navMonths.indexOf(month);
+    var ni = i + delta;
+    if (ni < 0 || ni >= navMonths.length) return;
+    setMonth(navMonths[ni]);
   };
 
   var sortedRows = function() {
@@ -103,8 +115,8 @@ export default function ReportView({ tx, brand, toast, onNav, planInfo }) {
       />
 
       <Card className="px-2 py-2 flex items-center justify-between gap-2">
-        <button onClick={function() { shiftMonth(-1); }} aria-label="Mês anterior"
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl transition hover:bg-[var(--bg-subtle)]" style={{color:'var(--text-sub)'}}>
+        <button onClick={function() { shiftMonth(-1); }} disabled={prevDisabled} aria-label="Mês anterior"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl transition hover:bg-[var(--bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed" style={{color:'var(--text-sub)'}}>
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
         </button>
         <div className="text-center min-w-0">

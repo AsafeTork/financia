@@ -134,11 +134,41 @@ input:focus, select:focus, textarea:focus {
 
 /* ── View Transitions API: anima a troca de paginas ── */
 @media (prefers-reduced-motion: no-preference) {
-  ::view-transition-old(root) { animation: vtOut .18s ease both; }
-  ::view-transition-new(root) { animation: vtIn .28s ease both; }
+  ::view-transition-old(root) { animation: vtOut .2s ease both; }
+  ::view-transition-new(root) { animation: vtIn .32s cubic-bezier(0.22, 1, 0.36, 1) both; }
 }
-@keyframes vtIn  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes vtOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes vtIn  { from { opacity: 0; transform: translateY(14px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes vtOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.99); } }
+
+/* ── Botao duplo de exportacao: [PDF] vermelho | [Excel] verde ── */
+.exp-split {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+}
+.exp-half {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  min-height: 44px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease;
+}
+.exp-half svg { transition: transform .18s ease; }
+.exp-half:hover svg { transform: scale(1.18); }
+.exp-half:active { transform: translateY(1px); }
+.exp-pdf { color: #ef4444; background: rgba(239,68,68,0.08); }
+.exp-pdf:hover { background: #ef4444; color: #fff; }
+.exp-xls { color: #16a34a; background: rgba(22,163,74,0.08); }
+.exp-xls:hover { background: #16a34a; color: #fff; }
+.exp-divider { width: 1px; background: var(--border); align-self: stretch; }
 
 /* ── Notas de dinheiro flutuantes (Landing) ── */
 @keyframes moneyFloat {

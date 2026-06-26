@@ -1,8 +1,17 @@
 import React from 'react';
 import { NAV } from '../lib/constants.js';
 
-export default function Sidebar({ view, onNav, brand, open, onClose, isAdmin, session }) {
-  var email = session && session.user ? session.user.email : '';
+export default function Sidebar({ view, onNav, brand, open, onClose, isAdmin }) {
+  var onlineState = React.useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  var online = onlineState[0];
+  var setOnline = onlineState[1];
+  React.useEffect(function() {
+    var up = function() { setOnline(true); };
+    var down = function() { setOnline(false); };
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return function() { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
+  }, []);
   var navItems = NAV.filter(function(v) { return !v.adminOnly || isAdmin; });
   var mainItems = navItems.filter(function(v) { return v.key !== 'settings'; });
   var settingsItem = navItems.find(function(v) { return v.key === 'settings'; });
@@ -32,8 +41,8 @@ export default function Sidebar({ view, onNav, brand, open, onClose, isAdmin, se
 
         <div className="px-5 py-5 flex items-center gap-3" style={{borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
           {brand.logo_url
-            ? <img src={brand.logo_url} alt="logo" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" style={{border:'2px solid rgba(255,255,255,0.2)'}}/>
-            : <div className="w-10 h-10 rounded-xl flex items-center justify-center text-base flex-shrink-0" style={{background:'rgba(255,255,255,0.15)', border:'2px solid rgba(255,255,255,0.2)'}}>
+            ? <img src={brand.logo_url} alt="logo" className="w-10 h-10 rounded-xl object-cover flex-shrink-0"/>
+            : <div className="w-10 h-10 rounded-xl flex items-center justify-center text-base flex-shrink-0" style={{background:'rgba(255,255,255,0.15)'}}>
                 <span className="text-white font-bold">{(brand.logo || 'F')[0]}</span>
               </div>
           }
@@ -51,12 +60,10 @@ export default function Sidebar({ view, onNav, brand, open, onClose, isAdmin, se
           {settingsItem && NavBtn(settingsItem)}
         </div>
 
-        {email && (
-          <div className="px-5 py-3" style={{borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-            <p className="text-xs truncate" style={{color:'rgba(255,255,255,0.3)'}}>{email}</p>
-            <p className="text-xs" style={{color:'rgba(255,255,255,0.15)'}}>Financia v5</p>
-          </div>
-        )}
+        <div className="px-5 py-3 flex items-center gap-2" style={{borderTop:'1px solid rgba(255,255,255,0.06)'}}>
+          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{background: online ? '#22c55e' : '#f59e0b', boxShadow: '0 0 0 3px ' + (online ? 'rgba(34,197,94,0.18)' : 'rgba(245,158,11,0.18)')}}/>
+          <p className="text-xs truncate" style={{color:'rgba(255,255,255,0.6)'}}>{online ? 'Online — tudo sincronizado' : 'Offline — salvo no aparelho'}</p>
+        </div>
       </aside>
     </>
   );

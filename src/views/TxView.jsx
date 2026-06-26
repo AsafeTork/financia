@@ -246,15 +246,22 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
             <Sel label="Categoria" value={form.cat} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {cat:e.target.value}); }); }}>
               {cats.map(function(c) { return <option key={c}>{c}</option>; })}
             </Sel>
-            <div className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{background:'var(--bg-subtle)', border:'1px solid var(--border)'}}>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold" style={{color:'var(--text-main)'}}>Despesa fixa</p>
-                <p className="text-xs" style={{color:'var(--text-sub)'}}>Repete automaticamente todo mês</p>
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{color:'var(--text-sub)'}}>Tipo de despesa</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[{k:false, l:'Variável', d:'Lançamento único'}, {k:true, l:'Fixa (mensal)', d:'Repete todo mês'}].map(function(opt) {
+                  var sel = form.fixo === opt.k;
+                  return (
+                    <button key={String(opt.k)} type="button" aria-pressed={sel}
+                      onClick={function() { setForm(function(f) { return Object.assign({}, f, {fixo:opt.k}); }); }}
+                      className="rounded-xl px-3 py-2.5 text-left transition min-h-[44px]"
+                      style={sel ? {border:'1.5px solid ' + accentColor, background: accentBg} : {border:'1px solid var(--border)', background:'var(--bg-card)'}}>
+                      <p className="text-sm font-semibold" style={{color: sel ? accentColor : 'var(--text-main)'}}>{opt.l}</p>
+                      <p className="text-[11px]" style={{color:'var(--text-sub)'}}>{opt.d}</p>
+                    </button>
+                  );
+                })}
               </div>
-              <button type="button" onClick={function() { setForm(function(f) { return Object.assign({}, f, {fixo:!f.fixo}); }); }} aria-pressed={form.fixo} aria-label="Despesa fixa"
-                className="relative w-11 h-6 rounded-full flex-shrink-0 transition" style={{background: form.fixo ? '#16a34a' : '#cbd5e1'}}>
-                <span className="absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all" style={{left: form.fixo ? '22px' : '2px'}}/>
-              </button>
             </div>
             {form.fixo && (
               <NumInp label="Dia do vencimento" decimals={false} maxLen={2} value={form.day} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {day:e.target.value}); }); }} placeholder="5"/>

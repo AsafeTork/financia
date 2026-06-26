@@ -28,12 +28,14 @@ var FAQ = [
   { q: 'Meus dados ficam seguros?', a: 'Ficam. Cada conta enxerga apenas os próprios dados, com conexão criptografada e isolamento por usuário no banco.' },
 ];
 
+// Camada fixa (desktop): flutua nas laterais ao longo de toda a pagina, com
+// parallax pelo scroll. Posicionadas nas bordas para nao cobrir o conteudo.
 var MONEY_NOTES = [
-  { v: '+R$ 250',  type: 'gain', top: '14%', left: '3%',   dur: 6,   delay: 0,   rot: -8, factor: 0.20, size: 13 },
-  { v: '-R$ 80',   type: 'loss', top: '22%', right: '5%',  dur: 7,   delay: 0.8, rot: 7,  factor: 0.13, size: 12 },
-  { v: '+R$ 1.2k', type: 'gain', top: '58%', left: '7%',   dur: 8,   delay: 0.4, rot: 6,  factor: 0.28, size: 13 },
-  { v: '-R$ 40',   type: 'loss', top: '70%', right: '9%',  dur: 6.5, delay: 1.2, rot: -6, factor: 0.22, size: 11 },
-  { v: '+R$ 500',  type: 'gain', top: '40%', right: '15%', dur: 7.5, delay: 0.2, rot: -5, factor: 0.16, size: 12 },
+  { v: '+R$ 250',  type: 'gain', top: '16%', left: '2.5%', dur: 6,   delay: 0,   rot: -8, factor: 0.06,  size: 13 },
+  { v: '-R$ 80',   type: 'loss', top: '26%', right: '3%',  dur: 7,   delay: 0.8, rot: 7,  factor: 0.05,  size: 12 },
+  { v: '+R$ 1.2k', type: 'gain', top: '54%', left: '3.5%', dur: 8,   delay: 0.4, rot: 6,  factor: 0.08,  size: 13 },
+  { v: '-R$ 40',   type: 'loss', top: '70%', right: '4%',  dur: 6.5, delay: 1.2, rot: -6, factor: 0.07,  size: 11 },
+  { v: '+R$ 500',  type: 'gain', top: '40%', right: '5.5%',dur: 7.5, delay: 0.2, rot: -5, factor: 0.045, size: 12 },
 ];
 
 export default function Landing({ onEnter }) {
@@ -56,6 +58,28 @@ export default function Landing({ onEnter }) {
   return (
     <div style={{ background: WARM, color: INK, minHeight: '100vh' }}>
 
+      {/* Notas de dinheiro: camada fixa na pagina toda (desktop). Ganhos verde,
+          perdas vermelho. Parallax vertical pelo scroll + hover que amplia.
+          pointer-events-none na camada; so a nota captura o hover. z abaixo do header. */}
+      <div className="hidden md:block fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 20 }} aria-hidden="true">
+        {MONEY_NOTES.map(function(n, i) {
+          var pos = { top: n.top };
+          if (n.left) pos.left = n.left;
+          if (n.right) pos.right = n.right;
+          var isGain = n.type === 'gain';
+          return (
+            <div key={'note-' + i} className="absolute" style={Object.assign({}, pos, { transform: 'translateY(' + (scrollY * n.factor).toFixed(1) + 'px)' })}>
+              <div className="money-note pointer-events-auto select-none" style={{ '--dur': n.dur + 's', '--delay': n.delay + 's', '--rot': n.rot + 'deg' }}>
+                <div className="flex items-center gap-1.5 rounded-xl px-3 py-2 shadow-lg" style={{ background: isGain ? 'rgba(15,157,108,0.95)' : 'rgba(225,29,72,0.95)', color: '#fff', fontSize: n.size + 'px', border: '1px solid rgba(255,255,255,0.28)' }}>
+                  <svg width={Math.round(n.size)} height={Math.round(n.size)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d={isGain ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} /></svg>
+                  <span className="font-bold tabular">{n.v}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       <header className="sticky top-0 z-30" style={{ background: 'rgba(251,250,247,0.85)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(10,37,64,0.08)' }}>
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -76,26 +100,6 @@ export default function Landing({ onEnter }) {
           <div className="lp-orb lp-orb-2" style={{ width: '380px', height: '380px', bottom: '-160px', left: '-120px', background: 'radial-gradient(circle, rgba(0,47,89,0.16), transparent 65%)' }} />
         </div>
 
-        {/* Notas de dinheiro flutuantes: ganhos (verde) e perdas (vermelho).
-            Parallax vertical pelo scroll + hover que amplia a nota. */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-          {MONEY_NOTES.map(function(n, i) {
-            var pos = { top: n.top };
-            if (n.left) pos.left = n.left;
-            if (n.right) pos.right = n.right;
-            var isGain = n.type === 'gain';
-            return (
-              <div key={'note-' + i} className="absolute" style={Object.assign({}, pos, { transform: 'translateY(' + (-scrollY * n.factor).toFixed(1) + 'px)' })}>
-                <div className="money-note pointer-events-auto select-none" style={{ '--dur': n.dur + 's', '--delay': n.delay + 's', '--rot': n.rot + 'deg' }}>
-                  <div className="flex items-center gap-1.5 rounded-xl px-3 py-2 shadow-lg" style={{ background: isGain ? 'rgba(15,157,108,0.95)' : 'rgba(225,29,72,0.95)', color: '#fff', fontSize: n.size + 'px', border: '1px solid rgba(255,255,255,0.28)' }}>
-                    <svg width={Math.round(n.size)} height={Math.round(n.size)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d={isGain ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} /></svg>
-                    <span className="font-bold tabular">{n.v}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center relative z-10">
           <div>
             <div className="anim-up inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6" style={{ background: 'rgba(15,157,108,0.1)', color: ACCENT }}>

@@ -5,6 +5,7 @@ import { updatePassword, signOut as doSignOut } from '../lib/auth.js';
 import { effectivePlan, PRICING_PLANS, waLink, SUPPORT_EMAIL } from '../lib/constants.js';
 import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
+import InstallButton from '../components/InstallButton.jsx';
 
 export default function SettingsView({ brand, session, planInfo, onSave, onSavePhone, toast, confirm, isAdmin, onNav }) {
   var [tab, setTab] = useState(isAdmin ? 'clients' : 'account');
@@ -65,7 +66,14 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
   };
   var devMsg = 'Olá! Tenho o pacote de personalização e quero gerar o APK customizado do meu app.';
 
-  const allTabs = [{key:'account',label:'Conta'}];
+  var planExpiry = (planId !== 'free' && planInfo && planInfo.plan_expires_at) ? new Date(planInfo.plan_expires_at).toLocaleDateString('pt-BR') : '';
+  var planPriceLabel = planMeta.price ? ('R$ ' + planMeta.price.toFixed(2).replace('.', ',') + (planMeta.period || '')) : 'Grátis';
+  var subActions = [
+    { label:'Gerenciar forma de pagamento', desc:'Cartão e cobrança da assinatura', icon:'M3 10h18M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z', act:function() { if (onNav) onNav('planos'); } },
+    { label:'Alterar plano', desc:'Compare e troque de plano', icon:'M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z', act:function() { if (onNav) onNav('planos'); } },
+  ];
+
+  const allTabs = [{key:'account',label:'Conta'}, {key:'subscription',label:'Assinatura'}];
   if (hasWhiteLabel) allTabs.push({key:'appearance',label:'Aparência'});
   allTabs.push({key:'clients',label:'Clientes',adminOnly:true});
   const tabs = allTabs.filter(function(t) { return !t.adminOnly || isAdmin; });
@@ -75,7 +83,7 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
       <PageHead
         icon="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"
         title="Configurações"
-        sub="Aparência, segurança e conta"
+        sub="Conta, assinatura e preferências"
       />
 
       <div className="flex border-b" style={{borderColor:'var(--border)'}}>
@@ -108,26 +116,19 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            {[
-              { label:'Alterar senha', desc:'Defina uma nova senha de acesso', icon:'M8 11V7a4 4 0 118 0v4m-9 0h10a1 1 0 011 1v7a1 1 0 01-1 1H7a1 1 0 01-1-1v-7a1 1 0 011-1z', act:function() { setPwModal(true); } },
-              { label:'Gerenciar forma de pagamento', desc:'Cartão e cobrança da assinatura', icon:'M3 10h18M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z', act:function() { if (onNav) onNav('planos'); } },
-              { label:'Alterar plano', desc:'Compare e troque de plano', icon:'M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z', act:function() { if (onNav) onNav('planos'); } },
-            ].map(function(a) {
-              return (
-                <button key={a.label} onClick={a.act}
-                  className="w-full text-left rounded-xl px-3 py-2.5 flex items-center gap-3 transition hover:opacity-80 min-h-[44px]"
-                  style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{background:'var(--brand-soft)'}}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={brand.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={a.icon}/></svg>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{a.label}</p>
-                    <p className="text-xs truncate" style={{color:'var(--text-sub)'}}>{a.desc}</p>
-                  </div>
-                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="var(--text-sub)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
-                </button>
-              );
-            })}
+            <button onClick={function() { setPwModal(true); }}
+              className="w-full text-left rounded-xl px-3 py-2.5 flex items-center gap-3 transition hover:opacity-80 min-h-[44px]"
+              style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{background:'var(--brand-soft)'}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={brand.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 11V7a4 4 0 118 0v4m-9 0h10a1 1 0 011 1v7a1 1 0 01-1 1H7a1 1 0 01-1-1v-7a1 1 0 011-1z"/></svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>Alterar senha</p>
+                <p className="text-xs truncate" style={{color:'var(--text-sub)'}}>Defina uma nova senha de acesso</p>
+              </div>
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="var(--text-sub)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+            </button>
+            <InstallButton brand={brand}/>
           </div>
 
           <div className="pt-1">
@@ -145,6 +146,40 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
           <p className="text-xs text-center -mt-1" style={{color:'var(--text-muted)'}}>Ou por e-mail: <a href={'mailto:' + SUPPORT_EMAIL} className="underline" style={{color:'var(--text-sub)'}}>{SUPPORT_EMAIL}</a></p>
 
           <button onClick={function() { confirm('Sair da conta?', function() { doSignOut(); }); }} className="w-full rounded-xl py-3 text-sm font-medium transition min-h-12" style={{border:'1px solid var(--border)', color:'var(--text-sub)', background:'var(--bg-card)'}} onMouseEnter={function(e) { e.target.style.background = 'var(--bg-subtle)'; }} onMouseLeave={function(e) { e.target.style.background = 'var(--bg-card)'; }}>Sair da conta</button>
+        </Card>
+      )}
+
+      {tab === 'subscription' && (
+        <Card className="p-6 flex flex-col gap-4">
+          <div className="rounded-2xl p-5" style={{background:'var(--brand-soft)', border:'1px solid var(--border)'}}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{color:'var(--text-muted)'}}>Plano atual</p>
+                <p className="text-xl font-bold mt-0.5 truncate" style={{color: brand.color}}>{planMeta.name}</p>
+              </div>
+              <span className="text-sm font-bold tabular flex-shrink-0" style={{color:'var(--text-main)'}}>{planPriceLabel}</span>
+            </div>
+            {planExpiry && <p className="text-xs mt-2" style={{color:'var(--text-sub)'}}>Válido até {planExpiry}</p>}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {subActions.map(function(a) {
+              return (
+                <button key={a.label} onClick={a.act}
+                  className="w-full text-left rounded-xl px-3 py-2.5 flex items-center gap-3 transition hover:opacity-80 min-h-[44px]"
+                  style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{background:'var(--brand-soft)'}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={brand.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={a.icon}/></svg>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{a.label}</p>
+                    <p className="text-xs truncate" style={{color:'var(--text-sub)'}}>{a.desc}</p>
+                  </div>
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="var(--text-sub)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+                </button>
+              );
+            })}
+          </div>
         </Card>
       )}
 

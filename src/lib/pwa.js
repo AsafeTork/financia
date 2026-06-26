@@ -74,3 +74,51 @@ export function registerSW() {
     });
   });
 }
+
+// ── Instalacao do PWA (beforeinstallprompt) ──
+// Captura o evento que o navegador dispara quando o app e instalavel e o guarda,
+// para que o usuario possa instalar via botao mesmo depois de fechar o aviso.
+var deferredPrompt = null;
+var installListeners = [];
+
+export function isStandalone() {
+  if (typeof window === 'undefined') return false;
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+  return navigator.standalone === true;
+}
+
+export function canInstall() {
+  return !!deferredPrompt && !isStandalone();
+}
+
+function emitInstall() {
+  var ok = canInstall();
+  for (var i = 0; i < installListeners.length; i++) { installListeners[i](ok); }
+}
+
+export function onInstallAvailable(cb) {
+  installListeners.push(cb);
+  cb(canInstall());
+  return function() { installListeners = installListeners.filter(function(f) { return f !== cb; }); };
+}
+
+export function promptInstall() {
+  if (!deferredPrompt) return Promise.resolve('unavailable');
+  var p = deferredPrompt;
+  deferredPrompt = null;
+  emitInstall();
+  p.prompt();
+  return p.userChoice.then(function(res) { return res && res.outcome ? res.outcome : 'dismissed'; }).catch(function() { return 'dismissed'; });
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    emitInstall();
+  });
+  window.addEventListener('appinstalled', function() {
+    deferredPrompt = null;
+    emitInstall();
+  });
+}
