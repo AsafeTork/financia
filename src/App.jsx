@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
+import { flushSync } from 'react-dom';
 import { brandAlpha, deriveCores } from './lib/utils.js';
 import { INIT_BRAND, INIT_PLAN, atLimit, limitFor } from './lib/constants.js';
 import { useTx } from './hooks/useTx.js';
@@ -59,6 +60,8 @@ export default function App() {
   const [confirmData, setConfirmData]   = useState(null);
   const [showLogin, setShowLogin]       = useState(false);
   const [showUpgrade, setShowUpgrade]   = useState(false);
+  const [onboardingNeeded, setOnboardingNeeded] = useState(false);
+  const onboardingRef                   = useRef(null); // null=indeciso, true/false=decidido
   const [themePref, setThemePref]       = useState(function() { try { return localStorage.getItem('financia_theme'); } catch (e) { return null; } });
   const toastId                         = useRef(0);
 
@@ -74,7 +77,15 @@ export default function App() {
     });
   }, [brand]);
 
-  const navTo = useCallback(function(v) { setView(v); window.location.hash = v; }, []);
+  const navTo = useCallback(function(v) {
+    var go = function() { setView(v); window.location.hash = v; };
+    // View Transitions API nativa: anima a troca de pagina quando suportado.
+    if (typeof document !== 'undefined' && document.startViewTransition) {
+      document.startViewTransition(function() { flushSync(go); });
+    } else {
+      go();
+    }
+  }, []);
 
   const applyBrandVars = useCallback(function(b) {
     var primary   = b.color || '#002f59';
@@ -107,6 +118,30 @@ export default function App() {
     window.addEventListener('hashchange', onHash);
     return function() { window.removeEventListener('hashchange', onHash); };
   }, []);
+
+  // Decisao de onboarding (nome/telefone). Corrige o loop telefone<->dashboard:
+  // - so decide com o perfil ja carregado (dataLoading === false);
+  // - telefone tratado por digitos (com ou sem +);
+  // - regra monotonica: pode sumir (true->false) quando o telefone chega ou o
+  //   usuario conclui, mas NUNCA reaparece (false->true) por causa de um sync.
+  useEffect(function() {
+    if (!session) { onboardingRef.current = null; setOnboardingNeeded(false); return; }
+    if (dataLoading) return;
+    var meta2 = session.user.user_metadata || {};
+    var gName = meta2.full_name || meta2.name || '';
+    var doneFlag = !!localStorage.getItem('financia_onboarded_' + session.user.id);
+    var digits = function(s) { return String(s || '').replace(/\D/g, ''); };
+    var hasPhone = digits(brand.phone).length > 0 || digits(meta2.phone).length > 0;
+    var needName = !!gName && brand.name === gName;
+    var needs = !doneFlag && (needName || !hasPhone);
+    if (onboardingRef.current === null) {
+      onboardingRef.current = needs;
+      setOnboardingNeeded(needs);
+    } else if (onboardingRef.current === true && !needs) {
+      onboardingRef.current = false;
+      setOnboardingNeeded(false);
+    }
+  }, [session, dataLoading, brand]);
 
   const dismissToast = useCallback(function(id) {
     setToasts(function(list) { return list.filter(function(t) { return t.id !== id; }); });
@@ -185,12 +220,11 @@ export default function App() {
   var uid = session.user.id;
   var meta = session.user.user_metadata || {};
   var googleName = meta.full_name || meta.name || '';
-  var onboarded = !!localStorage.getItem('financia_onboarded_' + uid);
+  var phoneDigits = String(brand.phone || '').replace(/\D/g, '');
+  var metaPhoneDigits = String(meta.phone || '').replace(/\D/g, '');
   var needsName = !!googleName && brand.name === googleName;
-  // Telefone ja informado no cadastro (metadata) nao deve ser pedido de novo no onboarding.
-  var needsPhone = !brand.phone && !meta.phone;
-  var needsOnboarding = !onboarded && (needsName || needsPhone);
-  if (needsOnboarding) {
+  var needsPhone = phoneDigits.length === 0 && metaPhoneDigits.length === 0;
+  if (onboardingNeeded) {
     var finishOnboarding = function(data) {
       var tasks = [];
       if (needsName && data.name) {
@@ -200,6 +234,8 @@ export default function App() {
       if (data.phone) tasks.push(Promise.resolve(savePhone(data.phone)));
       return Promise.all(tasks).then(function() {
         localStorage.setItem('financia_onboarded_' + uid, '1');
+        onboardingRef.current = false;
+        setOnboardingNeeded(false);
       });
     };
     return <Onboarding brand={brand} needsName={needsName} needsPhone={needsPhone} onSave={finishOnboarding}/>;
@@ -210,9 +246,9 @@ export default function App() {
   const p = {brand:brand, toast:toast, confirm:confirm};
   const views = {
     dashboard: React.createElement(Dashboard, {tx:tx, products:products, brand:brand, onNav:navTo, planInfo:planInfo, lossesCount:losses.length, onUpgrade:function() { navTo('planos'); }}),
-    income:    React.createElement(TxView, Object.assign({type:'income', tx:tx, products:products, onAdd:addTx, onEdit:editTx, onDelete:deleteTx, onDeductStock:function(id,qty){adjustStock(id,-qty);}}, p)),
-    expense:   React.createElement(TxView, Object.assign({type:'expense', tx:tx, products:products, onAdd:addTx, onEdit:editTx, onDelete:deleteTx, onDeductStock:function(){}, onAddGenerated:addGenerated, uid:uid}, p)),
-    inventory: React.createElement(InventoryView, Object.assign({products:products, losses:losses, onAddProduct:addProduct, onEditProduct:editProduct, onDeleteProduct:deleteProduct, onAddLoss:addLoss, onEditLoss:editLoss, onDeleteLoss:deleteLoss, onAdjustStock:adjustStock}, p)),
+    income:    React.createElement(TxView, Object.assign({type:'income', tx:tx, products:products, onAdd:addTx, onEdit:editTx, onDelete:deleteTx, onDeductStock:function(id,qty){adjustStock(id,-qty);}, planInfo:planInfo, onNav:navTo}, p)),
+    expense:   React.createElement(TxView, Object.assign({type:'expense', tx:tx, products:products, onAdd:addTx, onEdit:editTx, onDelete:deleteTx, onDeductStock:function(){}, onAddGenerated:addGenerated, uid:uid, planInfo:planInfo, onNav:navTo}, p)),
+    inventory: React.createElement(InventoryView, Object.assign({products:products, losses:losses, onAddProduct:addProduct, onEditProduct:editProduct, onDeleteProduct:deleteProduct, onAddLoss:addLoss, onEditLoss:editLoss, onDeleteLoss:deleteLoss, onAdjustStock:adjustStock, planInfo:planInfo, onNav:navTo}, p)),
     email:     React.createElement(EmailView, {brand:brand, toast:toast}),
     report:    React.createElement(ReportView, {tx:tx, brand:brand, toast:toast, onNav:navTo, planInfo:planInfo}),
     settings:  React.createElement(SettingsView, {brand:brand, session:session, planInfo:planInfo, onSave:saveBrand, onSavePhone:savePhone, toast:toast, confirm:confirm, isAdmin:isAdminDB, onNav:navTo}),

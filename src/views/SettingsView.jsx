@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react';
-import { Card, Inp, Spin, PageHead } from '../components/ui.jsx';
+import { Card, Inp, Spin, PageHead, Modal } from '../components/ui.jsx';
 import PhoneInput, { parsePhone, buildPhone } from '../components/PhoneInput.jsx';
 import { updatePassword, signOut as doSignOut } from '../lib/auth.js';
 import { effectivePlan, PRICING_PLANS, waLink, SUPPORT_EMAIL } from '../lib/constants.js';
@@ -7,18 +7,21 @@ import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
 
 export default function SettingsView({ brand, session, planInfo, onSave, onSavePhone, toast, confirm, isAdmin, onNav }) {
-  var [tab, setTab] = useState(isAdmin ? 'clients' : 'security');
+  var [tab, setTab] = useState(isAdmin ? 'clients' : 'account');
+  var [pwModal, setPwModal] = useState(false);
   var [pwForm, setPwForm] = useState({newPw:'', confirm:''});
   var [pwSaving, setPwSaving] = useState(false);
+  var planId = effectivePlan(planInfo || {});
+  var planMeta = PRICING_PLANS.filter(function(p) { return p.id === planId; })[0] || PRICING_PLANS[0];
   var [phoneData, setPhoneData] = useState(function() { var p = parsePhone(brand.phone); return buildPhone(p.iso, p.digits); });
   var [phoneSaving, setPhoneSaving] = useState(false);
   var initParsed = parsePhone(brand.phone);
   var initE164 = buildPhone(initParsed.iso, initParsed.digits).e164;
   React.useEffect(function() {
-    if (isAdmin && tab === 'security') {
+    if (isAdmin && tab === 'account') {
       setTab('clients');
     } else if (!isAdmin && tab === 'clients') {
-      setTab('security');
+      setTab('account');
     }
   }, [isAdmin]);
 
@@ -34,7 +37,7 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
     setPwSaving(true);
     const res = await updatePassword(pwForm.newPw);
     if (res.error) toast('Erro ao alterar senha.', 'error');
-    else { toast('Senha alterada!'); setPwForm({newPw:'', confirm:''}); }
+    else { toast('Senha alterada!'); setPwForm({newPw:'', confirm:''}); setPwModal(false); }
     setPwSaving(false);
   };
 
@@ -62,7 +65,7 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
   };
   var devMsg = 'Olá! Tenho o pacote de personalização e quero gerar o APK customizado do meu app.';
 
-  const allTabs = [{key:'security',label:'Segurança'},{key:'account',label:'Conta'}];
+  const allTabs = [{key:'account',label:'Conta'}];
   if (hasWhiteLabel) allTabs.push({key:'appearance',label:'Aparência'});
   allTabs.push({key:'clients',label:'Clientes',adminOnly:true});
   const tabs = allTabs.filter(function(t) { return !t.adminOnly || isAdmin; });
@@ -74,31 +77,6 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
         title="Configurações"
         sub="Aparência, segurança e conta"
       />
-
-      {onNav && (function() {
-        var planId = effectivePlan(planInfo || {});
-        var planMeta = PRICING_PLANS.filter(function(p) { return p.id === planId; })[0] || PRICING_PLANS[0];
-        return (
-          <div className="rounded-2xl p-4 flex flex-col gap-3" style={{background:'var(--brand-soft)', border:'1px solid var(--border)'}}>
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{brand.name}</p>
-                <p className="text-xs" style={{color:'var(--text-sub)'}}>Plano atual</p>
-              </div>
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white flex-shrink-0" style={{background: brand.color}}>{planMeta.name}</span>
-            </div>
-            <button onClick={function() { onNav('planos'); }}
-              className="w-full text-left rounded-xl px-3 py-2.5 flex items-center gap-2 transition hover:opacity-80 min-h-[44px]"
-              style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{background: brand.color}}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"/></svg>
-              </div>
-              <span className="text-sm font-semibold flex-1" style={{color:'var(--text-main)'}}>Gerenciar plano</span>
-              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="var(--text-sub)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
-            </button>
-          </div>
-        );
-      })()}
 
       <div className="flex border-b" style={{borderColor:'var(--border)'}}>
         {tabs.map(function(t) {
@@ -112,36 +90,7 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
           );
         })}
       </div>
-{tab === 'security' && (
-        <Card className="p-6 flex flex-col gap-5">
-          <div>
-            <p className="text-sm font-semibold mb-1" style={{color:'var(--text-main)'}}>Alterar senha</p>
-            <p className="text-xs mb-4" style={{color:'var(--text-muted)'}}>Use uma senha forte com letras, números e símbolos.</p>
-            <div className="flex flex-col gap-3">
-              <Inp label="Nova senha" type="password" value={pwForm.newPw} onChange={function(e) { setPwForm(function(f) { return Object.assign({}, f, {newPw:e.target.value}); }); }} placeholder="Mínimo 8 caracteres" hint={pwForm.newPw.length > 0 && pwForm.newPw.length < 8 ? 'Muito curta' : ''}/>
-              <Inp label="Confirmar senha" type="password" value={pwForm.confirm} onChange={function(e) { setPwForm(function(f) { return Object.assign({}, f, {confirm:e.target.value}); }); }} placeholder="Repita a senha" hint={pwForm.confirm && pwForm.newPw !== pwForm.confirm ? 'Senhas diferentes' : ''}/>
-              <button onClick={changePw} disabled={pwSaving || !pwForm.newPw || !pwForm.confirm} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40" style={{background:brand.color}}>
-                {pwSaving ? <Spin white/> : 'Alterar senha'}
-              </button>
-            </div>
-          </div>
-          <div className="border-t pt-4" style={{borderColor:'var(--border)'}}>
-            <p className="text-sm font-semibold mb-2" style={{color:'var(--text-main)'}}>Segurança do sistema</p>
-            {['Dados criptografados no Supabase','Cada usuário acessa apenas seus dados (RLS)','Conexão sempre via HTTPS','Sessão expira automaticamente','Nunca compartilhe sua senha'].map(function(s, i) {
-              return (
-                <div key={i} className="flex items-center gap-2.5 mb-2">
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{background:'#dcfce7'}}>
-                    <svg className="w-3 h-3" fill="none" stroke="#16a34a" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
-                  </div>
-                  <p className="text-sm" style={{color:'var(--text-sub)'}}>{s}</p>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      )}
-
-      {tab === 'account' && (
+{tab === 'account' && (
         <Card className="p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3 p-4 rounded-xl" style={{background:'var(--bg-subtle)'}}>
             <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden" style={{background:brand.color}}>
@@ -150,11 +99,17 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
                 : <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">{brand.name ? brand.name[0].toUpperCase() : (session && session.user && session.user.email ? session.user.email[0].toUpperCase() : 'U')}</div>
               }
             </div>
-            <div className="min-w-0"><p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{brand.name || (session && session.user ? session.user.email : '')}</p><p className="text-xs truncate" style={{color:'var(--text-sub)'}}>{session && session.user ? session.user.email : 'Usuário ativo'}</p></div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{brand.name || (session && session.user ? session.user.email : '')}</p>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex-shrink-0" style={{background: brand.color}}>{planMeta.name}</span>
+              </div>
+              <p className="text-xs truncate" style={{color:'var(--text-sub)'}}>{session && session.user ? session.user.email : 'Usuário ativo'}</p>
+            </div>
           </div>
           <div className="flex flex-col gap-2">
             {[
-              { label:'Alterar senha', desc:'Defina uma nova senha de acesso', icon:'M8 11V7a4 4 0 118 0v4m-9 0h10a1 1 0 011 1v7a1 1 0 01-1 1H7a1 1 0 01-1-1v-7a1 1 0 011-1z', act:function() { setTab('security'); } },
+              { label:'Alterar senha', desc:'Defina uma nova senha de acesso', icon:'M8 11V7a4 4 0 118 0v4m-9 0h10a1 1 0 011 1v7a1 1 0 01-1 1H7a1 1 0 01-1-1v-7a1 1 0 011-1z', act:function() { setPwModal(true); } },
               { label:'Gerenciar forma de pagamento', desc:'Cartão e cobrança da assinatura', icon:'M3 10h18M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z', act:function() { if (onNav) onNav('planos'); } },
               { label:'Alterar plano', desc:'Compare e troque de plano', icon:'M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z', act:function() { if (onNav) onNav('planos'); } },
             ].map(function(a) {
@@ -249,6 +204,14 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
           <GhTokenCard toast={toast}/>
           <Card className="p-6"><AdminPanel toast={toast} confirm={confirm} session={session}/></Card>
         </div>
+      )}
+
+      {pwModal && (
+        <Modal title="Alterar senha" onClose={function() { setPwModal(false); }} onSave={changePw} saving={pwSaving} saveLabel="Alterar senha" color={brand.color}>
+          <p className="text-xs -mt-1" style={{color:'var(--text-muted)'}}>Use uma senha forte com letras, números e símbolos.</p>
+          <Inp label="Nova senha" type="password" value={pwForm.newPw} onChange={function(e) { setPwForm(function(f) { return Object.assign({}, f, {newPw:e.target.value}); }); }} placeholder="Mínimo 8 caracteres" hint={pwForm.newPw.length > 0 && pwForm.newPw.length < 8 ? 'Muito curta' : ''}/>
+          <Inp label="Confirmar senha" type="password" value={pwForm.confirm} onChange={function(e) { setPwForm(function(f) { return Object.assign({}, f, {confirm:e.target.value}); }); }} placeholder="Repita a senha" hint={pwForm.confirm && pwForm.newPw !== pwForm.confirm ? 'Senhas diferentes' : ''}/>
+        </Modal>
       )}
     </div>
   );

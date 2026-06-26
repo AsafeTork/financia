@@ -1,7 +1,9 @@
 ﻿import React, { useState, useMemo } from 'react';
 import { Card, PageHead } from '../components/ui.jsx';
+import ExportButtons from '../components/ExportButtons.jsx';
 import { fmt, today, brandAlpha } from '../lib/utils.js';
 import { effectivePlan } from '../lib/constants.js';
+import { exportPDF, exportXLS } from '../lib/exporters.js';
 
 export default function ReportView({ tx, brand, toast, onNav, planInfo }) {
   var accentColor = (brand && brand.color) || '#1a6b5c';
@@ -18,80 +20,40 @@ export default function ReportView({ tx, brand, toast, onNav, planInfo }) {
   var expense = filtered.filter(function(t) { return t.type === 'expense'; }).reduce(function(s, t) { return s + t.amount; }, 0);
   var bycat   = filtered.filter(function(t) { return t.type === 'expense'; }).reduce(function(a, t) { var k = t.category || 'Outro'; a[k] = (a[k] || 0) + t.amount; return a; }, {});
 
-  var csvEscape = function(v) {
-    var s = String(v == null ? '' : v);
-    if (/[",\n=+\-@]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-    return s;
+  var monthLabel = function(m) { return new Date(m + '-15').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); };
+  var curRealMonth = today().slice(0, 7);
+  var nextDisabled = month >= curRealMonth;
+  var shiftMonth = function(delta) {
+    var p = month.split('-');
+    var d = new Date(Number(p[0]), Number(p[1]) - 1 + delta, 1);
+    var mm = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    if (mm > curRealMonth) return;
+    setMonth(mm);
   };
-  var htmlEscape = function(v) {
-    return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  };
-  var download = function(blob, filename) {
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
-  };
-  var tipoLabel = function(t) { return t.type === 'income' ? 'Entrada' : 'Saida'; };
+
   var sortedRows = function() {
     return filtered.slice().sort(function(a, b) { return b.date.localeCompare(a.date); });
   };
-
-  var exportCSV = function() {
+  var doExport = function(kind) {
     if (!paid) { if (onNav) onNav('planos'); return; }
-    var rows = sortedRows().map(function(t) { return csvEscape(t.date) + ',' + csvEscape(t.desc) + ',' + t.amount.toFixed(2) + ',' + tipoLabel(t) + ',' + csvEscape(t.method || t.category || ''); });
-    var csv = 'Data,Descrição,Valor,Tipo,Método/Cat\n' + rows.join('\n');
-    download(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }), 'relatorio-' + month + '.csv');
-    toast('CSV exportado!');
-  };
-
-  var exportXLS = function() {
-    if (!paid) { if (onNav) onNav('planos'); return; }
-    var head = '<tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Tipo</th><th>Método/Cat</th></tr>';
-    var body = sortedRows().map(function(t) {
-      return '<tr><td>' + htmlEscape(t.date) + '</td><td>' + htmlEscape(t.desc) + '</td><td>' + t.amount.toFixed(2).replace('.', ',') + '</td><td>' + tipoLabel(t) + '</td><td>' + htmlEscape(t.method || t.category || '') + '</td></tr>';
-    }).join('');
-    var foot = '<tr><td colspan="2"><b>Resultado</b></td><td colspan="3"><b>' + (income - expense).toFixed(2).replace('.', ',') + '</b></td></tr>';
-    var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head>'
-      + '<body><table border="1">' + head + body + foot + '</table></body></html>';
-    download(new Blob(['﻿' + html], { type: 'application/vnd.ms-excel' }), 'relatorio-' + month + '.xls');
-    toast('Excel exportado!');
-  };
-
-  var exportPDF = function() {
-    if (!paid) { if (onNav) onNav('planos'); return; }
-    var win = window.open('', '_blank');
-    if (!win) { toast('Permita pop-ups para exportar o PDF.', 'error'); return; }
-    var label = new Date(month + '-15').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    var headers = ['Data', 'Descrição', 'Valor', 'Tipo', 'Método/Cat'];
     var rows = sortedRows().map(function(t) {
-      var val = (t.type === 'income' ? '+' : '-') + fmt(t.amount);
-      return '<tr><td>' + htmlEscape(new Date(t.date + 'T12:00').toLocaleDateString('pt-BR')) + '</td><td>' + htmlEscape(t.desc) + '</td><td class="r" style="color:' + (t.type === 'income' ? accentColor : '#ef4444') + '">' + htmlEscape(val) + '</td></tr>';
-    }).join('');
-    var doc = '<!doctype html><html><head><meta charset="utf-8"><title>Relatório ' + htmlEscape(label) + '</title>'
-      + '<style>*{font-family:Arial,Helvetica,sans-serif;color:#111}body{margin:32px}h1{font-size:20px;margin:0}'
-      + '.sub{color:#666;font-size:12px;margin:2px 0 20px}.kpis{display:flex;gap:16px;margin-bottom:20px}'
-      + '.kpi{flex:1;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px}.kpi p{margin:0}.kpi .l{font-size:10px;text-transform:uppercase;color:#888;letter-spacing:.5px}'
-      + '.kpi .v{font-size:16px;font-weight:700;margin-top:4px}table{width:100%;border-collapse:collapse;font-size:12px}'
-      + 'th,td{text-align:left;padding:7px 8px;border-bottom:1px solid #eee}th{color:#888;text-transform:uppercase;font-size:10px}.r{text-align:right;font-weight:700;white-space:nowrap}'
-      + '@media print{body{margin:0}}</style></head><body>'
-      + '<h1>' + htmlEscape((brand && brand.name) || 'Financia') + '</h1><p class="sub">Relatório financeiro — ' + htmlEscape(label) + '</p>'
-      + '<div class="kpis"><div class="kpi"><p class="l">Entradas</p><p class="v" style="color:' + accentColor + '">' + htmlEscape(fmt(income)) + '</p></div>'
-      + '<div class="kpi"><p class="l">Saídas</p><p class="v" style="color:#ef4444">' + htmlEscape(fmt(expense)) + '</p></div>'
-      + '<div class="kpi"><p class="l">Resultado</p><p class="v">' + htmlEscape(fmt(income - expense)) + '</p></div></div>'
-      + '<table><thead><tr><th>Data</th><th>Descrição</th><th class="r">Valor</th></tr></thead><tbody>' + rows + '</tbody></table>'
-      + '<script>window.onload=function(){window.print();}<\/script></body></html>';
-    win.document.write(doc);
-    win.document.close();
-    toast('Abrindo PDF para impressão...');
+      return [t.date, t.desc || '', (t.type === 'income' ? '+' : '-') + fmt(t.amount), (t.type === 'income' ? 'Entrada' : 'Saída'), (t.method || t.category || '')];
+    });
+    if (kind === 'xls') { exportXLS({ filename: 'relatorio-' + month, headers: headers, rows: rows }); toast('Excel exportado!'); return; }
+    var ok = exportPDF({
+      title: 'Relatório ' + monthLabel(month),
+      brandName: (brand && brand.name) || 'Financia',
+      subtitle: 'Relatório financeiro — ' + monthLabel(month),
+      accent: accentColor, headers: headers, rows: rows,
+      kpis: [
+        { label: 'Entradas', value: fmt(income), color: accentColor },
+        { label: 'Saídas', value: fmt(expense), color: '#ef4444' },
+        { label: 'Resultado', value: fmt(income - expense) },
+      ],
+    });
+    if (!ok) toast('Permita pop-ups para exportar o PDF.', 'error');
   };
-
-  var EXPORTS = [
-    { key: 'pdf', label: 'PDF', act: exportPDF, icon: 'M9 13h6m-6 4h6M7 3h7l5 5v11a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z' },
-    { key: 'xls', label: 'Excel', act: exportXLS, icon: 'M9 17l3-3m0 0l3 3m-3-3v6M4 7h16M4 7V5a2 2 0 012-2h12a2 2 0 012 2v2M4 7v12a2 2 0 002 2' },
-    { key: 'csv', label: 'CSV', act: exportCSV, icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' },
-  ];
 
   var kpis = [
     {l:'Entradas', v:income, c:accentColor},
@@ -140,43 +102,28 @@ export default function ReportView({ tx, brand, toast, onNav, planInfo }) {
         sub="Fechamento mensal"
       />
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {allMonths.map(function(m) {
-          var active = m === month;
-          var shortLabel = new Date(m + '-15').toLocaleDateString('pt-BR', {month:'short', year:'2-digit'});
-          return (
-            <button key={m} onClick={function() { setMonth(m); }}
-              className={'flex-shrink-0 px-3.5 min-h-[44px] rounded-xl text-xs font-semibold ' + (active ? 'text-white' : 'hover:opacity-80')}
-              style={active ? {background: accentColor} : {background:'var(--bg-subtle)', color:'var(--text-sub)'}}>
-              {shortLabel}
-            </button>
-          );
-        })}
-      </div>
+      <Card className="px-2 py-2 flex items-center justify-between gap-2">
+        <button onClick={function() { shiftMonth(-1); }} aria-label="Mês anterior"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl transition hover:bg-[var(--bg-subtle)]" style={{color:'var(--text-sub)'}}>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <div className="text-center min-w-0">
+          <p className="text-sm font-semibold capitalize truncate" style={{color:'var(--text-main)'}}>{monthLabel(month)}</p>
+          <p className="text-[11px]" style={{color:'var(--text-muted)'}}>{filtered.length} registro{filtered.length !== 1 ? 's' : ''}</p>
+        </div>
+        <button onClick={function() { shiftMonth(1); }} disabled={nextDisabled} aria-label="Próximo mês"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl transition hover:bg-[var(--bg-subtle)] disabled:opacity-30 disabled:cursor-not-allowed" style={{color:'var(--text-sub)'}}>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </Card>
 
       {filtered.length > 0 && (
         <Card className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2 min-w-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            <p className="text-sm font-semibold" style={{color:'var(--text-main)'}}>Exportar relatório</p>
-          </div>
-          {paid ? (
-            <div className="flex items-center gap-2">
-              {EXPORTS.map(function(ex) {
-                return (
-                  <button key={ex.key} onClick={ex.act} className="flex items-center gap-1.5 text-xs font-semibold px-3 min-h-[44px] rounded-xl text-white transition hover:opacity-90" style={{background: accentColor}}>
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={ex.icon}/></svg>
-                    {ex.label}
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <button onClick={function() { if (onNav) onNav('planos'); }} className="flex items-center gap-2 text-xs font-semibold px-4 min-h-[44px] rounded-xl transition hover:opacity-90" style={{background:'var(--bg-subtle)', color:'var(--text-sub)', border:'1px solid var(--border)'}}>
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-              PDF, Excel e CSV no Pro
-            </button>
-          )}
+          <p className="text-sm font-semibold" style={{color:'var(--text-main)'}}>Exportar relatório</p>
+          <ExportButtons paid={paid} color={accentColor}
+            onPDF={function() { doExport('pdf'); }}
+            onXLS={function() { doExport('xls'); }}
+            onLocked={function() { if (onNav) onNav('planos'); }}/>
         </Card>
       )}
 

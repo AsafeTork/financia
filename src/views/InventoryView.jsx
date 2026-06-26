@@ -1,7 +1,10 @@
 import React, { useMemo, useReducer } from 'react';
 import { Card, Inp, NumInp, Modal, EditBtn, DelBtn, Badge, Btn, PageHead } from '../components/ui.jsx';
+import ExportButtons from '../components/ExportButtons.jsx';
 import { PSearch } from '../components/SaleForm.jsx';
 import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';
+import { effectivePlan } from '../lib/constants.js';
+import { exportPDF, exportXLS } from '../lib/exporters.js';
 
 var INIT_PF = {name:'', category:'', price:'', cost:'', stock:''};
 
@@ -48,9 +51,20 @@ function reducer(state, action) {
   }
 }
 
-export default function InventoryView({ products, losses, onAddProduct, onEditProduct, onDeleteProduct, onAddLoss, onEditLoss, onDeleteLoss, onAdjustStock, brand, toast, confirm }) {
+export default function InventoryView({ products, losses, onAddProduct, onEditProduct, onDeleteProduct, onAddLoss, onEditLoss, onDeleteLoss, onAdjustStock, brand, toast, confirm, planInfo, onNav }) {
   const [state, dispatch] = useReducer(reducer, null, initState);
   const {tab, search, collapsed, pm, editP, lm, editL, sm, pf, lf, sq, saving} = state;
+  var paid = effectivePlan(planInfo) !== 'free';
+
+  var doExport = function(kind) {
+    var headers = ['Produto', 'Categoria', 'Preço', 'Custo', 'Estoque'];
+    var rows = products.map(function(p) {
+      return [p.name, p.category || '', fmt(p.price), p.cost != null ? fmt(p.cost) : '', p.stock != null ? String(p.stock) : '—'];
+    });
+    if (kind === 'xls') { exportXLS({ filename: 'estoque-' + today(), headers: headers, rows: rows }); toast('Excel exportado!'); return; }
+    var ok = exportPDF({ title: 'Estoque', brandName: (brand && brand.name) || 'Financia', subtitle: 'Produtos — ' + products.length + ' item(ns)', accent: brand.color, headers: headers, rows: rows });
+    if (!ok) toast('Permita pop-ups para exportar o PDF.', 'error');
+  };
 
   const saveProd = async function() {
     if (!pf.name || !pf.price) return;
@@ -149,6 +163,12 @@ export default function InventoryView({ products, losses, onAddProduct, onEditPr
         title="Estoque e Perdas"
         sub={products.length + ' produto' + (products.length !== 1 ? 's' : '') + ' . ' + losses.length + ' perda' + (losses.length !== 1 ? 's' : '')}
         right={<>
+          {tab === 'products' && products.length > 0 && (
+            <ExportButtons paid={paid} color={brand.color}
+              onPDF={function() { doExport('pdf'); }}
+              onXLS={function() { doExport('xls'); }}
+              onLocked={function() { if (onNav) onNav('planos'); }}/>
+          )}
           {tab === 'products' && (
             <Btn onClick={function() { dispatch({type:'OPEN_PM'}); }} style={{background: brand.color}}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/></svg>

@@ -131,3 +131,33 @@ input:focus, select:focus, textarea:focus {
 [data-theme="dark"] .hover\:bg-gray-50:hover,
 [data-theme="dark"] .hover\:bg-gray-100:hover { background-color: #162032 !important; }
 [data-theme="dark"] .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important; }
+
+/* ── View Transitions API: anima a troca de paginas ── */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) { animation: vtOut .18s ease both; }
+  ::view-transition-new(root) { animation: vtIn .28s ease both; }
+}
+@keyframes vtIn  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes vtOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* ── Notas de dinheiro flutuantes (Landing) ── */
+@keyframes moneyFloat {
+  0%   { transform: translateY(0) rotate(var(--rot, 0deg)); }
+  50%  { transform: translateY(-18px) rotate(var(--rot, 0deg)); }
+  100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
+}
+.money-note {
+  position: absolute;
+  animation: moneyFloat var(--dur, 6s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  transition: transform .25s ease, filter .25s ease;
+  will-change: transform;
+}
+.money-note:hover {
+  transform: scale(1.18) rotate(0deg) !important;
+  filter: brightness(1.06) drop-shadow(0 10px 20px rgba(0,0,0,0.18));
+  z-index: 5;
+}
+@media (prefers-reduced-motion: reduce) {
+  .money-note { animation: none; }
+}

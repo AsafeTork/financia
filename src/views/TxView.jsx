@@ -1,23 +1,25 @@
 ﻿import React, { useState, useMemo } from 'react';
 import { Card, Inp, NumInp, Sel, Modal, EditBtn, DelBtn, Spin, Btn, PageHead, Empty } from '../components/ui.jsx';
 import { SaleForm } from '../components/SaleForm.jsx';
-import RecurringManager from '../components/RecurringManager.jsx';
+import ExportButtons from '../components/ExportButtons.jsx';
 import { fmt, fmtDate, today, safe, uid, brandAlpha } from '../lib/utils.js';
-import { isRecurringId } from '../lib/recurring.js';
+import { isRecurringId, getRecurring, setRecurring, buildRecurringRow, periodOf } from '../lib/recurring.js';
+import { effectivePlan } from '../lib/constants.js';
+import { exportPDF, exportXLS } from '../lib/exporters.js';
 
-export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, onDeductStock, onAddGenerated, uid: userId, brand, toast, confirm }) {
+export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, onDeductStock, onAddGenerated, uid: userId, brand, toast, confirm, planInfo, onNav }) {
   var isIncome = type === 'income';
   var accentColor = isIncome ? brand.color : '#ef4444';
   var accentBg    = isIncome ? brandAlpha(brand.color, 0.08) : 'rgba(239,68,68,0.06)';
+  var paid = effectivePlan(planInfo) !== 'free';
 
   var [modal, setModal]       = useState(false);
-  var [recurModal, setRecurModal] = useState(false);
   var [editItem, setEditItem] = useState(null);
   var [saving, setSaving]     = useState(false);
   var [search, setSearch]     = useState('');
   var [dateFrom, setDateFrom] = useState('');
   var [dateTo, setDateTo]     = useState('');
-  var [form, setForm] = useState({desc:'', amount:'', date:today(), cat:'Fixo', method:'PIX'});
+  var [form, setForm] = useState({desc:'', amount:'', date:today(), cat:'Fixo', method:'PIX', fixo:false, day:'5'});
 
   var cats    = ['Fixo','Variavel','Estoque','Marketing','Pessoal','Servicos','Outro'];
   var METHODS = ['PIX','Dinheiro','Cartao de Debito','Cartao de Credito','Boleto','Transferencia'];
@@ -57,31 +59,47 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
     } catch(_) {}
     finally { setSaving(false); }
   };
+  var resetForm = function() { setForm({desc:'', amount:'', date:today(), cat:'Fixo', method:'PIX', fixo:false, day:'5'}); };
   var saveNew = async function() {
     if (!form.desc || !form.amount) return;
     setSaving(true);
     try {
+      if (!isIncome && form.fixo) {
+        var day = Number(form.day) || 5;
+        var tpl = { id: uid(), desc: safe(form.desc), amount: Number(form.amount), day: day, category: form.cat, active: true };
+        var list = await getRecurring(userId);
+        await setRecurring(userId, list.concat([tpl]));
+        var row = buildRecurringRow(userId, tpl, periodOf(new Date()));
+        var okR = onAddGenerated ? await onAddGenerated(row) : true;
+        if (okR === false) return;
+        toast('Despesa fixa adicionada — repete todo mês.');
+        setModal(false);
+        resetForm();
+        return;
+      }
       var ok = await onAdd({id:uid(), type:type, desc:safe(form.desc), amount:Number(form.amount), date:form.date, method:isIncome ? form.method : null, cat:isIncome ? null : form.cat});
       if (!ok) return;
       toast(isIncome ? 'Venda registrada!' : 'Despesa registrada!');
       setModal(false);
-      setForm({desc:'', amount:'', date:today(), cat:'Fixo', method:'PIX'});
+      resetForm();
     } catch(_) {}
     finally { setSaving(false); }
   };
-  var csvEscape = function(v) {
-    var s = String(v || '');
-    if (/[",\n=+\-@]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-    return s;
-  };
-  var exportCSV = function() {
-    var rows = filtered.map(function(t) { return csvEscape(t.date) + ',' + csvEscape(t.desc||'') + ',' + t.amount.toFixed(2) + ',' + csvEscape(t.method || t.category || ''); });
-    var csv = 'Data,Descrição,Valor,Tipo\n' + rows.join('\n');
-    var a = document.createElement('a');
-    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-    a.download = (isIncome ? 'vendas' : 'despesas') + '-' + today() + '.csv';
-    a.click();
-    toast('CSV exportado!');
+  var doExport = function(kind) {
+    var headers = ['Data', 'Descrição', 'Valor', isIncome ? 'Pagamento' : 'Categoria'];
+    var rows = filtered.map(function(t) {
+      return [fmtDate(t.date), t.desc || '', fmt(t.amount), isIncome ? (t.method || '') : (t.category || t.cat || '')];
+    });
+    var fname = (isIncome ? 'vendas' : 'despesas') + '-' + today();
+    if (kind === 'xls') { exportXLS({ filename: fname, headers: headers, rows: rows }); toast('Excel exportado!'); return; }
+    var ok = exportPDF({
+      title: isIncome ? 'Vendas' : 'Despesas',
+      brandName: (brand && brand.name) || 'Financia',
+      subtitle: (isIncome ? 'Vendas / Ganhos' : 'Despesas') + ' — ' + filtered.length + ' registro(s) — total ' + fmt(total),
+      accent: accentColor, headers: headers, rows: rows,
+      kpis: [{ label: 'Total', value: fmt(total), color: accentColor }, { label: 'Registros', value: String(filtered.length) }],
+    });
+    if (!ok) toast('Permita pop-ups para exportar o PDF.', 'error');
   };
 
   return (
@@ -93,18 +111,12 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
         title={isIncome ? 'Vendas / Ganhos' : 'Despesas'}
         sub={<>{filtered.length} registro{filtered.length !== 1 ? 's' : ''}{' . '}<span className="font-semibold tabular" style={{color: accentColor}}>{fmt(total)}</span></>}
         right={<>
-          {!isIncome && (
-            <Btn variant="secondary" onClick={function() { setRecurModal(true); }} title="Despesas recorrentes" aria-label="Despesas recorrentes">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M19 9a8 8 0 00-14.9-3M5 15a8 8 0 0014.9 3"/>
-              </svg>
-            </Btn>
+          {filtered.length > 0 && (
+            <ExportButtons paid={paid} color={accentColor}
+              onPDF={function() { doExport('pdf'); }}
+              onXLS={function() { doExport('xls'); }}
+              onLocked={function() { if (onNav) onNav('planos'); }}/>
           )}
-          <Btn variant="secondary" onClick={exportCSV} title="Exportar CSV" aria-label="Exportar CSV">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-            </svg>
-          </Btn>
           <Btn onClick={function() { setModal(true); }} style={{background: accentColor}}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/>
@@ -234,6 +246,19 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
             <Sel label="Categoria" value={form.cat} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {cat:e.target.value}); }); }}>
               {cats.map(function(c) { return <option key={c}>{c}</option>; })}
             </Sel>
+            <div className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{background:'var(--bg-subtle)', border:'1px solid var(--border)'}}>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold" style={{color:'var(--text-main)'}}>Despesa fixa</p>
+                <p className="text-xs" style={{color:'var(--text-sub)'}}>Repete automaticamente todo mês</p>
+              </div>
+              <button type="button" onClick={function() { setForm(function(f) { return Object.assign({}, f, {fixo:!f.fixo}); }); }} aria-pressed={form.fixo} aria-label="Despesa fixa"
+                className="relative w-11 h-6 rounded-full flex-shrink-0 transition" style={{background: form.fixo ? '#16a34a' : '#cbd5e1'}}>
+                <span className="absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all" style={{left: form.fixo ? '22px' : '2px'}}/>
+              </button>
+            </div>
+            {form.fixo && (
+              <NumInp label="Dia do vencimento" decimals={false} maxLen={2} value={form.day} onChange={function(e) { setForm(function(f) { return Object.assign({}, f, {day:e.target.value}); }); }} placeholder="5"/>
+            )}
           </Modal>
         )
       )}
@@ -250,12 +275,6 @@ export default function TxView({ type, tx, products, onAdd, onEdit, onDelete, on
             : <Sel label="Categoria" value={editItem.cat}    onChange={function(e) { setEditItem(function(f) { return Object.assign({}, f, {cat:e.target.value}); }); }}>{cats.map(function(c) { return <option key={c}>{c}</option>; })}</Sel>
           }
         </Modal>
-      )}
-
-      {recurModal && (
-        <RecurringManager uid={userId} color={accentColor} toast={toast}
-          onApply={onAddGenerated}
-          onClose={function() { setRecurModal(false); }}/>
       )}
     </div>
   );

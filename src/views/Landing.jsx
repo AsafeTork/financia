@@ -28,9 +28,25 @@ var FAQ = [
   { q: 'Meus dados ficam seguros?', a: 'Ficam. Cada conta enxerga apenas os próprios dados, com conexão criptografada e isolamento por usuário no banco.' },
 ];
 
+var MONEY_NOTES = [
+  { v: '+R$ 250',  type: 'gain', top: '14%', left: '3%',   dur: 6,   delay: 0,   rot: -8, factor: 0.20, size: 13 },
+  { v: '-R$ 80',   type: 'loss', top: '22%', right: '5%',  dur: 7,   delay: 0.8, rot: 7,  factor: 0.13, size: 12 },
+  { v: '+R$ 1.2k', type: 'gain', top: '58%', left: '7%',   dur: 8,   delay: 0.4, rot: 6,  factor: 0.28, size: 13 },
+  { v: '-R$ 40',   type: 'loss', top: '70%', right: '9%',  dur: 6.5, delay: 1.2, rot: -6, factor: 0.22, size: 11 },
+  { v: '+R$ 500',  type: 'gain', top: '40%', right: '15%', dur: 7.5, delay: 0.2, rot: -5, factor: 0.16, size: 12 },
+];
+
 export default function Landing({ onEnter }) {
   var waLink = makeWaLink('Quero conhecer o Financia para o meu negócio.');
   var delay = function(ms) { return { animationDelay: ms + 'ms', animationFillMode: 'both' }; };
+  var scrollState = React.useState(0);
+  var scrollY = scrollState[0];
+  var setScrollY = scrollState[1];
+  React.useEffect(function() {
+    var onScroll = function() { setScrollY(window.scrollY || 0); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return function() { window.removeEventListener('scroll', onScroll); };
+  }, []);
   var statsRef = useScrollReveal();
   var featRef = useScrollReveal();
   var priceRef = useScrollReveal();
@@ -58,6 +74,27 @@ export default function Landing({ onEnter }) {
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
           <div className="lp-orb" style={{ width: '460px', height: '460px', top: '-140px', right: '-120px', background: 'radial-gradient(circle, rgba(15,157,108,0.20), transparent 65%)' }} />
           <div className="lp-orb lp-orb-2" style={{ width: '380px', height: '380px', bottom: '-160px', left: '-120px', background: 'radial-gradient(circle, rgba(0,47,89,0.16), transparent 65%)' }} />
+        </div>
+
+        {/* Notas de dinheiro flutuantes: ganhos (verde) e perdas (vermelho).
+            Parallax vertical pelo scroll + hover que amplia a nota. */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+          {MONEY_NOTES.map(function(n, i) {
+            var pos = { top: n.top };
+            if (n.left) pos.left = n.left;
+            if (n.right) pos.right = n.right;
+            var isGain = n.type === 'gain';
+            return (
+              <div key={'note-' + i} className="absolute" style={Object.assign({}, pos, { transform: 'translateY(' + (-scrollY * n.factor).toFixed(1) + 'px)' })}>
+                <div className="money-note pointer-events-auto select-none" style={{ '--dur': n.dur + 's', '--delay': n.delay + 's', '--rot': n.rot + 'deg' }}>
+                  <div className="flex items-center gap-1.5 rounded-xl px-3 py-2 shadow-lg" style={{ background: isGain ? 'rgba(15,157,108,0.95)' : 'rgba(225,29,72,0.95)', color: '#fff', fontSize: n.size + 'px', border: '1px solid rgba(255,255,255,0.28)' }}>
+                    <svg width={Math.round(n.size)} height={Math.round(n.size)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d={isGain ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} /></svg>
+                    <span className="font-bold tabular">{n.v}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center relative z-10">
           <div>
