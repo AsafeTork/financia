@@ -30,6 +30,25 @@ async function findOrCreateCustomer(stripe, email, userId) {
   return created.id;
 }
 
+// Subscriptions nao aceitam price_data.product_data (criacao inline de produto).
+// E preciso referenciar um Product existente. Busca por metadata.plan_id e cria se faltar.
+async function findOrCreateProduct(stripe, planId) {
+  try {
+    const found = await stripe.products.search({
+      query: "active:'true' AND metadata['plan_id']:'" + planId + "'",
+      limit: 1,
+    });
+    if (found && found.data && found.data.length > 0) return found.data[0].id;
+  } catch (searchErr) {
+    // Search API indisponivel: cai para create.
+  }
+  const created = await stripe.products.create({
+    name: 'Financia ' + planId,
+    metadata: { plan_id: planId },
+  });
+  return created.id;
+}
+
 Deno.serve(async function (req) {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -67,6 +86,7 @@ Deno.serve(async function (req) {
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
     const customerId = await findOrCreateCustomer(stripe, user.email, user.id);
+    const productId = await findOrCreateProduct(stripe, planId);
 
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
@@ -74,7 +94,7 @@ Deno.serve(async function (req) {
         {
           price_data: {
             currency: 'brl',
-            product_data: { name: 'Financia ' + planId },
+            product: productId,
             unit_amount: PLAN_PRICES[planId],
             recurring: { interval: 'month' },
           },
