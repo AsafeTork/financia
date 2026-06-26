@@ -15,6 +15,8 @@ var CheckIcon = function({ color }) {
 function PlanCard({ plan, brand, current, onSubscribe }) {
   var popular = !!plan.popular;
   var paid = plan.id === 'pro' || plan.id === 'premium';
+  var isFree = plan.id === 'free';
+  var priceNote = isFree ? 'grátis para sempre, sem cartão' : 'cobrado mensalmente, cancele quando quiser';
 
   return (
     <Card className="p-5 flex flex-col gap-4" accent={popular} color={brand.color}>
@@ -32,15 +34,27 @@ function PlanCard({ plan, brand, current, onSubscribe }) {
         {current && <span className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0" style={{background:'var(--brand-soft)', color: brand.color}}>Seu plano</span>}
       </div>
 
-      <div className="flex items-end gap-1">
-        <span className="font-display text-3xl font-bold" style={{color:'var(--text-main)'}}>
-          {plan.price === 0 ? 'Grátis' : fmt(plan.price)}
-        </span>
-        {plan.period && <span className="text-sm mb-1" style={{color:'var(--text-sub)'}}>{plan.period}</span>}
+      <div>
+        <div className="flex items-end gap-1">
+          <span className="font-display text-3xl font-bold" style={{color:'var(--text-main)'}}>
+            {plan.price === 0 ? 'Grátis' : fmt(plan.price)}
+          </span>
+          {plan.period && <span className="text-sm mb-1" style={{color:'var(--text-sub)'}}>{plan.period}</span>}
+        </div>
+        <p className="text-xs mt-1.5" style={{color:'var(--text-sub)'}}>{priceNote}</p>
       </div>
 
       <div className="flex flex-col gap-2">
         {plan.features.map(function(f) {
+          var ladder = f.indexOf('Tudo do') === 0;
+          if (ladder) {
+            return (
+              <div key={f} className="flex items-center gap-2 pb-1.5 mb-0.5" style={{borderBottom:'1px dashed var(--border)'}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={brand.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                <span className="text-sm font-bold" style={{color:'var(--text-main)'}}>{f}</span>
+              </div>
+            );
+          }
           return (
             <div key={f} className="flex items-start gap-2">
               <CheckIcon color={brand.color}/>
@@ -66,11 +80,17 @@ function PlanCard({ plan, brand, current, onSubscribe }) {
   );
 }
 
+var WL_PLAN = { id: 'white_label', name: 'Personalização', price: WHITELABEL.price, period: '' };
+
 export default function PlansView({ brand, planInfo, toast }) {
   var plan = effectivePlan(planInfo);
   var checkoutState = useState(null);
   var checkoutPlan = checkoutState[0];
   var setCheckoutPlan = checkoutState[1];
+  var wlState = useState(false);
+  var wlOpen = wlState[0];
+  var setWlOpen = wlState[1];
+  var hasWhiteLabel = !!(brand && brand.white_label);
   var wlMsg = 'Olá! Quero o app personalizado da minha empresa (logo, nome e cores). Pode me passar como funciona?';
   var duvidaMsg = 'Olá! Tenho uma dúvida sobre o Financia.';
 
@@ -92,6 +112,11 @@ export default function PlansView({ brand, planInfo, toast }) {
       {checkoutPlan && (
         <StripeCheckout plan={checkoutPlan} brand={brand} toast={toast}
           onClose={function() { setCheckoutPlan(null); }}/>
+      )}
+
+      {wlOpen && (
+        <StripeCheckout plan={WL_PLAN} mode="payment" brand={brand} toast={toast}
+          onClose={function() { setWlOpen(false); }}/>
       )}
 
       {/* Pacote white-label — pagamento unico */}
@@ -124,12 +149,25 @@ export default function PlansView({ brand, planInfo, toast }) {
           })}
         </div>
 
-        <a href={waLink(wlMsg)} target="_blank" rel="noopener noreferrer"
-          className="mt-1 text-center text-sm font-semibold px-4 py-3 rounded-xl text-white transition hover:opacity-90 min-h-[44px] flex items-center justify-center gap-2"
-          style={{background: brand.color}}>
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.477-.913z"/></svg>
-          Quero meu app personalizado
-        </a>
+        {hasWhiteLabel ? (
+          <div className="mt-1 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-3 rounded-xl min-h-[44px]" style={{background:'var(--brand-soft)', color: brand.color}}>
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
+            Personalização ativa — configure em Aparência
+          </div>
+        ) : (
+          <div className="mt-1 flex flex-col gap-2">
+            <button type="button" onClick={function() { setWlOpen(true); }}
+              className="w-full text-sm font-semibold px-4 py-3 rounded-xl text-white transition hover:opacity-90 min-h-[44px] flex items-center justify-center gap-2"
+              style={{background: brand.color}}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+              Comprar personalização — {fmt(WHITELABEL.price)}
+            </button>
+            <a href={waLink(wlMsg)} target="_blank" rel="noopener noreferrer"
+              className="text-center text-xs font-semibold transition hover:opacity-70" style={{color: brand.color}}>
+              Prefere falar antes? Chamar no WhatsApp
+            </a>
+          </div>
+        )}
       </Card>
 
       {/* Contato / negociacao */}

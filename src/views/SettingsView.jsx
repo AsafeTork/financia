@@ -38,7 +38,33 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
     setPwSaving(false);
   };
 
-  const allTabs = [{key:'security',label:'Segurança'},{key:'account',label:'Conta'},{key:'clients',label:'Clientes',adminOnly:true}];
+  var hasWhiteLabel = !!(brand && brand.white_label);
+  var [appForm, setAppForm] = useState(function() {
+    return { color: brand.color || '#002f59', color_secondary: brand.color_secondary || '', logo_url: brand.logo_url || '' };
+  });
+  var [appSaving, setAppSaving] = useState(false);
+  var onLogoFile = function(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (file.size > 512 * 1024) { toast('Imagem muito grande (máx. 512KB).', 'error'); return; }
+    var reader = new FileReader();
+    reader.onload = function() { setAppForm(function(f) { return Object.assign({}, f, { logo_url: String(reader.result) }); }); };
+    reader.readAsDataURL(file);
+  };
+  var setAppField = function(key, value) {
+    setAppForm(function(f) { var o = Object.assign({}, f); o[key] = value; return o; });
+  };
+  var saveAppearance = async function() {
+    setAppSaving(true);
+    var nb = Object.assign({}, brand, { color: appForm.color, color_secondary: appForm.color_secondary || null, logo_url: appForm.logo_url || null });
+    await onSave(nb);
+    setAppSaving(false);
+  };
+  var devMsg = 'Olá! Tenho o pacote de personalização e quero gerar o APK customizado do meu app.';
+
+  const allTabs = [{key:'security',label:'Segurança'},{key:'account',label:'Conta'}];
+  if (hasWhiteLabel) allTabs.push({key:'appearance',label:'Aparência'});
+  allTabs.push({key:'clients',label:'Clientes',adminOnly:true});
   const tabs = allTabs.filter(function(t) { return !t.adminOnly || isAdmin; });
 
   return (
@@ -164,6 +190,57 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
           <p className="text-xs text-center -mt-1" style={{color:'var(--text-muted)'}}>Ou por e-mail: <a href={'mailto:' + SUPPORT_EMAIL} className="underline" style={{color:'var(--text-sub)'}}>{SUPPORT_EMAIL}</a></p>
 
           <button onClick={function() { confirm('Sair da conta?', function() { doSignOut(); }); }} className="w-full rounded-xl py-3 text-sm font-medium transition min-h-12" style={{border:'1px solid var(--border)', color:'var(--text-sub)', background:'var(--bg-card)'}} onMouseEnter={function(e) { e.target.style.background = 'var(--bg-subtle)'; }} onMouseLeave={function(e) { e.target.style.background = 'var(--bg-card)'; }}>Sair da conta</button>
+        </Card>
+      )}
+
+      {tab === 'appearance' && hasWhiteLabel && (
+        <Card className="p-6 flex flex-col gap-5">
+          <div>
+            <p className="text-sm font-semibold mb-1" style={{color:'var(--text-main)'}}>Identidade visual</p>
+            <p className="text-xs mb-4" style={{color:'var(--text-muted)'}}>Defina as 2 cores principais e a logo da sua empresa.</p>
+
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden flex items-center justify-center" style={{background: appForm.color}}>
+                {appForm.logo_url
+                  ? <img src={appForm.logo_url} alt="logo" className="w-full h-full object-cover"/>
+                  : <span className="text-white text-xl font-bold">{brand.name ? brand.name[0].toUpperCase() : 'A'}</span>}
+              </div>
+              <div className="flex flex-col gap-2 min-w-0">
+                <label className="text-sm font-semibold px-4 py-2.5 rounded-xl cursor-pointer text-center min-h-[44px] flex items-center justify-center" style={{background:'var(--brand-soft)', color: brand.color}}>
+                  Enviar logo
+                  <input type="file" accept="image/*" onChange={onLogoFile} className="hidden"/>
+                </label>
+                {appForm.logo_url && (
+                  <button type="button" onClick={function() { setAppField('logo_url', ''); }} className="text-xs font-medium" style={{color:'var(--text-muted)'}}>Remover logo</button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {[{k:'color',l:'Cor principal'},{k:'color_secondary',l:'Cor secundária'}].map(function(field) {
+                var val = appForm[field.k] || '#002f59';
+                return (
+                  <div key={field.k} className="flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold" style={{color:'var(--text-sub)'}}>{field.l}</span>
+                    <div className="flex items-center gap-2 rounded-xl px-2 py-1.5" style={{border:'1px solid var(--border)'}}>
+                      <input type="color" value={val} onChange={function(e) { setAppField(field.k, e.target.value); }} className="w-9 h-9 rounded-lg cursor-pointer flex-shrink-0" style={{border:'none', background:'transparent'}}/>
+                      <span className="text-sm font-mono uppercase" style={{color:'var(--text-main)'}}>{val}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <button onClick={saveAppearance} disabled={appSaving} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40 min-h-12" style={{background: brand.color}}>
+            {appSaving ? <Spin white/> : 'Salvar aparência'}
+          </button>
+
+          <a href={waLink(devMsg)} target="_blank" rel="noreferrer"
+            className="w-full rounded-xl py-3 text-sm font-semibold flex items-center justify-center gap-2 transition hover:opacity-90 min-h-12" style={{border:'1px solid var(--border)', color:'var(--text-main)'}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
+            Falar com o Desenvolvedor (gerar APK)
+          </a>
         </Card>
       )}
 

@@ -9,7 +9,7 @@ function isDarkTheme() {
   return document.documentElement.getAttribute('data-theme') === 'dark';
 }
 
-function PaymentForm({ plan, brand, onDone, onClose }) {
+function PaymentForm({ plan, brand, onDone, onClose, mode }) {
   var stripe = useStripe();
   var elements = useElements();
   var [submitting, setSubmitting] = useState(false);
@@ -50,12 +50,13 @@ function PaymentForm({ plan, brand, onDone, onClose }) {
           {submitting ? <Spin white /> : ('Pagar ' + fmt(plan.price))}
         </button>
       </div>
-      <p className="text-[11px] text-center" style={{ color: 'var(--text-muted)' }}>Pagamento seguro processado pela Stripe. Você pode cancelar quando quiser.</p>
+      <p className="text-[11px] text-center" style={{ color: 'var(--text-muted)' }}>{mode === 'payment' ? 'Pagamento único e seguro, processado pela Stripe.' : 'Pagamento seguro processado pela Stripe. Você pode cancelar quando quiser.'}</p>
     </form>
   );
 }
 
-export default function StripeCheckout({ plan, brand, onClose, onDone, toast }) {
+export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mode }) {
+  var checkoutMode = mode === 'payment' ? 'payment' : 'subscription';
   var [clientSecret, setClientSecret] = useState('');
   var [loadErr, setLoadErr] = useState('');
   var [loading, setLoading] = useState(true);
@@ -66,7 +67,9 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast }) 
     var alive = true;
     setLoading(true);
     setLoadErr('');
-    sb.functions.invoke('create-subscription', { body: { plan_id: plan.id } }).then(function(result) {
+    var fnName = checkoutMode === 'payment' ? 'create-payment' : 'create-subscription';
+    var fnBody = checkoutMode === 'payment' ? { kind: 'white_label' } : { plan_id: plan.id };
+    sb.functions.invoke(fnName, { body: fnBody }).then(function(result) {
       if (!alive) return;
       var data = result && result.data ? result.data : null;
       if (result && result.error) { setLoadErr('Não foi possível iniciar o pagamento. Tente novamente.'); setLoading(false); return; }
@@ -82,7 +85,10 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast }) 
   }, [plan.id]);
 
   var done = function() {
-    if (toast) toast('Pagamento recebido! Seu plano será ativado em instantes.', 'success');
+    var msg = checkoutMode === 'payment'
+      ? 'Pagamento recebido! Sua personalização será liberada em instantes.'
+      : 'Pagamento recebido! Seu plano será ativado em instantes.';
+    if (toast) toast(msg, 'success');
     if (onDone) onDone();
     onClose();
   };
@@ -94,8 +100,8 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast }) 
       <div className="rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md flex flex-col anim-scale" style={{ background: 'var(--bg-card)', maxHeight: '92vh', boxShadow: 'var(--shadow-lg)' }}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <div className="min-w-0">
-            <span className="font-semibold text-gray-900">Assinar {plan.name}</span>
-            <p className="text-xs text-gray-400">{fmt(plan.price)}{plan.period || '/mês'}</p>
+            <span className="font-semibold text-gray-900">{checkoutMode === 'payment' ? 'Comprar' : 'Assinar'} {plan.name}</span>
+            <p className="text-xs text-gray-400">{fmt(plan.price)}{plan.period || (checkoutMode === 'payment' ? ' (única)' : '/mês')}</p>
           </div>
           <button onClick={onClose} aria-label="Fechar" className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -118,7 +124,7 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast }) 
           )}
           {!loading && !loadErr && options && stripePromise && (
             <Elements stripe={stripePromise} options={options}>
-              <PaymentForm plan={plan} brand={brand} onDone={done} onClose={onClose} />
+              <PaymentForm plan={plan} brand={brand} onDone={done} onClose={onClose} mode={checkoutMode} />
             </Elements>
           )}
         </div>

@@ -42,6 +42,7 @@ export default function AdminPanel({ toast, confirm, session }) {
   }, { total: 0, pro: 0, free: 0, novos: 0, mrr: 0 });
   var mrr = stats.mrr;
   var moneyBR = function(v) { return 'R$ ' + v.toFixed(2).replace('.', ','); };
+  const wlClients = clients.filter(function(c) { return !!c.white_label; });
 
   const visibleClients = clients.filter(function(c) {
     if (planFilter !== 'all' && effectivePlan(c) !== planFilter) return false;
@@ -168,6 +169,45 @@ export default function AdminPanel({ toast, confirm, session }) {
           })}
         </div>
         {stats.novos > 0 && <p className="text-xs mb-3" style={{color:'var(--text-sub)'}}>{stats.novos} novo(s) cliente(s) neste mês</p>}
+
+        {wlClients.length > 0 && (
+          <div className="rounded-2xl p-3 mb-3" style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
+            <div className="flex items-center gap-2 mb-2.5">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+              <p className="text-xs font-bold uppercase tracking-wide flex-1" style={{color:'var(--text-muted)'}}>Personalização — assistente de setup</p>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md text-white" style={{background:'var(--brand)'}}>{wlClients.length}</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {wlClients.map(function(c) {
+                var cores = [c.color, c.color_secondary, c.color_accent].filter(Boolean);
+                return (
+                  <div key={c.user_id} className="rounded-xl p-3 flex flex-col gap-2" style={{background:'var(--bg-subtle)', border:'1px solid var(--border)'}}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center" style={{background: c.color || '#002f59'}}>
+                        {c.logo_url
+                          ? <img src={c.logo_url} alt="" className="w-full h-full object-cover"/>
+                          : <span className="text-white text-sm font-bold">{(c.name || '?')[0]}</span>}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{c.name || 'Sem nome'}</p>
+                        <p className="text-xs truncate" style={{color:'var(--text-sub)'}}>Nicho: {c.niche || c.segment || 'Não informado'}</p>
+                      </div>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background: c.logo_url ? '#dcfce7' : '#fee2e2', color: c.logo_url ? '#16a34a' : '#dc2626'}}>{c.logo_url ? 'Logo OK' : 'Sem logo'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {cores.length > 0
+                        ? cores.map(function(col, i) {
+                            return <span key={col + '-' + i} className="flex items-center gap-1 text-[10px] font-mono px-1.5 py-1 rounded-md" style={{background:'var(--bg-card)', border:'1px solid var(--border)', color:'var(--text-sub)'}}><span className="w-3 h-3 rounded-sm inline-block" style={{background: col}}/>{String(col).toUpperCase()}</span>;
+                          })
+                        : <span className="text-xs" style={{color:'var(--text-muted)'}}>Cores não definidas</span>}
+                      <button onClick={function() { setEditClient(c); }} className="text-xs font-semibold px-2.5 py-1.5 min-h-[36px] rounded-lg text-white ml-auto" style={{background:'var(--brand)'}}>Abrir setup</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="rounded-2xl p-3 mb-1" style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
           <div className="flex items-center justify-between mb-2.5">

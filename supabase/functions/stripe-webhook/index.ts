@@ -69,6 +69,14 @@ Deno.serve(async function (req) {
           });
         }
       }
+    } else if (event.type === 'payment_intent.succeeded') {
+      // Cobranca unica do add-on de personalizacao (white-label). So age quando o
+      // metadata marca kind=white_label (ignora os PaymentIntents das assinaturas).
+      const pi = event.data.object;
+      const pm = pi.metadata ? pi.metadata : {};
+      if (pm.kind === 'white_label' && pm.user_id) {
+        await supabase.rpc('set_white_label', { p_user: pm.user_id, p_on: true });
+      }
     } else if (event.type === 'customer.subscription.deleted') {
       const sub = event.data.object;
       const subMeta = sub.metadata ? sub.metadata : {};

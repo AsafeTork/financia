@@ -61,12 +61,29 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
 
   var gerarInsights = async function() {
     setAiLoading(true); setAiErr(''); setAiText('');
+    var byCat = mtx.filter(function(t) { return t.type === 'expense'; }).reduce(function(a, t) {
+      var k = t.category || t.cat || 'Outros';
+      a[k] = (a[k] || 0) + t.amount;
+      return a;
+    }, {});
+    var topCats = Object.keys(byCat).map(function(k) { return [k, byCat[k]]; })
+      .sort(function(a, b) { return b[1] - a[1]; }).slice(0, 3);
+    var nSales = mtx.filter(function(t) { return t.type === 'income'; }).length;
+    var ticket = nSales > 0 ? ti / nSales : 0;
+
     var resumo = 'Mes atual. Entradas: ' + fmt(ti) + '. Saidas: ' + fmt(to) + '. Lucro: ' + fmt(profitCurr) + '.';
     if (profVar !== null) resumo += ' Variacao do lucro vs mes anterior: ' + profVar + '%.';
+    resumo += ' Vendas no mes: ' + nSales + '. Ticket medio: ' + fmt(ticket) + '.';
+    if (topCats.length > 0) {
+      resumo += ' Maiores despesas por categoria: ' + topCats.map(function(c) { return c[0] + ' (' + fmt(c[1]) + ')'; }).join(', ') + '.';
+    }
     if (lowStock.length > 0) resumo += ' Produtos com estoque baixo: ' + lowStock.length + '.';
     resumo += ' Total de produtos: ' + products.length + '. Lancamentos no mes: ' + mtx.length + '.';
-    var sys = 'Voce e um consultor financeiro para pequenos negocios no Brasil. Com base nos numeros, escreva no maximo 4 dicas curtas, praticas e diretas, em portugues do Brasil, sem jargao e sem repetir os numeros. Foque em acoes concretas. Use uma linha por dica comecando com "- ".';
-    var r = await askAI(resumo, sys, 400);
+
+    var sys = 'Voce e um consultor financeiro para pequenos negocios no Brasil. Com base nos numeros reais informados, escreva no maximo 4 dicas curtas, praticas e ACIONAVEIS, em portugues do Brasil, sem jargao. '
+      + 'Cada dica deve sugerir uma acao concreta (o que fazer agora), priorizando o que tem maior impacto no lucro: cortar a maior categoria de despesa, melhorar margem, aumentar ticket medio ou reduzir perdas. '
+      + 'Nao repita os numeros crus; transforme-os em recomendacao. Use uma linha por dica comecando com "- ".';
+    var r = await askAI(resumo, sys, 450);
     setAiLoading(false);
     if (r.ok) setAiText(r.text); else setAiErr(r.error);
   };

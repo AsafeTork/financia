@@ -214,7 +214,7 @@ export default function App() {
     expense:   React.createElement(TxView, Object.assign({type:'expense', tx:tx, products:products, onAdd:addTx, onEdit:editTx, onDelete:deleteTx, onDeductStock:function(){}, onAddGenerated:addGenerated, uid:uid}, p)),
     inventory: React.createElement(InventoryView, Object.assign({products:products, losses:losses, onAddProduct:addProduct, onEditProduct:editProduct, onDeleteProduct:deleteProduct, onAddLoss:addLoss, onEditLoss:editLoss, onDeleteLoss:deleteLoss, onAdjustStock:adjustStock}, p)),
     email:     React.createElement(EmailView, {brand:brand, toast:toast}),
-    report:    React.createElement(ReportView, {tx:tx, brand:brand, toast:toast, onNav:navTo}),
+    report:    React.createElement(ReportView, {tx:tx, brand:brand, toast:toast, onNav:navTo, planInfo:planInfo}),
     settings:  React.createElement(SettingsView, {brand:brand, session:session, planInfo:planInfo, onSave:saveBrand, onSavePhone:savePhone, toast:toast, confirm:confirm, isAdmin:isAdminDB, onNav:navTo}),
     planos:    React.createElement(PlansView, {brand:brand, planInfo:planInfo, toast:toast}),
   };
