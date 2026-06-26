@@ -132,13 +132,23 @@ input:focus, select:focus, textarea:focus {
 [data-theme="dark"] .hover\:bg-gray-100:hover { background-color: #162032 !important; }
 [data-theme="dark"] .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important; }
 
-/* ── View Transitions API: anima a troca de paginas ── */
+/* ── View Transitions API: efeito "Slide In Over" ──
+   A pagina nova entra deslizando da direita (translateX(100%) -> 0), por cima da
+   antiga, que recua levemente por baixo. Os pseudo-elementos ::view-transition-*
+   ja sao posicionados em tela cheia (fixed) pelo navegador; basta animar. */
 @media (prefers-reduced-motion: no-preference) {
-  ::view-transition-old(root) { animation: vtOut .2s ease both; }
-  ::view-transition-new(root) { animation: vtIn .32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  ::view-transition-group(root) { animation-duration: .4s; }
+  ::view-transition-old(root) {
+    animation: slideOldUnder .4s ease-in-out both;
+    z-index: 1;
+  }
+  ::view-transition-new(root) {
+    animation: slideInOver .4s ease-in-out both;
+    z-index: 999;
+  }
 }
-@keyframes vtIn  { from { opacity: 0; transform: translateY(14px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes vtOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.99); } }
+@keyframes slideInOver  { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes slideOldUnder { from { transform: translateX(0); filter: brightness(1); } to { transform: translateX(-6%); filter: brightness(0.92); } }
 
 /* ── Botao duplo de exportacao: [PDF] vermelho | [Excel] verde ── */
 .exp-split {

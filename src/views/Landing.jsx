@@ -56,12 +56,15 @@ export default function Landing({ onEnter }) {
   var ctaRef = useScrollReveal();
 
   return (
-    <div style={{ background: WARM, color: INK, minHeight: '100vh' }}>
+    <div className="relative overflow-hidden" style={{ color: INK, minHeight: '100vh' }}>
 
-      {/* Notas de dinheiro: camada fixa na pagina toda (desktop). Ganhos verde,
-          perdas vermelho. Parallax vertical pelo scroll + hover que amplia.
-          pointer-events-none na camada; so a nota captura o hover. z abaixo do header. */}
-      <div className="hidden md:block fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 20 }} aria-hidden="true">
+      {/* Fundo gradiente continuo cobrindo 100% da pagina (nivel mais baixo). */}
+      <div className="fixed inset-0" style={{ zIndex: -20, background: 'linear-gradient(180deg, #fcfbf8 0%, #f4f8f5 45%, #eef3fa 100%)' }} aria-hidden="true" />
+
+      {/* Notas de dinheiro (nivel intermediario): presas ao container central
+          max-w-7xl — nunca coladas nas bordas da janela. Opacidade leve, atras do
+          texto. Parallax vertical pelo scroll. Apenas desktop. */}
+      <div className="hidden md:block absolute inset-y-0 left-1/2 -translate-x-1/2 w-full max-w-7xl px-4 sm:px-6 lg:px-8 pointer-events-none" style={{ zIndex: -10, opacity: 0.55 }} aria-hidden="true">
         {MONEY_NOTES.map(function(n, i) {
           var pos = { top: n.top };
           if (n.left) pos.left = n.left;
@@ -69,7 +72,7 @@ export default function Landing({ onEnter }) {
           var isGain = n.type === 'gain';
           return (
             <div key={'note-' + i} className="absolute" style={Object.assign({}, pos, { transform: 'translateY(' + (scrollY * n.factor).toFixed(1) + 'px)' })}>
-              <div className="money-note pointer-events-auto select-none" style={{ '--dur': n.dur + 's', '--delay': n.delay + 's', '--rot': n.rot + 'deg' }}>
+              <div className="money-note select-none" style={{ '--dur': n.dur + 's', '--delay': n.delay + 's', '--rot': n.rot + 'deg' }}>
                 <div className="flex items-center gap-1.5 rounded-xl px-3 py-2 shadow-lg" style={{ background: isGain ? 'rgba(15,157,108,0.95)' : 'rgba(225,29,72,0.95)', color: '#fff', fontSize: n.size + 'px', border: '1px solid rgba(255,255,255,0.28)' }}>
                   <svg width={Math.round(n.size)} height={Math.round(n.size)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d={isGain ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} /></svg>
                   <span className="font-bold tabular">{n.v}</span>
@@ -87,7 +90,6 @@ export default function Landing({ onEnter }) {
             <span className="font-display text-xl font-semibold" style={{ color: INK, letterSpacing: '-0.3px' }}>Financia</span>
           </div>
           <nav className="flex items-center gap-1 sm:gap-2">
-            <a href="#planos" className="hidden sm:flex items-center text-sm font-medium px-4 min-h-[44px] rounded-xl transition hover:bg-black/5" style={{ color: MUTED }}>Planos</a>
             <button onClick={onEnter} className="text-sm font-semibold px-4 min-h-[44px] rounded-xl text-white transition hover:opacity-90" style={{ background: BRAND }}>Entrar</button>
           </nav>
         </div>
