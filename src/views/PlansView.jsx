@@ -96,11 +96,11 @@ export default function PlansView({ brand, planInfo, toast, onNav }) {
 
   return (
     <div className="flex flex-col gap-5 pb-20 lg:pb-0">
-      <button type="button" onClick={function() { if (onNav) onNav('dashboard'); }}
+      <button type="button" onClick={function() { try { sessionStorage.setItem('financia_settings_tab', 'subscription'); } catch (e) {} if (onNav) onNav('settings'); }}
         className="self-start inline-flex items-center gap-1.5 text-sm font-semibold min-h-[44px] px-2 -ml-2 rounded-xl transition hover:opacity-70"
         style={{color:'var(--text-sub)'}}>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
-        Voltar para a Dashboard
+        Voltar para Assinatura
       </button>
       <PageHead
         icon="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"

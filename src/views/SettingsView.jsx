@@ -9,7 +9,16 @@ import InstallButton from '../components/InstallButton.jsx';
 import StripeCheckout from '../components/StripeCheckout.jsx';
 
 export default function SettingsView({ brand, session, planInfo, onSave, onSavePhone, toast, confirm, isAdmin, onNav }) {
-  var [tab, setTab] = useState(isAdmin ? 'clients' : 'account');
+  var [tab, setTab] = useState(function() {
+    try {
+      var hint = sessionStorage.getItem('financia_settings_tab');
+      if (hint) {
+        sessionStorage.removeItem('financia_settings_tab');
+        if (hint === 'subscription' || hint === 'account' || hint === 'appearance') return hint;
+      }
+    } catch (e) {}
+    return isAdmin ? 'clients' : 'account';
+  });
   var [pwModal, setPwModal] = useState(false);
   var [pwForm, setPwForm] = useState({newPw:'', confirm:''});
   var [pwSaving, setPwSaving] = useState(false);
