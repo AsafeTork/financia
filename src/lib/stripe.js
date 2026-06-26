@@ -1,17 +1,38 @@
 import { loadStripe } from '@stripe/stripe-js';
+import { sb } from './supabase.js';
 
 // Chave publicavel (pk_...) — segura no front. A secret fica so no servidor.
-// Aceita os dois nomes de variavel para evitar mismatch de configuracao no deploy.
-var PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || import.meta.env.VITE_STRIPE_PUBLIC_KEY || '';
+// Resolucao: 1) variavel de build (Render); 2) senao, runtime via edge function
+// stripe-config (le STRIPE_PUBLISHABLE_KEY do Supabase). Assim nada precisa ir no Render.
+var BUILD_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || import.meta.env.VITE_STRIPE_PUBLIC_KEY || '';
 
-export var stripeConfigured = !!PUBLISHABLE_KEY;
+var _resolvedKey = BUILD_KEY;
+var _keyPromise = null;
+var _stripePromise = null;
 
-var _promise = null;
-// Carrega o Stripe.js uma unica vez (singleton). null se a chave nao estiver configurada.
+// true quando ja temos a chave de build (sincrono). A resolucao em runtime usa getPublishableKey().
+export var stripeConfigured = !!BUILD_KEY;
+
+// Resolve a chave publicavel de forma assincrona (build primeiro, depois Supabase).
+export function getPublishableKey() {
+  if (_resolvedKey) return Promise.resolve(_resolvedKey);
+  if (_keyPromise) return _keyPromise;
+  _keyPromise = sb.functions.invoke('stripe-config', { body: {} }).then(function(res) {
+    var data = res && res.data ? res.data : null;
+    var k = data && data.publishableKey ? data.publishableKey : '';
+    _resolvedKey = k;
+    return k;
+  }).catch(function() { return ''; });
+  return _keyPromise;
+}
+
+// Carrega o Stripe.js uma unica vez (singleton). Resolve null se nao houver chave.
 export function getStripe() {
-  if (!PUBLISHABLE_KEY) return null;
-  if (!_promise) _promise = loadStripe(PUBLISHABLE_KEY);
-  return _promise;
+  return getPublishableKey().then(function(key) {
+    if (!key) return null;
+    if (!_stripePromise) _stripePromise = loadStripe(key);
+    return _stripePromise;
+  });
 }
 
 // Tema do Stripe Elements alinhado a identidade visual (cor da marca + fontes do app).

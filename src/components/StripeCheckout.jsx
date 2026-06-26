@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { getStripe, stripeAppearance, stripeConfigured } from '../lib/stripe.js';
+import { getStripe, getPublishableKey, stripeAppearance } from '../lib/stripe.js';
 import { sb } from '../lib/supabase.js';
 import { fmt } from '../lib/utils.js';
 import { Spin } from './ui.jsx';
@@ -60,26 +60,36 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
   var [clientSecret, setClientSecret] = useState('');
   var [loadErr, setLoadErr] = useState('');
   var [loading, setLoading] = useState(true);
-  var stripePromise = getStripe();
+  var [stripePromise, setStripePromise] = useState(null);
 
   useEffect(function() {
-    if (!stripeConfigured) { setLoadErr('Chave pública do Stripe ausente. Defina VITE_STRIPE_PUBLISHABLE_KEY (pk_...) no ambiente e refaça o build.'); setLoading(false); return; }
     var alive = true;
     setLoading(true);
     setLoadErr('');
-    var fnName = checkoutMode === 'payment' ? 'create-payment' : 'create-subscription';
-    var fnBody = checkoutMode === 'payment' ? { kind: 'white_label' } : { plan_id: plan.id };
-    sb.functions.invoke(fnName, { body: fnBody }).then(function(result) {
+    // 1) Resolve a chave publicavel (build env -> Supabase). Sem ela, nao monta o form.
+    getPublishableKey().then(function(key) {
       if (!alive) return;
-      var data = result && result.data ? result.data : null;
-      if (result && result.error) { setLoadErr('Não foi possível iniciar o pagamento. Tente novamente.'); setLoading(false); return; }
-      if (data && data.clientSecret) { setClientSecret(data.clientSecret); setLoading(false); return; }
-      setLoadErr((data && data.error) ? 'Pagamento indisponível no momento.' : 'Não foi possível iniciar o pagamento.');
-      setLoading(false);
-    }).catch(function() {
-      if (!alive) return;
-      setLoadErr('Erro de conexão. Tente novamente.');
-      setLoading(false);
+      if (!key) {
+        setLoadErr('Chave pública do Stripe ausente. Defina STRIPE_PUBLISHABLE_KEY (pk_...) nos secrets do Supabase ou VITE_STRIPE_PUBLISHABLE_KEY no front.');
+        setLoading(false);
+        return;
+      }
+      setStripePromise(getStripe());
+      // 2) Inicia o pagamento (clientSecret) na edge function correspondente.
+      var fnName = checkoutMode === 'payment' ? 'create-payment' : 'create-subscription';
+      var fnBody = checkoutMode === 'payment' ? { kind: 'white_label' } : { plan_id: plan.id };
+      sb.functions.invoke(fnName, { body: fnBody }).then(function(result) {
+        if (!alive) return;
+        var data = result && result.data ? result.data : null;
+        if (result && result.error) { setLoadErr('Não foi possível iniciar o pagamento. Tente novamente.'); setLoading(false); return; }
+        if (data && data.clientSecret) { setClientSecret(data.clientSecret); setLoading(false); return; }
+        setLoadErr((data && data.error) ? 'Pagamento indisponível no momento.' : 'Não foi possível iniciar o pagamento.');
+        setLoading(false);
+      }).catch(function() {
+        if (!alive) return;
+        setLoadErr('Erro de conexão. Tente novamente.');
+        setLoading(false);
+      });
     });
     return function() { alive = false; };
   }, [plan.id]);
