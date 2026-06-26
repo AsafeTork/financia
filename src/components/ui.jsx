@@ -212,7 +212,7 @@ export const DelBtn = function({ onClick }) {
 export const PageHead = function({ icon, title, sub, right, color }) {
   var c = color || 'var(--brand)';
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex items-start justify-between gap-3 flex-wrap">
       <div className="flex items-start gap-3 min-w-0">
         {icon && (
           <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{background:'linear-gradient(135deg, var(--brand-soft), var(--brand-accent-soft, var(--brand-soft)))'}}>
@@ -224,7 +224,7 @@ export const PageHead = function({ icon, title, sub, right, color }) {
           {sub && <p className="page-sub">{sub}</p>}
         </div>
       </div>
-      {right && <div className="flex gap-2 flex-shrink-0">{right}</div>}
+      {right && <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end ml-auto">{right}</div>}
     </div>
   );
 };

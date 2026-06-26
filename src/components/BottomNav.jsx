@@ -30,7 +30,7 @@ export default function BottomNav({ view, onNav, brand }) {
                   <path d={item.d}/>
                 </svg>
               </div>
-              <span style={{fontSize: 10, fontWeight: active ? 600 : 400, lineHeight: '12px'}}>{item.label}</span>
+              <span className="truncate max-w-full px-0.5" style={{fontSize: 10, fontWeight: active ? 600 : 400, lineHeight: '12px'}}>{item.label}</span>
             </button>
           );
         })}

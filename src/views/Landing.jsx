@@ -125,7 +125,7 @@ export default function Landing({ onEnter }) {
                 Ver planos
               </a>
             </div>
-            <div className="anim-up mt-6 flex items-center gap-4 text-xs" style={Object.assign({ color: MUTED }, delay(300))}>
+            <div className="anim-up mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" style={Object.assign({ color: MUTED }, delay(300))}>
               {['Sem cartão de crédito', 'Funciona offline', 'Pronto em 1 minuto'].map(function(t) {
                 return (
                   <span key={t} className="flex items-center gap-1.5">

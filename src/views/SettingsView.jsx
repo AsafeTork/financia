@@ -99,7 +99,7 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
         sub="Conta, assinatura e preferências"
       />
 
-      <div className="flex border-b" style={{borderColor:'var(--border)'}}>
+      <div className="flex border-b overflow-x-auto" style={{borderColor:'var(--border)'}}>
         {tabs.map(function(t) {
           var active = tab === t.key;
           return (
