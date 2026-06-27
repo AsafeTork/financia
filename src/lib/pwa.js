@@ -5,6 +5,12 @@
 var listeners = [];
 var waitingSW = null;
 
+function shouldEnablePwa() {
+  if (typeof window === 'undefined') return false;
+  var host = window.location.hostname || '';
+  return host.indexOf('github.dev') === -1;
+}
+
 // Inscreve a UI nos eventos de atualizacao. Retorna funcao para cancelar.
 export function onSWUpdate(cb) {
   listeners.push(cb);
@@ -32,7 +38,7 @@ function watchInstall(nw, reg) {
 }
 
 export function registerSW() {
-  if (!('serviceWorker' in navigator)) return;
+  if (!shouldEnablePwa() || !('serviceWorker' in navigator)) return;
 
   // Troca de controlador = atualizacao aplicada -> recarrega uma unica vez.
   var refreshing = false;
