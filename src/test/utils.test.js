@@ -9,7 +9,7 @@ import {
 // fmt
 // ---------------------------------------------------------------------------
 describe('fmt', function() {
-  it('formata zero', function() { expect(fmt(0)).toBe('R$\xa00,00'); });
+  it('formata zero', function() { expect(fmt(0)).toBe('R$ 0,00'); });
   it('formata zero (inclui R$)', function() { expect(fmt(0)).toContain('R$'); });
   it('formata inteiro positivo', function() { expect(fmt(100)).toContain('100'); });
   it('usa vírgula como separador decimal', function() { expect(fmt(1.5)).toContain(','); });

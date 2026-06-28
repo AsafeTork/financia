@@ -6,7 +6,6 @@ import { effectivePlan, PRICING_PLANS, waLink, SUPPORT_EMAIL } from '../lib/cons
 import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
 import InstallButton from '../components/InstallButton.jsx';
-import StripeCheckout from '../components/StripeCheckout.jsx';
 
 export default function SettingsView({ brand, session, planInfo, onSave, onSavePhone, toast, confirm, isAdmin, onNav }) {
   var [tab, setTab] = useState(function() {
@@ -22,7 +21,6 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
   var [pwModal, setPwModal] = useState(false);
   var [pwForm, setPwForm] = useState({newPw:'', confirm:''});
   var [pwSaving, setPwSaving] = useState(false);
-  var [payOpen, setPayOpen] = useState(false);
   var planId = effectivePlan(planInfo || {});
   var planMeta = PRICING_PLANS.filter(function(p) { return p.id === planId; })[0] || PRICING_PLANS[0];
   var [phoneData, setPhoneData] = useState(function() { var p = parsePhone(brand.phone); return buildPhone(p.iso, p.digits); });
@@ -79,11 +77,10 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
 
   var planExpiry = (planId !== 'free' && planInfo && planInfo.plan_expires_at) ? new Date(planInfo.plan_expires_at).toLocaleDateString('pt-BR') : '';
   var planPriceLabel = planMeta.price ? ('R$ ' + planMeta.price.toFixed(2).replace('.', ',') + (planMeta.period || '')) : 'Grátis';
-  var cardPlanId = planId !== 'free' ? planId : 'pro';
-  var cardPlan = PRICING_PLANS.filter(function(p) { return p.id === cardPlanId; })[0] || PRICING_PLANS[1];
+  var changeCardMsg = 'Olá! Quero atualizar o cartão da minha assinatura do Financia.';
   var subActions = [
     { label:'Gerenciar plano', desc:'Escolha entre Grátis, Pro e Premium', icon:'M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z', act:function() { if (onNav) onNav('planos'); } },
-    { label:'Gerenciar forma de pagamento', desc:'Cadastrar ou atualizar o cartão (Stripe)', icon:'M3 10h18M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z', act:function() { setPayOpen(true); } },
+    { label:'Atualizar forma de pagamento', desc:'Trocar o cartão da assinatura pelo suporte', icon:'M3 10h18M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z', act:function() { window.open(waLink(changeCardMsg), '_blank', 'noopener'); } },
   ];
 
   const allTabs = [{key:'account',label:'Conta'}, {key:'subscription',label:'Assinatura'}];
@@ -262,9 +259,6 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
         </Modal>
       )}
 
-      {payOpen && (
-        <StripeCheckout plan={cardPlan} brand={brand} toast={toast} onClose={function() { setPayOpen(false); }}/>
-      )}
     </div>
   );
 }

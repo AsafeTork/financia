@@ -1,12 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { getStripe, getPublishableKey, stripeAppearance } from '../lib/stripe.js';
+import { getStripe, getPublishableKey, stripeAppearance, friendlyStripeError } from '../lib/stripe.js';
 import { sb } from '../lib/supabase.js';
 import { fmt } from '../lib/utils.js';
 import { Spin } from './ui.jsx';
 
 function isDarkTheme() {
   return document.documentElement.getAttribute('data-theme') === 'dark';
+}
+
+// Extrai a mensagem REAL de erro do retorno de sb.functions.invoke, sem mascarar a causa.
+// Em erro HTTP a supabase-js poe a resposta crua em error.context (um Response).
+function readFnErrorMessage(result, data) {
+  if (data && data.error) return Promise.resolve(data.error);
+  var err = result ? result.error : null;
+  if (!err) return Promise.resolve('');
+  var ctx = err.context;
+  if (!ctx || typeof ctx.json !== 'function') return Promise.resolve(err.message || '');
+  return ctx.json()
+    .then(function(b) { return (b && b.error) ? b.error : (err.message || ''); })
+    .catch(function() { return err.message || ''; });
 }
 
 function PaymentForm({ plan, brand, onDone, onClose, mode }) {
@@ -61,17 +74,42 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
   var [loadErr, setLoadErr] = useState('');
   var [loading, setLoading] = useState(true);
   var [stripePromise, setStripePromise] = useState(null);
+  var [attempt, setAttempt] = useState(0);
+  var retry = function() { setAttempt(function(a) { return a + 1; }); };
 
   useEffect(function() {
     var alive = true;
+    var settled = false;
+    var timer = null;
     setLoading(true);
     setLoadErr('');
+    setClientSecret('');
+
+    var fail = function(msg) {
+      if (!alive || settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      setLoadErr(msg);
+      setLoading(false);
+    };
+    var ok = function(cs) {
+      if (!alive || settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      setClientSecret(cs);
+      setLoading(false);
+    };
+
+    // Servidor pode estar reativando (cold start): em vez de travar no skeleton, avisa e oferece retry.
+    timer = setTimeout(function() {
+      fail('O servidor está demorando para responder (pode estar reativando). Toque em Tentar de novo.');
+    }, 30000);
+
     // 1) Resolve a chave publicavel (build env -> Supabase). Sem ela, nao monta o form.
     getPublishableKey().then(function(key) {
-      if (!alive) return;
+      if (!alive || settled) return;
       if (!key) {
-        setLoadErr('Chave pública do Stripe ausente. Defina STRIPE_PUBLISHABLE_KEY (pk_...) nos secrets do Supabase ou VITE_STRIPE_PUBLISHABLE_KEY no front.');
-        setLoading(false);
+        fail('Chave pública do Stripe ausente. Defina STRIPE_PUBLISHABLE_KEY (pk_...) nos secrets do Supabase ou VITE_STRIPE_PUBLISHABLE_KEY no front.');
         return;
       }
       setStripePromise(getStripe());
@@ -79,20 +117,20 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
       var fnName = checkoutMode === 'payment' ? 'create-payment' : 'create-subscription';
       var fnBody = checkoutMode === 'payment' ? { kind: 'white_label' } : { plan_id: plan.id };
       sb.functions.invoke(fnName, { body: fnBody }).then(function(result) {
-        if (!alive) return;
+        if (!alive || settled) return;
         var data = result && result.data ? result.data : null;
-        if (result && result.error) { setLoadErr('Não foi possível iniciar o pagamento. Tente novamente.'); setLoading(false); return; }
-        if (data && data.clientSecret) { setClientSecret(data.clientSecret); setLoading(false); return; }
-        setLoadErr((data && data.error) ? 'Pagamento indisponível no momento.' : 'Não foi possível iniciar o pagamento.');
-        setLoading(false);
+        if (data && data.clientSecret) { ok(data.clientSecret); return; }
+        // Mostra a causa REAL (mensagem da Stripe / codigo do backend) em vez de generico.
+        readFnErrorMessage(result, data).then(function(msg) { fail(friendlyStripeError(msg)); });
       }).catch(function() {
-        if (!alive) return;
-        setLoadErr('Erro de conexão. Tente novamente.');
-        setLoading(false);
+        fail('Erro de conexão. Verifique sua internet e tente de novo.');
       });
+    }).catch(function() {
+      fail('Erro de conexão. Verifique sua internet e tente de novo.');
     });
-    return function() { alive = false; };
-  }, [plan.id]);
+
+    return function() { alive = false; if (timer) clearTimeout(timer); };
+  }, [plan.id, attempt]);
 
   var done = function() {
     var msg = checkoutMode === 'payment'
@@ -129,7 +167,10 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
           {!loading && loadErr && (
             <div className="flex flex-col items-center text-center gap-3 py-6">
               <p className="text-sm font-medium" style={{ color: 'var(--text-sub)' }}>{loadErr}</p>
-              <button onClick={onClose} className="text-sm font-semibold px-5 py-2.5 rounded-xl text-white" style={{ background: brand.color }}>Fechar</button>
+              <div className="flex gap-2">
+                <button onClick={onClose} className="text-sm font-semibold px-5 py-2.5 rounded-xl border min-h-[44px]" style={{ borderColor: 'var(--border)', color: 'var(--text-sub)' }}>Fechar</button>
+                <button onClick={retry} className="text-sm font-semibold px-5 py-2.5 rounded-xl text-white min-h-[44px]" style={{ background: brand.color }}>Tentar de novo</button>
+              </div>
             </div>
           )}
           {!loading && !loadErr && options && stripePromise && (

@@ -35,6 +35,28 @@ export function getStripe() {
   });
 }
 
+// Codigos de erro retornados pelas edge functions de pagamento (create-subscription,
+// create-payment, stripe-config) mapeados para mensagens claras ao usuario (pt-BR).
+var PAYMENT_ERROR_MESSAGES = {
+  stripe_not_configured: 'Pagamento indisponível: a chave do Stripe não está configurada no servidor.',
+  unauthorized: 'Sua sessão expirou. Saia e entre de novo para concluir o pagamento.',
+  invalid_plan: 'Plano inválido para assinatura.',
+  invalid_kind: 'Item de compra inválido.',
+  no_client_secret: 'Não foi possível iniciar a cobrança. Tente de novo em instantes.',
+};
+
+var DEFAULT_PAYMENT_ERROR = 'Não foi possível iniciar o pagamento. Tente de novo.';
+
+// Traduz o erro do backend para o usuario sem esconder a causa real:
+// - codigo conhecido -> mensagem amigavel;
+// - mensagem crua da Stripe (codigo desconhecido) -> exibida como veio;
+// - vazio/null/undefined -> mensagem padrao.
+export function friendlyStripeError(code) {
+  if (!code) return DEFAULT_PAYMENT_ERROR;
+  if (PAYMENT_ERROR_MESSAGES[code]) return PAYMENT_ERROR_MESSAGES[code];
+  return String(code);
+}
+
 // Tema do Stripe Elements alinhado a identidade visual (cor da marca + fontes do app).
 export function stripeAppearance(brandColor, isDark) {
   return {
