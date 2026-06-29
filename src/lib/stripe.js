@@ -43,6 +43,8 @@ var PAYMENT_ERROR_MESSAGES = {
   invalid_plan: 'Plano inválido para assinatura.',
   invalid_kind: 'Item de compra inválido.',
   no_client_secret: 'Não foi possível iniciar a cobrança. Tente de novo em instantes.',
+  no_setup_secret: 'Não foi possível iniciar a atualização do cartão. Tente de novo em instantes.',
+  no_payment_method: 'Cartão não informado. Preencha os dados e tente de novo.',
 };
 
 var DEFAULT_PAYMENT_ERROR = 'Não foi possível iniciar o pagamento. Tente de novo.';
@@ -55,6 +57,20 @@ export function friendlyStripeError(code) {
   if (!code) return DEFAULT_PAYMENT_ERROR;
   if (PAYMENT_ERROR_MESSAGES[code]) return PAYMENT_ERROR_MESSAGES[code];
   return String(code);
+}
+
+// Extrai a mensagem REAL de erro do retorno de sb.functions.invoke, sem mascarar a
+// causa. Em erro HTTP a supabase-js poe a resposta crua em error.context (um Response).
+// Ordem: data.error -> corpo JSON do error.context -> error.message -> ''.
+export function readFnErrorMessage(result, data) {
+  if (data && data.error) return Promise.resolve(data.error);
+  var err = result ? result.error : null;
+  if (!err) return Promise.resolve('');
+  var ctx = err.context;
+  if (!ctx || typeof ctx.json !== 'function') return Promise.resolve(err.message || '');
+  return ctx.json()
+    .then(function(b) { return (b && b.error) ? b.error : (err.message || ''); })
+    .catch(function() { return err.message || ''; });
 }
 
 // Tema do Stripe Elements alinhado a identidade visual (cor da marca + fontes do app).

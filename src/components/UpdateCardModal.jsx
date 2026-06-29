@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { getStripe, getPublishableKey, stripeAppearance, friendlyStripeError, readFnErrorMessage } from '../lib/stripe.js';
 import { sb } from '../lib/supabase.js';
-import { fmt } from '../lib/utils.js';
 import { Spin } from './ui.jsx';
 
 function isDarkTheme() {
   return document.documentElement.getAttribute('data-theme') === 'dark';
 }
 
-function PaymentForm({ plan, brand, onDone, onClose, mode }) {
+function CardForm({ brand, onDone, onClose }) {
   var stripe = useStripe();
   var elements = useElements();
   var [submitting, setSubmitting] = useState(false);
@@ -20,15 +19,31 @@ function PaymentForm({ plan, brand, onDone, onClose, mode }) {
     if (!stripe || !elements) return;
     setSubmitting(true);
     setPayErr('');
+
     var sub = await elements.submit();
     if (sub.error) { setPayErr(sub.error.message || 'Verifique os dados do cartão.'); setSubmitting(false); return; }
-    var res = await stripe.confirmPayment({
+
+    // Modo setup: salva o cartao sem cobrar. redirect:if_required mantem no app.
+    var res = await stripe.confirmSetup({
       elements: elements,
-      confirmParams: { return_url: window.location.origin + '/?checkout=success#planos' },
+      confirmParams: { return_url: window.location.origin + '/?card=updated#configuracoes' },
       redirect: 'if_required',
     });
     if (res.error) {
-      setPayErr(res.error.message || 'Não foi possível concluir o pagamento.');
+      setPayErr(res.error.message || 'Não foi possível salvar o cartão.');
+      setSubmitting(false);
+      return;
+    }
+
+    var pm = res.setupIntent && res.setupIntent.payment_method ? res.setupIntent.payment_method : null;
+    if (!pm) { setPayErr(friendlyStripeError('no_payment_method')); setSubmitting(false); return; }
+
+    // Define o novo cartao como padrao do customer e das assinaturas ativas.
+    var setRes = await sb.functions.invoke('set-default-payment-method', { body: { payment_method_id: pm } });
+    var data = setRes && setRes.data ? setRes.data : null;
+    if (!data || !data.ok) {
+      var msg = await readFnErrorMessage(setRes, data);
+      setPayErr(friendlyStripeError(msg));
       setSubmitting(false);
       return;
     }
@@ -47,16 +62,15 @@ function PaymentForm({ plan, brand, onDone, onClose, mode }) {
       <div className="flex gap-2 pt-1">
         <button type="button" onClick={onClose} disabled={submitting} className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-3 text-sm font-medium hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
         <button type="submit" disabled={!stripe || submitting} className="flex-1 text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition" style={{ background: brand.color }}>
-          {submitting ? <Spin white /> : ('Pagar ' + fmt(plan.price))}
+          {submitting ? <Spin white /> : 'Salvar cartão'}
         </button>
       </div>
-      <p className="text-[11px] text-center" style={{ color: 'var(--text-muted)' }}>{mode === 'payment' ? 'Pagamento único e seguro, processado pela Stripe.' : 'Pagamento seguro processado pela Stripe. Você pode cancelar quando quiser.'}</p>
+      <p className="text-[11px] text-center" style={{ color: 'var(--text-muted)' }}>Nenhuma cobrança agora. O novo cartão passa a valer nas próximas faturas. Seguro, processado pela Stripe.</p>
     </form>
   );
 }
 
-export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mode }) {
-  var checkoutMode = mode === 'payment' ? 'payment' : 'subscription';
+export default function UpdateCardModal({ brand, onClose, onDone, toast }) {
   var [clientSecret, setClientSecret] = useState('');
   var [loadErr, setLoadErr] = useState('');
   var [loading, setLoading] = useState(true);
@@ -87,12 +101,10 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
       setLoading(false);
     };
 
-    // Servidor pode estar reativando (cold start): em vez de travar no skeleton, avisa e oferece retry.
     timer = setTimeout(function() {
       fail('O servidor está demorando para responder (pode estar reativando). Toque em Tentar de novo.');
     }, 30000);
 
-    // 1) Resolve a chave publicavel (build env -> Supabase). Sem ela, nao monta o form.
     getPublishableKey().then(function(key) {
       if (!alive || settled) return;
       if (!key) {
@@ -100,14 +112,10 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
         return;
       }
       setStripePromise(getStripe());
-      // 2) Inicia o pagamento (clientSecret) na edge function correspondente.
-      var fnName = checkoutMode === 'payment' ? 'create-payment' : 'create-subscription';
-      var fnBody = checkoutMode === 'payment' ? { kind: 'white_label' } : { plan_id: plan.id };
-      sb.functions.invoke(fnName, { body: fnBody }).then(function(result) {
+      sb.functions.invoke('create-setup-intent', { body: {} }).then(function(result) {
         if (!alive || settled) return;
         var data = result && result.data ? result.data : null;
         if (data && data.clientSecret) { ok(data.clientSecret); return; }
-        // Mostra a causa REAL (mensagem da Stripe / codigo do backend) em vez de generico.
         readFnErrorMessage(result, data).then(function(msg) { fail(friendlyStripeError(msg)); });
       }).catch(function() {
         fail('Erro de conexão. Verifique sua internet e tente de novo.');
@@ -117,13 +125,10 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
     });
 
     return function() { alive = false; if (timer) clearTimeout(timer); };
-  }, [plan.id, attempt]);
+  }, [attempt]);
 
   var done = function() {
-    var msg = checkoutMode === 'payment'
-      ? 'Pagamento recebido! Sua personalização será liberada em instantes.'
-      : 'Pagamento recebido! Seu plano será ativado em instantes.';
-    if (toast) toast(msg, 'success');
+    if (toast) toast('Cartão atualizado! As próximas cobranças usarão o novo cartão.', 'success');
     if (onDone) onDone();
     onClose();
   };
@@ -135,8 +140,8 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
       <div className="rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md flex flex-col anim-scale" style={{ background: 'var(--bg-card)', maxHeight: '92vh', boxShadow: 'var(--shadow-lg)' }}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <div className="min-w-0">
-            <span className="font-semibold text-gray-900">{checkoutMode === 'payment' ? 'Comprar' : 'Assinar'} {plan.name}</span>
-            <p className="text-xs text-gray-400">{fmt(plan.price)}{plan.period || (checkoutMode === 'payment' ? ' (única)' : '/mês')}</p>
+            <span className="font-semibold text-gray-900">Atualizar forma de pagamento</span>
+            <p className="text-xs text-gray-400">Troque o cartão da sua assinatura</p>
           </div>
           <button onClick={onClose} aria-label="Fechar" className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -162,7 +167,7 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
           )}
           {!loading && !loadErr && options && stripePromise && (
             <Elements stripe={stripePromise} options={options}>
-              <PaymentForm plan={plan} brand={brand} onDone={done} onClose={onClose} mode={checkoutMode} />
+              <CardForm brand={brand} onDone={done} onClose={onClose} />
             </Elements>
           )}
         </div>
