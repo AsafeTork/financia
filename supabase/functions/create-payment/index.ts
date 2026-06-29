@@ -24,10 +24,9 @@ function jsonResponse(status, payload) {
 async function findOrCreateCustomer(stripe, email, userId) {
   if (email) {
     const existing = await stripe.customers.list({ email: email, limit: 1 });
-    if (existing && existing.data && existing.data.length > 0) return existing.data[0].id;
+    if (existing && existing.data && existing.data.length > 0) return existing.data[0];
   }
-  const created = await stripe.customers.create({ email: email || undefined, metadata: { user_id: userId } });
-  return created.id;
+  return await stripe.customers.create({ email: email || undefined, metadata: { user_id: userId } });
 }
 
 Deno.serve(async function (req) {
@@ -61,12 +60,49 @@ Deno.serve(async function (req) {
     let body = {};
     try { body = await req.json(); } catch (parseErr) { body = {}; }
     const kind = body && body.kind ? body.kind : null;
+    const useSavedCard = !!(body && body.use_saved_card);
     if (kind !== 'white_label') {
       return jsonResponse(400, { error: 'invalid_kind' });
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
-    const customerId = await findOrCreateCustomer(stripe, user.email, user.id);
+    const customer = await findOrCreateCustomer(stripe, user.email, user.id);
+    const customerId = customer.id;
+
+    // Pagar com o cartao salvo (off_session): confirma na hora e devolve status.
+    if (useSavedCard) {
+      const invoiceSettings = customer.invoice_settings || {};
+      let defaultPm = invoiceSettings.default_payment_method || null;
+      if (!defaultPm) {
+        const list = await stripe.paymentMethods.list({ customer: customerId, type: 'card', limit: 1 });
+        if (list && list.data && list.data.length > 0) defaultPm = list.data[0].id;
+      }
+      if (!defaultPm) {
+        return jsonResponse(400, { error: 'no_payment_method' });
+      }
+      const pi = await stripe.paymentIntents.create({
+        amount: WHITE_LABEL_PRICE,
+        currency: 'brl',
+        customer: customerId,
+        description: 'Financia - Personalizacao (white-label)',
+        payment_method: defaultPm,
+        off_session: true,
+        confirm: true,
+        metadata: { user_id: user.id, kind: 'white_label' },
+      }).catch(function (confirmErr) {
+        const raw = confirmErr && confirmErr.raw ? confirmErr.raw : null;
+        const failedPi = raw && raw.payment_intent ? raw.payment_intent : null;
+        if (failedPi) return failedPi;
+        throw confirmErr;
+      });
+      if (pi.status === 'succeeded') {
+        return jsonResponse(200, { status: 'paid' });
+      }
+      if (pi.client_secret && (pi.status === 'requires_action' || pi.status === 'requires_confirmation')) {
+        return jsonResponse(200, { clientSecret: pi.client_secret, requiresAction: true });
+      }
+      return jsonResponse(402, { error: 'payment_failed' });
+    }
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: WHITE_LABEL_PRICE,

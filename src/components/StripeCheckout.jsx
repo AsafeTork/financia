@@ -134,6 +134,19 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
       });
     };
 
+    // Inicia o pagamento white-label com cartao NOVO (PaymentElement).
+    var startNewCardPayment = function() {
+      sb.functions.invoke('create-payment', { body: { kind: 'white_label' } }).then(function(result) {
+        if (!alive || settled) return;
+        var data = result && result.data ? result.data : null;
+        if (data && data.clientSecret) { toForm(data.clientSecret); return; }
+        if (data && data.status === 'paid') { done(); return; }
+        readFnErrorMessage(result, data).then(function(msg) { fail(friendlyStripeError(msg)); });
+      }).catch(function() {
+        fail('Erro de conexão. Verifique sua internet e tente de novo.');
+      });
+    };
+
     getPublishableKey().then(function(key) {
       if (!alive || settled) return;
       if (!key) {
@@ -142,15 +155,17 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
       }
       setStripePromise(getStripe());
 
-      // White-label: pagamento unico via PaymentElement (sem cartao salvo).
+      // White-label: pagamento unico. Se ja existe cartao salvo, oferece pagar com ele.
       if (checkoutMode === 'payment') {
-        sb.functions.invoke('create-payment', { body: { kind: 'white_label' } }).then(function(result) {
+        sb.functions.invoke('get-payment-method', { body: {} }).then(function(result) {
           if (!alive || settled) return;
           var data = result && result.data ? result.data : null;
-          if (data && data.clientSecret) { toForm(data.clientSecret); return; }
-          readFnErrorMessage(result, data).then(function(msg) { fail(friendlyStripeError(msg)); });
+          var savedCard = data && data.card ? data.card : null;
+          if (savedCard) { toPreview(savedCard, 'saved'); return; }
+          startNewCardPayment();
         }).catch(function() {
-          fail('Erro de conexão. Verifique sua internet e tente de novo.');
+          if (!alive || settled) return;
+          startNewCardPayment();
         });
         return;
       }
@@ -176,14 +191,42 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
     // eslint-disable-next-line
   }, [plan.id, attempt]);
 
-  var done = function() {
-    var msg;
-    if (checkoutMode === 'payment') msg = 'Pagamento recebido! Sua personalização será liberada em instantes.';
-    else if (isChange) msg = 'Plano alterado! A mudança já está valendo.';
-    else msg = 'Pagamento recebido! Seu plano será ativado em instantes.';
+  var done = function(customMsg) {
+    var msg = customMsg;
+    if (!msg) {
+      if (checkoutMode === 'payment') msg = 'Pagamento recebido! Sua personalização será liberada em instantes.';
+      else if (isChange) msg = 'Plano alterado! A mudança já está valendo.';
+      else msg = 'Pagamento recebido! Seu plano será ativado em instantes.';
+    }
     if (toast) toast(msg, 'success');
     if (onDone) onDone();
     onClose();
+  };
+
+  // Paga o pacote white-label com o cartao ja salvo (off_session + 3DS se preciso).
+  var runWhiteLabelSaved = async function() {
+    setConfirming(true);
+    setActionErr('');
+    try {
+      var res = await sb.functions.invoke('create-payment', { body: { kind: 'white_label', use_saved_card: true } });
+      var data = res && res.data ? res.data : null;
+      if (data && data.status === 'paid') { done(); return; }
+      if (data && data.clientSecret && data.requiresAction) {
+        var stripe = await stripePromise;
+        if (!stripe) { setActionErr('Não foi possível carregar o Stripe. Tente de novo.'); setConfirming(false); return; }
+        var r = await stripe.handleNextAction({ clientSecret: data.clientSecret });
+        if (r && r.error) { setActionErr(r.error.message || 'Autenticação do cartão falhou.'); setConfirming(false); return; }
+        done();
+        return;
+      }
+      if (data && data.clientSecret) { setClientSecret(data.clientSecret); setUseOtherCard(false); setPhase('form'); setConfirming(false); return; }
+      var msg = await readFnErrorMessage(res, data);
+      setActionErr(friendlyStripeError(msg));
+      setConfirming(false);
+    } catch (err) {
+      setActionErr('Erro de conexão. Tente de novo.');
+      setConfirming(false);
+    }
   };
 
   // Confirma assinatura/mudanca usando o cartao salvo (ou mudando o plano no servidor).
@@ -196,7 +239,11 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
       var res = await sb.functions.invoke('create-subscription', { body: body });
       var data = res && res.data ? res.data : null;
       if (data && (data.status === 'active' || data.status === 'changed' || data.status === 'unchanged')) {
-        done();
+        if (data.status === 'changed' && data.scheduled) {
+          done('Downgrade agendado. Você mantém o plano atual até o fim do período já pago e depois muda automaticamente para o ' + plan.name + '.');
+        } else {
+          done();
+        }
         return;
       }
       if (data && data.clientSecret && data.requiresAction) {
@@ -279,9 +326,9 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
                   <p className="text-xs font-medium text-red-600">{actionErr}</p>
                 </div>
               )}
-              <button onClick={function() { runSubscription(phase === 'saved'); }} disabled={confirming}
+              <button onClick={function() { if (checkoutMode === 'payment') { runWhiteLabelSaved(); } else { runSubscription(phase === 'saved'); } }} disabled={confirming}
                 className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition" style={{ background: brand.color }}>
-                {confirming ? <Spin white /> : confirmLabel(kind)}
+                {confirming ? <Spin white /> : (checkoutMode === 'payment' ? ('Pagar ' + fmt(plan.price)) : confirmLabel(kind))}
               </button>
               {phase === 'saved' && (
                 <button onClick={function() { setUseOtherCard(true); setActionErr(''); startNewCardFromSaved(); }} disabled={confirming}
@@ -312,6 +359,18 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
   // Troca para cartao novo a partir da tela de cartao salvo: busca clientSecret.
   function startNewCardFromSaved() {
     setPhase('loading');
+    if (checkoutMode === 'payment') {
+      sb.functions.invoke('create-payment', { body: { kind: 'white_label' } }).then(function(result) {
+        var data = result && result.data ? result.data : null;
+        if (data && data.clientSecret) { setClientSecret(data.clientSecret); setPhase('form'); return; }
+        if (data && data.status === 'paid') { done(); return; }
+        readFnErrorMessage(result, data).then(function(msg) { setLoadErr(friendlyStripeError(msg)); setPhase('error'); });
+      }).catch(function() {
+        setLoadErr('Erro de conexão. Verifique sua internet e tente de novo.');
+        setPhase('error');
+      });
+      return;
+    }
     sb.functions.invoke('create-subscription', { body: { plan_id: plan.id } }).then(function(result) {
       var data = result && result.data ? result.data : null;
       if (data && data.clientSecret) { setClientSecret(data.clientSecret); setPhase('form'); return; }

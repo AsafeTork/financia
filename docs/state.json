@@ -1,0 +1,59 @@
+{
+  "pipeline_id": "2026-06-28T00:00:00Z",
+  "current_phase": "PAGAMENTO_FIX_DONE",
+  "status": "running",
+  "completed_agents": [
+    "AGENT_CONTEXT",
+    "AGENT_DISCOVERY",
+    "AGENT_ARCHITECT",
+    "AGENT_PLANNING"
+  ],
+  "failed_agent": null,
+  "retry_count": 0,
+  "active_increment": {
+    "id": "PAGAMENTO",
+    "title": "Fix pagamento (Stripe) — diagnostico + correcoes de codigo",
+    "approved_by": "USER (Asafe) 2026-06-28",
+    "diagnostico": "Chaves Stripe corretas e no mesmo modo (LIVE pk+sk, verificado via stripe-config e bundle de producao). Edge functions criam assinatura+PaymentIntent ok; RPCs e webhook existem. Sintoma 'falha ao carregar' = cold start lento + UI sem feedback + erro mascarado. PaymentIntents criados mas nunca confirmados (last_payment_error null).",
+    "fixes_aplicados": [
+      "StripeCheckout: mostra erro REAL (friendlyStripeError + readFnErrorMessage de error.context) em vez de generico",
+      "StripeCheckout: timeout 30s p/ cold start + botao 'Tentar de novo' (retry)",
+      "SettingsView: removido caminho que criava assinatura DUPLICADA ('Gerenciar forma de pagamento' reabria create-subscription); agora 'Atualizar forma de pagamento' vai p/ suporte WhatsApp"
+    ],
+    "pendente": "Verificacao end-to-end exige cartao real (modo LIVE) — usuario adiou. Fluxo real de trocar cartao (SetupIntent) nao construido (opcao adiada)."
+  },
+  "verificacao": {
+    "tdd": "src/lib/stripe.test.js 5/5 PASS",
+    "suite": "319/319 PASS apos corrigir teste NBSP em src/test/utils.test.js",
+    "build": "npm run build OK"
+  },
+  "checkpoint": {
+    "at": "2026-06-28",
+    "estado": "Workflow de 700 testes rodando em background (run wf_c0f3d4d0-df5). 10 modulos -> src/test/gen/*.test.js. Apos concluir: rodar suite completa, resolver falhas, commit+push, depois iniciar frente ADMIN.",
+    "usage_note": "Monitorar limite 5h (regra 9). Workflow em background nao consome loop principal.",
+    "resume": "Se interromper: rodar 'npx vitest run' na pasta financia, corrigir falhas em src/test/gen, depois commit+push e passar pro admin."
+  },
+  "locked_files": [
+    "src/components/StripeCheckout.jsx",
+    "src/lib/stripe.js",
+    "src/lib/stripe.test.js",
+    "src/views/SettingsView.jsx"
+  ],
+  "artifacts": {
+    "context_bootstrap": "docs/context_bootstrap.md",
+    "discovery_report": "docs/discovery_report.md",
+    "architecture_analysis": "docs/architecture_analysis.md",
+    "execution_plan": "docs/detailed_execution_plan.md",
+    "security_report": "docs/security_audit_report.md",
+    "database_report": "docs/database_sync_report.md",
+    "frontend_report": "docs/frontend_design_report.md",
+    "backend_report": "docs/backend_integration_report.md",
+    "review_report": "docs/code_review_report.md",
+    "qa_report": "docs/qa_test_report.md",
+    "release_summary": "docs/release_summary.md"
+  },
+  "confidence": {
+    "score": 95,
+    "risk": "Medium"
+  }
+}

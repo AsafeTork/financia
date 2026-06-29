@@ -17,7 +17,18 @@ const CORS_HEADERS = {
 };
 
 const PLAN_PRICES = { pro: 4990, premium: 9990 };
+const PLAN_RANK = { free: 0, pro: 1, premium: 2 };
 const ACTIVE_STATUSES = ['active', 'trialing', 'past_due', 'unpaid'];
+
+// Descobre o plano atual de uma assinatura (metadata da sub ou do price).
+function planOfSub(sub) {
+  const m = sub.metadata ? sub.metadata : {};
+  if (m.plan_id === 'pro' || m.plan_id === 'premium') return m.plan_id;
+  const item = sub.items && sub.items.data ? sub.items.data[0] : null;
+  const pm = item && item.price && item.price.metadata ? item.price.metadata : {};
+  if (pm.plan_id === 'pro' || pm.plan_id === 'premium') return pm.plan_id;
+  return 'pro';
+}
 
 function jsonResponse(status, payload) {
   const headers = { 'Content-Type': 'application/json' };
@@ -161,12 +172,17 @@ Deno.serve(async function (req) {
       if (item.price && item.price.id === priceId) {
         return jsonResponse(200, { status: 'unchanged' });
       }
+      // Upgrade: cobra a diferenca proporcional AGORA e ativa o plano maior (webhook).
+      // Downgrade: NAO cobra/credita agora; o plano mais barato passa a valer so no
+      // proximo ciclo. O cliente mantem o plano mais caro ate o fim do periodo ja pago.
+      const currentPlanId = planOfSub(activeSub);
+      const isDowngrade = PLAN_RANK[planId] < PLAN_RANK[currentPlanId];
       await stripe.subscriptions.update(activeSub.id, {
         items: [{ id: item.id, price: priceId }],
-        proration_behavior: 'create_prorations',
+        proration_behavior: isDowngrade ? 'none' : 'always_invoice',
         metadata: { user_id: user.id, plan_id: planId },
       });
-      return jsonResponse(200, { status: 'changed' });
+      return jsonResponse(200, { status: 'changed', scheduled: isDowngrade });
     }
 
     // 2) Sem assinatura: pagar com cartao salvo (off_session) se solicitado.
