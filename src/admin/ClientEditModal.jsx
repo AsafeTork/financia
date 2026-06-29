@@ -201,7 +201,7 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
       if (planChanged) {
         updated.plan = plan;
         updated.plan_expires_at = null;
-        updated.plan_activated_by = plan === 'pro' ? (adminEmail || 'admin') : null;
+        updated.plan_activated_by = plan !== 'free' ? (adminEmail || 'admin') : null;
       }
       onSave(updated);
     } catch (e) {
@@ -231,6 +231,12 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
               className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-gray-400" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
           </div>
 
+          {!client.white_label && (
+            <div className="rounded-xl p-3 text-xs" style={{background:'var(--bg-subtle)', border:'1px solid var(--border)', color:'var(--text-sub)'}}>
+              Personalização visual (logo, cores e tema) fica disponível quando o cliente compra o pacote de personalização. Nome e plano continuam editáveis.
+            </div>
+          )}
+          {client.white_label && (<React.Fragment>
           {/* Logo */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Logo</label>
@@ -381,22 +387,30 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             </div>
           </div>
 
+          </React.Fragment>)}
+
           {/* Plano */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Plano</label>
             <div className="flex gap-2">
-              <button type="button" onClick={function() { setPlan('free'); }}
-                className={'flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold border transition hover:opacity-90 ' + (plan === 'free' ? 'text-white' : 'text-gray-600 border-gray-200')}
-                style={plan === 'free' ? {background:'#6b7280', borderColor:'#6b7280'} : {background:'var(--bg-card)'}}>
-                Free
-              </button>
-              <button type="button" onClick={function() { setPlan('pro'); }}
-                className={'flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold border transition hover:opacity-90 ' + (plan === 'pro' ? 'text-white' : 'text-gray-600 border-gray-200')}
-                style={plan === 'pro' ? {background: color, borderColor: color} : {background:'var(--bg-card)'}}>
-                Pro
-              </button>
+              {[['free', 'Free', '#6b7280'], ['pro', 'Pro', color], ['premium', 'Premium', '#7c3aed']].map(function(opt) {
+                var active = plan === opt[0];
+                return (
+                  <button key={opt[0]} type="button" onClick={function() { setPlan(opt[0]); }}
+                    className={'flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold border transition hover:opacity-90 ' + (active ? 'text-white' : 'text-gray-600 border-gray-200')}
+                    style={active ? {background: opt[2], borderColor: opt[2]} : {background:'var(--bg-card)'}}>
+                    {opt[1]}
+                  </button>
+                );
+              })}
             </div>
-            {client.plan_activated_by && plan === 'pro' && <p className="text-xs text-gray-400">Ativado por: {client.plan_activated_by}</p>}
+            {client.plan_activated_by && plan !== 'free' && (
+              <p className="text-xs" style={{color:'var(--text-muted)'}}>
+                {String(client.plan_activated_by).indexOf('@') !== -1
+                  ? 'Cortesia (ativado por ' + client.plan_activated_by + ') — não conta como receita.'
+                  : 'Pago via Stripe — conta como receita.'}
+              </p>
+            )}
           </div>
 
         </div>

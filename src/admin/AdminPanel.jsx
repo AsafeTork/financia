@@ -3,7 +3,7 @@ import { Card, Empty, Skeleton } from '../components/ui.jsx';
 import { sb } from '../lib/supabase.js';
 import { triggerApkBuild, fetchClients, deleteClient, clearClientData, fetchClientUsage } from '../lib/db.js';
 import { genPwd, luminance, lightenHex, fmtDate } from '../lib/utils.js';
-import { GH_REPO, effectivePlan, PRICING_PLANS } from '../lib/constants.js';
+import { GH_REPO, effectivePlan, PRICING_PLANS, countsAsRevenue, isAdminGranted } from '../lib/constants.js';
 import ClientEditModal from './ClientEditModal.jsx';
 
 export default function AdminPanel({ toast, confirm, session }) {
@@ -33,13 +33,20 @@ export default function AdminPanel({ toast, confirm, session }) {
 
   const priceOf = function(id) { var p = PRICING_PLANS.find(function(x) { return x.id === id; }); return p ? p.price : 0; };
   const nowMonth = new Date().toISOString().slice(0, 7);
+  // Receita REAL: so planos pagos via Stripe (countsAsRevenue exclui cortesia do admin).
   const stats = clients.reduce(function(a, c) {
     var ep = effectivePlan(c);
     a.total += 1;
-    if (ep === 'free') { a.free += 1; } else { a.pro += 1; a.mrr += priceOf(ep); }
+    if (ep === 'free') { a.free += 1; }
+    else {
+      if (countsAsRevenue(c)) { a.pagantes += 1; a.mrr += priceOf(ep); }
+      else { a.cortesia += 1; }
+      if (ep === 'premium') a.premium += 1;
+    }
+    if (!!c.white_label) a.addon += 1;
     if (c.created_at && String(c.created_at).slice(0, 7) === nowMonth) a.novos += 1;
     return a;
-  }, { total: 0, pro: 0, free: 0, novos: 0, mrr: 0 });
+  }, { total: 0, pagantes: 0, cortesia: 0, premium: 0, free: 0, addon: 0, novos: 0, mrr: 0 });
   var mrr = stats.mrr;
   var moneyBR = function(v) { return 'R$ ' + v.toFixed(2).replace('.', ','); };
   const wlClients = clients.filter(function(c) { return !!c.white_label; });
@@ -179,8 +186,8 @@ export default function AdminPanel({ toast, confirm, session }) {
     <div className="flex flex-col gap-5">
       <div>
         <p className="text-xs font-bold uppercase tracking-wide mb-2.5" style={{color:'var(--text-muted)'}}>Visão geral</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-          {[['Clientes', String(stats.total), false], ['Assinantes Pro', String(stats.pro), false], ['No plano Free', String(stats.free), false], ['Receita/mês', moneyBR(mrr), true]].map(function(kv) {
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+          {[['Clientes', String(stats.total), false], ['Pagantes', String(stats.pagantes), false], ['Free', String(stats.free), false], ['Receita/mês', moneyBR(mrr), true]].map(function(kv) {
             var hl = kv[2];
             return (
               <div key={kv[0]} className="rounded-xl p-3 relative overflow-hidden" style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
@@ -191,7 +198,12 @@ export default function AdminPanel({ toast, confirm, session }) {
             );
           })}
         </div>
-        {stats.novos > 0 && <p className="text-xs mb-3" style={{color:'var(--text-sub)'}}>{stats.novos} novo(s) cliente(s) neste mês</p>}
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {[['Premium', stats.premium], ['Cortesia', stats.cortesia], ['Add-on', stats.addon], ['Novos no mês', stats.novos]].filter(function(c) { return c[1] > 0; }).map(function(c) {
+            return <span key={c[0]} className="text-[11px] font-semibold px-2 py-1 rounded-md" style={{background:'var(--bg-subtle)', border:'1px solid var(--border)', color:'var(--text-sub)'}}>{c[0]}: <b style={{color:'var(--text-main)'}}>{c[1]}</b></span>;
+          })}
+          {stats.cortesia > 0 && <span className="text-[11px] px-2 py-1" style={{color:'var(--text-muted)'}}>cortesias não entram na receita</span>}
+        </div>
 
         {wlClients.length > 0 && (
           <div className="rounded-2xl p-3 mb-3" style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
@@ -242,7 +254,7 @@ export default function AdminPanel({ toast, confirm, session }) {
             <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="Buscar por nome, email ou ID..." className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
           </div>
           <div className="flex gap-1.5">
-            {[['all','Todos'],['pro','Pro'],['free','Free']].map(function(f) {
+            {[['all','Todos'],['pro','Pro'],['premium','Premium'],['free','Free']].map(function(f) {
               var active = planFilter === f[0];
               return <button key={f[0]} onClick={function() { setPlanFilter(f[0]); }} className={'text-xs font-semibold px-3 py-1.5 min-h-[44px] rounded-lg border transition ' + (active ? 'text-white' : 'text-gray-500 border-gray-200 hover:bg-gray-50')} style={active ? {background:'var(--brand)', borderColor:'var(--brand)'} : {}}>{f[1]}</button>;
             })}
@@ -273,6 +285,8 @@ export default function AdminPanel({ toast, confirm, session }) {
                             <span className={'text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 ' + (effectivePlan(c) !== 'free' ? 'text-white' : 'text-gray-600 bg-gray-100')} style={effectivePlan(c) !== 'free' ? {background:'#1a6b5c'} : {}}>
                               {effectivePlan(c) === 'premium' ? 'PREMIUM' : (effectivePlan(c) === 'pro' ? 'PRO' : 'FREE')}
                             </span>
+                            {isAdminGranted(c) && effectivePlan(c) !== 'free' && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:'#fef3c7', color:'#b45309'}}>cortesia</span>}
+                            {!!c.white_label && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0" style={{background:'var(--brand-soft)', color:'var(--brand)'}}>add-on</span>}
                           </div>
                           <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0, 8)}{c.updated_at ? ' · ativo ' + fmtDate(String(c.updated_at).slice(0, 10)) : ''}</p>
                         </div>
