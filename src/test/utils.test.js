@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   fmt, hexToRgb, brandAlpha, fmtDate, monthLabel, today, prevDays,
   safe, isUrl, genPwd, uid, luminance, lightenHex, hexToHsl, hslToHex,
-  deriveCores, passwordStrength, validPhone, maskPhone,
+  deriveCores, passwordStrength, validPhone, maskPhone, formatBytes, dbUsage,
 } from '../lib/utils.js';
 
 // ---------------------------------------------------------------------------
@@ -21,6 +21,34 @@ describe('fmt', function() {
   it('formata negativo', function() { expect(fmt(-50)).toContain('-'); });
   it('formata 50.50 corretamente', function() { expect(fmt(50.5)).toContain('50,50'); });
   it('formata 1234.56 preserva centavos', function() { expect(fmt(1234.56)).toContain('1.234,56'); });
+});
+
+// ---------------------------------------------------------------------------
+// formatBytes
+// ---------------------------------------------------------------------------
+describe('formatBytes', function() {
+  it('zero', function() { expect(formatBytes(0)).toBe('0 B'); });
+  it('null vira 0 B', function() { expect(formatBytes(null)).toBe('0 B'); });
+  it('bytes puros', function() { expect(formatBytes(512)).toBe('512 B'); });
+  it('kilobytes', function() { expect(formatBytes(1024)).toBe('1 KB'); });
+  it('megabytes com 1 decimal', function() { expect(formatBytes(1572864)).toBe('1.5 MB'); });
+  it('gigabytes', function() { expect(formatBytes(1073741824)).toBe('1 GB'); });
+  it('arredonda 1 casa', function() { expect(formatBytes(1234567)).toBe('1.2 MB'); });
+  it('sempre string', function() { expect(typeof formatBytes(2048)).toBe('string'); });
+});
+
+// ---------------------------------------------------------------------------
+// dbUsage
+// ---------------------------------------------------------------------------
+describe('dbUsage', function() {
+  it('percentual correto', function() { expect(dbUsage(250 * 1024 * 1024, 500 * 1024 * 1024).pct).toBe(50); });
+  it('verde abaixo de 70%', function() { expect(dbUsage(100, 1000).color).toBe('#16a34a'); });
+  it('ambar entre 70 e 90%', function() { expect(dbUsage(800, 1000).color).toBe('#d97706'); });
+  it('vermelho acima de 90%', function() { expect(dbUsage(950, 1000).color).toBe('#dc2626'); });
+  it('clampa em 100%', function() { expect(dbUsage(2000, 1000).pct).toBe(100); });
+  it('limite zero nao quebra', function() { expect(dbUsage(100, 0).pct).toBe(0); });
+  it('nivel ok abaixo de 70', function() { expect(dbUsage(100, 1000).level).toBe('ok'); });
+  it('nivel critico acima de 90', function() { expect(dbUsage(950, 1000).level).toBe('critical'); });
 });
 
 // ---------------------------------------------------------------------------

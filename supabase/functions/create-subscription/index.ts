@@ -76,6 +76,29 @@ function activeSubscriptionOf(subs) {
   return null;
 }
 
+// Resolve o Price: se o cliente tem preco customizado (desconto do admin), cria/reaproveita
+// um Price especifico por (plano + valor + cliente). lookup_key inclui o valor, entao mudar
+// o desconto gera um novo Price automaticamente, sem transfer_lookup_key.
+async function resolvePriceId(stripe, planId, customCents, userId) {
+  if (customCents && customCents > 0) {
+    const short = String(userId).replace(/-/g, '').slice(0, 12);
+    const lookupKey = 'financia_' + planId + '_c' + customCents + '_' + short;
+    const found = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
+    if (found && found.data && found.data.length > 0) return found.data[0].id;
+    const productId = await findOrCreateProduct(stripe, planId);
+    const price = await stripe.prices.create({
+      currency: 'brl',
+      unit_amount: customCents,
+      recurring: { interval: 'month' },
+      product: productId,
+      lookup_key: lookupKey,
+      metadata: { plan_id: planId, custom_for: userId },
+    });
+    return price.id;
+  }
+  return findOrCreatePrice(stripe, planId);
+}
+
 Deno.serve(async function (req) {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -112,10 +135,19 @@ Deno.serve(async function (req) {
       return jsonResponse(400, { error: 'invalid_plan' });
     }
 
+    // Preco customizado (desconto manual do admin) do proprio usuario, se houver.
+    let customCents = 0;
+    try {
+      const prof = await supabase.from('company_profiles').select('custom_price_cents').eq('user_id', user.id).maybeSingle();
+      if (prof && prof.data && prof.data.custom_price_cents) customCents = prof.data.custom_price_cents;
+    } catch (profErr) {
+      customCents = 0;
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
     const customer = await findOrCreateCustomer(stripe, user.email, user.id);
     const customerId = customer.id;
-    const priceId = await findOrCreatePrice(stripe, planId);
+    const priceId = await resolvePriceId(stripe, planId, customCents, user.id);
 
     // 1) Ja existe assinatura ativa? Entao MUDA de plano (upgrade/downgrade), sem duplicar.
     const subsList = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 });

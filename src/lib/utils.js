@@ -139,6 +139,33 @@ export const cleanNumeric = function(raw, opts) {
   return { value: clean, invalid: invalid };
 };
 
+// Tamanho legivel de bytes (B / KB / MB / GB) com no maximo 1 casa decimal.
+export const formatBytes = function(n) {
+  var b = Number(n) || 0;
+  if (b < 1024) return b + ' B';
+  var units = ['KB', 'MB', 'GB', 'TB'];
+  var i = -1;
+  do { b = b / 1024; i++; } while (b >= 1024 && i < units.length - 1);
+  var rounded = Math.round(b * 10) / 10;
+  var str = (rounded % 1 === 0) ? String(rounded) : rounded.toFixed(1);
+  return str + ' ' + units[i];
+};
+
+// Uso do banco vs limite: percentual + cor/nivel (verde<70, ambar 70-90, vermelho>=90).
+// Serve para o admin saber quando otimizar ou aumentar o plano do Supabase.
+export const dbUsage = function(bytes, limitBytes) {
+  var lim = Number(limitBytes) || 0;
+  var used = Number(bytes) || 0;
+  var pct = lim > 0 ? Math.round((used / lim) * 100) : 0;
+  if (pct > 100) pct = 100;
+  if (pct < 0) pct = 0;
+  var color = '#16a34a';
+  var level = 'ok';
+  if (pct >= 90) { color = '#dc2626'; level = 'critical'; }
+  else if (pct >= 70) { color = '#d97706'; level = 'warn'; }
+  return { pct: pct, color: color, level: level };
+};
+
 export const validPhone = function(s) {
   const digits = String(s || '').replace(/\D/g, '');
   return digits.length >= 10 && digits.length <= 13;

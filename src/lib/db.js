@@ -175,6 +175,38 @@ export const fetchClientUsage = async function() {
   } catch (_) { return {}; }
 };
 
+/* Tamanho do banco + maiores tabelas (admin). { db_bytes, tables:[{name,bytes}] } ou null */
+export const fetchDbStats = async function() {
+  try {
+    const { data, error } = await sb.rpc('admin_db_stats');
+    if (error) return null;
+    return data || null;
+  } catch (_) { return null; }
+};
+
+/* Saldo real Stripe + MRR estimado (admin). { available_cents, pending_cents, mrr_cents, active_count } ou null */
+export const fetchStripeOverview = async function() {
+  try {
+    const res = await sb.functions.invoke('admin-stripe-overview', { body: {} });
+    if (res && res.error) return null;
+    return res && res.data && !res.data.error ? res.data : null;
+  } catch (_) { return null; }
+};
+
+/* Define/limpa o preco customizado de um cliente (centavos; null limpa). Aplica na assinatura ativa se houver. */
+export const setClientCustomPrice = async function(targetUserId, cents) {
+  try {
+    const res = await sb.functions.invoke('admin-set-custom-price', { body: { target_user_id: targetUserId, cents: cents } });
+    if (res && res.error) {
+      var detail = res.data && res.data.error ? res.data.error : 'erro';
+      return { ok: false, error: detail };
+    }
+    var d = res && res.data ? res.data : {};
+    if (d.error) return { ok: false, error: d.error };
+    return { ok: true, applied: !!d.applied };
+  } catch (_) { return { ok: false, error: 'rede' }; }
+};
+
 /* v2 — usa RPC SECURITY DEFINER que deleta auth.users tambem */
 export const deleteClient = async function(uid) {
   try {

@@ -69,6 +69,25 @@ export const waLink = function(msg) {
   return 'https://wa.me/' + WHATSAPP + (msg ? '?text=' + encodeURIComponent(msg) : '');
 };
 
+// Link wa.me para o telefone de UM cliente especifico (contato direto do admin).
+// Telefone invalido/curto -> '' (front esconde o botao).
+export const waLinkTo = function(phone, msg) {
+  var digits = String(phone == null ? '' : phone).replace(/\D/g, '');
+  if (digits.length < 10) return '';
+  return 'https://wa.me/' + digits + (msg ? '?text=' + encodeURIComponent(msg) : '');
+};
+
+// Preco a EXIBIR para um plano, considerando preco customizado (desconto do admin).
+// customCents em centavos; quando >0, sobrescreve o preco de tabela.
+export const displayPlanPrice = function(planPrice, customCents) {
+  var base = Number(planPrice) || 0;
+  var cents = Number(customCents);
+  if (cents && cents > 0) {
+    return { value: cents / 100, custom: true, original: base };
+  }
+  return { value: base, custom: false, original: base };
+};
+
 // Pacote de personalizacao (white-label) — pagamento unico.
 // Cliente recebe o app com a logo, nome, cores e interface da empresa dele,
 // entregue para Android (APK) e Windows (.exe). Sem homologacao iOS no momento.

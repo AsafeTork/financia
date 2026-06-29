@@ -23,7 +23,7 @@ function ctaLabel(kind, plan) {
   return 'Seu plano atual';
 }
 
-function PlanCard({ plan, brand, cta, onAction }) {
+function PlanCard({ plan, brand, cta, onAction, open, onToggle }) {
   var popular = !!plan.popular;
   var isFree = plan.id === 'free';
   var priceNote = isFree ? 'grátis para sempre, sem cartão' : 'cobrado mensalmente, cancele quando quiser';
@@ -38,13 +38,17 @@ function PlanCard({ plan, brand, cta, onAction }) {
           Mais escolhido
         </span>
       )}
-      <div className="flex items-start justify-between gap-2">
+      <button type="button" onClick={onToggle} aria-expanded={open}
+        className="flex items-start justify-between gap-2 text-left w-full min-h-[44px]">
         <div className="min-w-0">
           <p className="font-display text-lg font-semibold truncate" style={{color:'var(--text-main)'}}>{plan.name}</p>
           <p className="text-xs mt-0.5" style={{color:'var(--text-sub)'}}>{plan.tagline}</p>
         </div>
-        {current && <span className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0" style={{background:'var(--brand-soft)', color: brand.color}}>Seu plano</span>}
-      </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {current && <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{background:'var(--brand-soft)', color: brand.color}}>Seu plano</span>}
+          <svg className="w-4 h-4 transition-transform" style={{transform: open ? 'rotate(180deg)' : 'none', color:'var(--text-sub)'}} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </button>
 
       <div>
         <div className="flex items-end gap-1">
@@ -56,6 +60,7 @@ function PlanCard({ plan, brand, cta, onAction }) {
         <p className="text-xs mt-1.5" style={{color:'var(--text-sub)'}}>{priceNote}</p>
       </div>
 
+      {open && (
       <div className="flex flex-col gap-2">
         {plan.features.map(function(f) {
           var ladder = f.indexOf('Tudo do') === 0;
@@ -75,6 +80,7 @@ function PlanCard({ plan, brand, cta, onAction }) {
           );
         })}
       </div>
+      )}
 
       {current && (
         <div className="mt-1 text-center text-sm font-semibold px-4 py-3 rounded-xl min-h-[44px] flex items-center justify-center" style={{background:'var(--brand-soft)', color: brand.color}}>Seu plano atual</div>
@@ -118,6 +124,10 @@ export default function PlansView({ brand, planInfo, toast, onNav }) {
   var cancellingState = useState(false);
   var cancelling = cancellingState[0];
   var setCancelling = cancellingState[1];
+  var openState = useState(plan && plan !== 'free' ? plan : 'pro');
+  var openPlan = openState[0];
+  var setOpenPlan = openState[1];
+  var customCents = planInfo && planInfo.custom_price_cents ? planInfo.custom_price_cents : 0;
   var wlState = useState(false);
   var wlOpen = wlState[0];
   var setWlOpen = wlState[1];
@@ -166,9 +176,22 @@ export default function PlansView({ brand, planInfo, toast, onNav }) {
         sub="Escolha o plano ou tenha o app com a cara da sua empresa"
       />
 
+      {customCents > 0 && (
+        <div className="rounded-2xl p-4 flex items-center gap-3" style={{background:'var(--brand-soft)', border:'1px solid var(--border)'}}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{background: brand.color}}>
+            <svg className="w-5 h-5" fill="none" stroke="#ffffff" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6M9.5 9h.01M14.5 15h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold" style={{color: brand.color}}>Você tem um preço especial</p>
+            <p className="text-xs" style={{color:'var(--text-sub)'}}>Combinado com você: <b>{fmt(customCents / 100)}/mês</b> no plano que assinar.</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3">
         {PRICING_PLANS.map(function(p) {
-          return <PlanCard key={p.id} plan={p} brand={brand} cta={planChangeCta(plan, p.id)} onAction={handleAction}/>;
+          return <PlanCard key={p.id} plan={p} brand={brand} cta={planChangeCta(plan, p.id)} onAction={handleAction}
+            open={openPlan === p.id} onToggle={function() { setOpenPlan(openPlan === p.id ? null : p.id); }}/>;
         })}
       </div>
 

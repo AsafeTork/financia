@@ -1,9 +1,24 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { Card, Empty, Skeleton } from '../components/ui.jsx';
 import { sb } from '../lib/supabase.js';
-import { triggerApkBuild, fetchClients, deleteClient, clearClientData, fetchClientUsage } from '../lib/db.js';
-import { genPwd, luminance, lightenHex, fmtDate } from '../lib/utils.js';
-import { GH_REPO, effectivePlan, PRICING_PLANS, countsAsRevenue, isAdminGranted } from '../lib/constants.js';
+import { triggerApkBuild, fetchClients, deleteClient, clearClientData, fetchClientUsage, fetchDbStats, fetchStripeOverview } from '../lib/db.js';
+import { genPwd, luminance, lightenHex, fmtDate, formatBytes, dbUsage } from '../lib/utils.js';
+import { GH_REPO, effectivePlan, PRICING_PLANS, countsAsRevenue, isAdminGranted, waLinkTo } from '../lib/constants.js';
+
+// Limite de armazenamento do plano Supabase (free = 500 MB). Base do alerta de uso.
+var DB_LIMIT_BYTES = 500 * 1024 * 1024;
+
+// Cabecalho de secao com barra/icone colorido — organiza o painel por cores e posicao.
+function SectionHead({ color, icon, title, right }) {
+  return (
+    <div className="flex items-center gap-2 mb-2.5">
+      <span className="w-1.5 h-5 rounded-full flex-shrink-0" style={{background: color}}/>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d={icon}/></svg>
+      <p className="text-xs font-bold uppercase tracking-wide flex-1" style={{color:'var(--text-muted)'}}>{title}</p>
+      {right}
+    </div>
+  );
+}
 import ClientEditModal from './ClientEditModal.jsx';
 
 export default function AdminPanel({ toast, confirm, session }) {
@@ -22,6 +37,9 @@ export default function AdminPanel({ toast, confirm, session }) {
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('all');
   const [usage, setUsage] = useState({});
+  const [stripeOv, setStripeOv] = useState(null);
+  const [dbStats, setDbStats] = useState(null);
+  const [loadingFin, setLoadingFin] = useState(true);
   const logoRef = useRef();
 
   const reload = function() {
@@ -30,6 +48,20 @@ export default function AdminPanel({ toast, confirm, session }) {
     });
   };
   useEffect(function() { reload(); }, [done]);
+
+  // Painel financeiro/infra (admin): saldo real Stripe + uso do banco. Carrega uma vez.
+  useEffect(function() {
+    var alive = true;
+    setLoadingFin(true);
+    Promise.all([fetchStripeOverview(), fetchDbStats()]).then(function(res) {
+      if (!alive) return;
+      setStripeOv(res[0]); setDbStats(res[1]); setLoadingFin(false);
+    }).catch(function() {
+      if (!alive) return;
+      setLoadingFin(false);
+    });
+    return function() { alive = false; };
+  }, []);
 
   const priceOf = function(id) { var p = PRICING_PLANS.find(function(x) { return x.id === id; }); return p ? p.price : 0; };
   const nowMonth = new Date().toISOString().slice(0, 7);
@@ -48,8 +80,15 @@ export default function AdminPanel({ toast, confirm, session }) {
     return a;
   }, { total: 0, pagantes: 0, cortesia: 0, premium: 0, free: 0, addon: 0, novos: 0, mrr: 0 });
   var mrr = stats.mrr;
-  var moneyBR = function(v) { return 'R$ ' + v.toFixed(2).replace('.', ','); };
+  var moneyBR = function(v) { return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ','); };
+  var centsBR = function(c) { return moneyBR((Number(c) || 0) / 100); };
   const wlClients = clients.filter(function(c) { return !!c.white_label; });
+
+  // Derivados do painel financeiro/infra.
+  var dbBytes = dbStats && dbStats.db_bytes ? dbStats.db_bytes : 0;
+  var dbu = dbUsage(dbBytes, DB_LIMIT_BYTES);
+  var dbTables = dbStats && dbStats.tables ? dbStats.tables : [];
+  var maxTableBytes = dbTables.reduce(function(m, t) { return t.bytes > m ? t.bytes : m; }, 1);
 
   const visibleClients = clients.filter(function(c) {
     if (planFilter !== 'all' && effectivePlan(c) !== planFilter) return false;
@@ -184,8 +223,82 @@ export default function AdminPanel({ toast, confirm, session }) {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* === FINANCEIRO (Stripe) — azul === */}
+      <div className="rounded-2xl p-4" style={{background:'var(--bg-card)', border:'1px solid var(--border)', borderTop:'3px solid #2563eb'}}>
+        <SectionHead color="#2563eb" title="Financeiro — Stripe"
+          icon="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          right={loadingFin ? <span className="text-[11px]" style={{color:'var(--text-muted)'}}>carregando...</span> : null}/>
+        {loadingFin ? (
+          <div className="grid grid-cols-2 gap-2">{[0,1,2,3].map(function(i) { return <Skeleton key={i} h={58} r={12}/>; })}</div>
+        ) : stripeOv ? (
+          <React.Fragment>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                ['Saldo disponível', centsBR(stripeOv.available_cents), '#16a34a', 'quantia real, pronta para saque'],
+                ['A caminho', centsBR(stripeOv.pending_cents), '#2563eb', 'liberando nos próximos dias'],
+                ['Receita/mês (estimada)', centsBR(stripeOv.mrr_cents), '#7c3aed', 'soma das assinaturas ativas'],
+                ['Assinaturas ativas', String(stripeOv.active_count), '#0f766e', 'pagantes recorrentes na Stripe'],
+              ].map(function(kv) {
+                return (
+                  <div key={kv[0]} className="rounded-xl p-3" style={{background:'var(--bg-subtle)', border:'1px solid var(--border)'}}>
+                    <p className="text-[11px]" style={{color:'var(--text-muted)'}}>{kv[0]}</p>
+                    <p className="text-lg font-extrabold tabular mt-0.5" style={{color: kv[2]}}>{kv[1]}</p>
+                    <p className="text-[10px] mt-0.5" style={{color:'var(--text-muted)'}}>{kv[3]}</p>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[11px] mt-2" style={{color:'var(--text-muted)'}}>O saque para sua conta/chave PIX é feito no painel da Stripe (o app não move o dinheiro por segurança).{stripeOv.truncated ? ' Mostrando as 100 primeiras assinaturas.' : ''}</p>
+          </React.Fragment>
+        ) : (
+          <p className="text-xs" style={{color:'var(--text-muted)'}}>Não foi possível carregar o saldo da Stripe agora. Verifique a configuração da chave ou tente recarregar.</p>
+        )}
+      </div>
+
+      {/* === BANCO DE DADOS — cor pelo nivel de uso === */}
+      <div className="rounded-2xl p-4" style={{background:'var(--bg-card)', border:'1px solid var(--border)', borderTop:'3px solid ' + dbu.color}}>
+        <SectionHead color={dbu.color} title="Banco de dados"
+          icon="M4 7v10c0 1.105 3.582 2 8 2s8-.895 8-2V7M4 7c0 1.105 3.582 2 8 2s8-.895 8-2M4 7c0-1.105 3.582-2 8-2s8 .895 8 2m0 5c0 1.105-3.582 2-8 2s-8-.895-8-2"
+          right={dbStats ? <span className="text-[11px] font-bold tabular" style={{color: dbu.color}}>{dbu.pct}%</span> : null}/>
+        {loadingFin && !dbStats ? (
+          <Skeleton h={64} r={12}/>
+        ) : dbStats ? (
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-end justify-between">
+              <p className="text-lg font-extrabold tabular" style={{color:'var(--text-main)'}}>{formatBytes(dbBytes)}</p>
+              <p className="text-xs" style={{color:'var(--text-muted)'}}>de {formatBytes(DB_LIMIT_BYTES)} (Supabase free)</p>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden" style={{background:'var(--bg-subtle)'}}>
+              <div className="h-full rounded-full transition-all" style={{width: dbu.pct + '%', background: dbu.color}}/>
+            </div>
+            {dbu.level !== 'ok' && (
+              <p className="text-[11px] font-semibold" style={{color: dbu.color}}>
+                {dbu.level === 'critical' ? 'Crítico — otimize tabelas ou aumente o plano do Supabase.' : 'Atenção — uso alto, planeje otimização ou upgrade.'}
+              </p>
+            )}
+            <div className="flex flex-col gap-1">
+              {dbTables.slice(0, 5).map(function(t) {
+                var w = Math.max(4, Math.round((t.bytes / maxTableBytes) * 100));
+                return (
+                  <div key={t.name} className="flex items-center gap-2">
+                    <span className="text-[11px] truncate flex-shrink-0" style={{color:'var(--text-sub)', width:96}}>{t.name}</span>
+                    <div className="h-1.5 rounded-full flex-1 overflow-hidden" style={{background:'var(--bg-subtle)'}}>
+                      <div className="h-full rounded-full" style={{width: w + '%', background:'var(--brand, #2563eb)'}}/>
+                    </div>
+                    <span className="text-[10px] tabular flex-shrink-0" style={{color:'var(--text-muted)', width:64, textAlign:'right'}}>{formatBytes(t.bytes)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs" style={{color:'var(--text-muted)'}}>Não foi possível ler o tamanho do banco agora.</p>
+        )}
+      </div>
+
       <div>
-        <p className="text-xs font-bold uppercase tracking-wide mb-2.5" style={{color:'var(--text-muted)'}}>Visão geral</p>
+        <SectionHead color="#0f766e" title="Visão geral"
+          icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
           {[['Clientes', String(stats.total), false], ['Pagantes', String(stats.pagantes), false], ['Free', String(stats.free), false], ['Receita/mês', moneyBR(mrr), true]].map(function(kv) {
             var hl = kv[2];
@@ -245,10 +358,9 @@ export default function AdminPanel({ toast, confirm, session }) {
         )}
 
         <div className="rounded-2xl p-3 mb-1" style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
-          <div className="flex items-center justify-between mb-2.5">
-            <p className="text-xs font-bold uppercase tracking-wide" style={{color:'var(--text-muted)'}}>Clientes</p>
-            <span className="text-xs" style={{color:'var(--text-muted)'}}>{visibleClients.length} de {clients.length}</span>
-          </div>
+          <SectionHead color="#0ea5e9" title="Clientes"
+            icon="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-3-6.7"
+            right={<span className="text-xs" style={{color:'var(--text-muted)'}}>{visibleClients.length} de {clients.length}</span>}/>
           <div className="relative mb-2">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="Buscar por nome, email ou ID..." className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
@@ -290,6 +402,12 @@ export default function AdminPanel({ toast, confirm, session }) {
                           </div>
                           <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0, 8)}{c.updated_at ? ' · ativo ' + fmtDate(String(c.updated_at).slice(0, 10)) : ''}</p>
                         </div>
+                        {waLinkTo(c.phone, 'Olá! Aqui é da equipe Financia.') && (
+                          <a href={waLinkTo(c.phone, 'Olá! Aqui é da equipe Financia.')} target="_blank" rel="noreferrer" aria-label="Falar no WhatsApp"
+                            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-white transition hover:opacity-90" style={{background:'#16a34a'}}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.477-.913z"/></svg>
+                          </a>
+                        )}
                       </div>
                       {usage[c.user_id] && (
                         <div className="flex items-center gap-3 text-xs px-0.5 flex-wrap" style={{color:'var(--text-sub)'}}>
@@ -366,7 +484,7 @@ export default function AdminPanel({ toast, confirm, session }) {
       <hr style={{borderColor:'var(--border)'}}/>
 
       <div>
-        <p className="text-sm font-bold mb-3" style={{color:'var(--text-main)'}}>Novo cliente</p>
+        <SectionHead color="#16a34a" title="Novo cliente" icon="M12 4v16m8-8H4"/>
         <div className="flex flex-col gap-3">
           <div className="rounded-2xl p-4 flex flex-col gap-3" style={{background:'var(--bg-subtle)'}}>
             <div className="flex flex-col gap-1.5">

@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { sb } from '../lib/supabase.js';
-import { hexToRgb, luminance, deriveCores, lightenHex } from '../lib/utils.js';
-import { THEME_PRESETS } from '../lib/constants.js';
+import { hexToRgb, luminance, deriveCores, lightenHex, fmt } from '../lib/utils.js';
+import { THEME_PRESETS, PRICING_PLANS, effectivePlan, waLinkTo } from '../lib/constants.js';
+import { setClientCustomPrice } from '../lib/db.js';
 import { gerarPaleta } from '../lib/ai.js';
 
 function PreviewPaleta({ primary, secondary, accent }) {
@@ -78,7 +79,33 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
   var [aiSegment, setAiSegment]      = useState(client.segment || '');
   var [aiLoading, setAiLoading]      = useState(false);
   var [aiRationale, setAiRationale]  = useState('');
+  var [customReais, setCustomReais]  = useState(client.custom_price_cents ? String((client.custom_price_cents / 100).toFixed(2)).replace('.', ',') : '');
+  var [priceSaving, setPriceSaving]  = useState(false);
   var fileRef = useRef();
+
+  var planMeta = PRICING_PLANS.filter(function(p) { return p.id === effectivePlan(client); })[0] || PRICING_PLANS[0];
+  var clientWa = waLinkTo(client.phone, 'Olá! Aqui é da equipe Financia. Posso ajudar?');
+
+  var applyCustomPrice = async function() {
+    var raw = String(customReais).replace(/\s/g, '').replace(',', '.').trim();
+    var cents = raw ? Math.round(parseFloat(raw) * 100) : null;
+    if (raw && (isNaN(cents) || cents < 0)) { toast('Valor inválido.', 'error'); return; }
+    setPriceSaving(true);
+    var res = await setClientCustomPrice(client.user_id, cents);
+    setPriceSaving(false);
+    if (!res.ok) { toast('Erro ao salvar preço: ' + res.error, 'error'); return; }
+    if (!cents) { toast('Desconto removido.'); return; }
+    toast(res.applied ? 'Preço aplicado — vale no próximo ciclo.' : 'Preço salvo — vale ao assinar/trocar de plano.');
+  };
+
+  var clearCustomPrice = async function() {
+    setPriceSaving(true);
+    var res = await setClientCustomPrice(client.user_id, null);
+    setPriceSaving(false);
+    if (!res.ok) { toast('Erro ao remover: ' + res.error, 'error'); return; }
+    setCustomReais('');
+    toast('Desconto removido.');
+  };
 
   var runAI = async function() {
     setAiLoading(true);
@@ -230,6 +257,14 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             <input value={name} onChange={function(e) { setName(e.target.value); }}
               className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-gray-400" style={{background:'var(--bg-input)', color:'var(--text-main)'}}/>
           </div>
+
+          {clientWa && (
+            <a href={clientWa} target="_blank" rel="noreferrer"
+              className="w-full rounded-xl py-2.5 min-h-[44px] text-sm font-semibold text-white flex items-center justify-center gap-2 transition hover:opacity-90" style={{background:'#16a34a'}}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.477-.913z"/></svg>
+              Falar no WhatsApp
+            </a>
+          )}
 
           {!client.white_label && (
             <div className="rounded-xl p-3 text-xs" style={{background:'var(--bg-subtle)', border:'1px solid var(--border)', color:'var(--text-sub)'}}>
@@ -411,6 +446,37 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
                   : 'Pago via Stripe — conta como receita.'}
               </p>
             )}
+          </div>
+
+          {/* Preço / desconto customizado */}
+          <div className="flex flex-col gap-2 rounded-xl p-3" style={{border:'1px solid #fde68a', background:'#fffbeb'}}>
+            <div className="flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14l6-6M9.5 9h.01M14.5 15h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <p className="text-xs font-bold" style={{color:'#92400e'}}>Preço customizado (desconto)</p>
+            </div>
+            <p className="text-xs" style={{color:'#92400e'}}>
+              Valor de tabela do plano {planMeta.name}: <b>{fmt(planMeta.price)}</b>/mês. Defina um valor menor só para este cliente. Aplica ao assinar/trocar e, se já houver assinatura ativa, no próximo ciclo.
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold" style={{color:'#92400e'}}>R$</span>
+              <input value={customReais}
+                onChange={function(e) { setCustomReais(e.target.value.replace(/[^0-9.,]/g, '')); }}
+                placeholder="ex: 29,90" inputMode="decimal"
+                className="border rounded-xl px-3 py-2 text-sm font-mono flex-1 focus:outline-none" style={{background:'var(--bg-input)', color:'var(--text-main)', borderColor:'#fde68a'}}/>
+              <span className="text-xs" style={{color:'#92400e'}}>/mês</span>
+            </div>
+            <div className="flex gap-2">
+              {client.custom_price_cents && (
+                <button onClick={clearCustomPrice} disabled={priceSaving}
+                  className="flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold border disabled:opacity-50" style={{borderColor:'#fca5a5', color:'#dc2626', background:'var(--bg-card)'}}>
+                  Remover desconto
+                </button>
+              )}
+              <button onClick={applyCustomPrice} disabled={priceSaving}
+                className="flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold text-white disabled:opacity-50 hover:opacity-90 transition" style={{background:'#d97706'}}>
+                {priceSaving ? 'Salvando...' : 'Aplicar preço'}
+              </button>
+            </div>
           </div>
 
         </div>
