@@ -21,7 +21,8 @@ export const limitFor = function(p, kind) { return PLAN_LIMITS[effectivePlan(p)]
 export const atLimit = function(p, kind, count) { return count >= limitFor(p, kind); };
 
 // Plano dado MANUALMENTE pelo admin: set_client_plan grava plan_activated_by = email
-// do admin (c_actor). O webhook Stripe (stripe_activate_plan) grava o uuid do usuario.
+// do admin (c_actor). O webhook Stripe (stripe_activate_plan) grava 'stripe'. Ambos os
+// marcadores de pagamento (stripe/uuid) nao tem "@"; so o email do admin tem.
 // Logo: plan_activated_by com "@" => cortesia do admin (nao e receita).
 export const isAdminGranted = function(p) {
   return !!(p && p.plan_activated_by && String(p.plan_activated_by).indexOf('@') !== -1);
