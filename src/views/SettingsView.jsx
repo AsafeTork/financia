@@ -7,6 +7,8 @@ import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
 import InstallButton from '../components/InstallButton.jsx';
 import UpdateCardModal from '../components/UpdateCardModal.jsx';
+import CardPreview from '../components/CardPreview.jsx';
+import { sb } from '../lib/supabase.js';
 
 export default function SettingsView({ brand, session, planInfo, onSave, onSavePhone, toast, confirm, isAdmin, onNav }) {
   var [tab, setTab] = useState(function() {
@@ -23,6 +25,9 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
   var [pwForm, setPwForm] = useState({newPw:'', confirm:''});
   var [pwSaving, setPwSaving] = useState(false);
   var [cardOpen, setCardOpen] = useState(false);
+  var [savedCard, setSavedCard] = useState(null);
+  var [cardLoading, setCardLoading] = useState(true);
+  var [cardReload, setCardReload] = useState(0);
   var planId = effectivePlan(planInfo || {});
   var planMeta = PRICING_PLANS.filter(function(p) { return p.id === planId; })[0] || PRICING_PLANS[0];
   var [phoneData, setPhoneData] = useState(function() { var p = parsePhone(brand.phone); return buildPhone(p.iso, p.digits); });
@@ -36,6 +41,24 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
       setTab('account');
     }
   }, [isAdmin]);
+
+  // Busca o cartao salvo ao abrir a aba Assinatura (e apos trocar/remover).
+  React.useEffect(function() {
+    if (tab !== 'subscription') return;
+    var alive = true;
+    setCardLoading(true);
+    sb.functions.invoke('get-payment-method', { body: {} }).then(function(result) {
+      if (!alive) return;
+      var data = result && result.data ? result.data : null;
+      setSavedCard(data && data.card ? data.card : null);
+      setCardLoading(false);
+    }).catch(function() {
+      if (!alive) return;
+      setSavedCard(null);
+      setCardLoading(false);
+    });
+    return function() { alive = false; };
+  }, [tab, cardReload]);
 
   const savePhone = async function() {
     setPhoneSaving(true);
@@ -82,10 +105,8 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
   var subActions = [
     { label:'Gerenciar plano', desc:'Escolha entre Grátis, Pro e Premium', icon:'M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z', act:function() { if (onNav) onNav('planos'); } },
   ];
-  // Trocar cartao so faz sentido com assinatura paga ativa.
-  if (planId !== 'free') {
-    subActions.push({ label:'Atualizar forma de pagamento', desc:'Trocar o cartão da assinatura', icon:'M3 10h18M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z', act:function() { setCardOpen(true); } });
-  }
+  // Secao de forma de pagamento aparece em planos pagos ou se ja existe cartao salvo.
+  var showPayment = planId !== 'free' || !!savedCard;
 
   const allTabs = [{key:'account',label:'Conta'}, {key:'subscription',label:'Assinatura'}];
   if (hasWhiteLabel) allTabs.push({key:'appearance',label:'Aparência'});
@@ -194,11 +215,39 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
               );
             })}
           </div>
+
+          {showPayment && (
+            <div className="flex flex-col gap-3 pt-1">
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{color:'var(--text-muted)'}}>Forma de pagamento</p>
+              {cardLoading ? (
+                <div className="skeleton" style={{height:56}}/>
+              ) : savedCard ? (
+                <div className="flex flex-col gap-2">
+                  <CardPreview card={savedCard} brand={brand}/>
+                  <button onClick={function() { setCardOpen(true); }}
+                    className="w-full text-sm font-semibold px-4 py-3 rounded-xl border transition hover:opacity-80 min-h-[44px] flex items-center justify-center gap-2"
+                    style={{borderColor:'var(--border)', color: brand.color}}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+                    Atualizar forma de pagamento
+                  </button>
+                </div>
+              ) : (
+                <button onClick={function() { setCardOpen(true); }}
+                  className="w-full text-sm font-semibold px-4 py-3 rounded-xl text-white transition hover:opacity-90 min-h-[44px] flex items-center justify-center gap-2"
+                  style={{background: brand.color}}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+                  Adicionar forma de pagamento
+                </button>
+              )}
+            </div>
+          )}
         </Card>
       )}
 
       {cardOpen && (
-        <UpdateCardModal brand={brand} toast={toast} onClose={function() { setCardOpen(false); }} />
+        <UpdateCardModal brand={brand} toast={toast}
+          onChanged={function() { setCardReload(function(k) { return k + 1; }); }}
+          onClose={function() { setCardOpen(false); setCardReload(function(k) { return k + 1; }); }} />
       )}
 
       {tab === 'appearance' && hasWhiteLabel && (

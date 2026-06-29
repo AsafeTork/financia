@@ -45,6 +45,9 @@ var PAYMENT_ERROR_MESSAGES = {
   no_client_secret: 'Não foi possível iniciar a cobrança. Tente de novo em instantes.',
   no_setup_secret: 'Não foi possível iniciar a atualização do cartão. Tente de novo em instantes.',
   no_payment_method: 'Cartão não informado. Preencha os dados e tente de novo.',
+  no_customer: 'Não encontramos seu cadastro de pagamento. Assine um plano primeiro.',
+  payment_failed: 'O pagamento não foi aprovado. Verifique o cartão e tente de novo.',
+  subscription_without_item: 'Sua assinatura está inconsistente. Fale com o suporte.',
 };
 
 var DEFAULT_PAYMENT_ERROR = 'Não foi possível iniciar o pagamento. Tente de novo.';
@@ -71,6 +74,22 @@ export function readFnErrorMessage(result, data) {
   return ctx.json()
     .then(function(b) { return (b && b.error) ? b.error : (err.message || ''); })
     .catch(function() { return err.message || ''; });
+}
+
+// Bandeiras conhecidas da Stripe -> rotulo amigavel. Demais sao capitalizadas.
+var CARD_BRANDS = {
+  visa: 'Visa', mastercard: 'Mastercard', amex: 'Amex', elo: 'Elo',
+  hipercard: 'Hipercard', discover: 'Discover', diners: 'Diners',
+  jcb: 'JCB', unionpay: 'UnionPay',
+};
+
+// Rotulo SEGURO do cartao salvo: "Bandeira •••• 1234". Sem brand ou last4 -> ''.
+// Nunca expoe o numero completo (so os 4 finais que a Stripe ja devolve).
+export function formatCardLabel(card) {
+  if (!card || !card.brand || !card.last4) return '';
+  var brand = CARD_BRANDS[card.brand];
+  if (!brand) brand = String(card.brand).charAt(0).toUpperCase() + String(card.brand).slice(1);
+  return brand + ' •••• ' + card.last4;
 }
 
 // Tema do Stripe Elements alinhado a identidade visual (cor da marca + fontes do app).

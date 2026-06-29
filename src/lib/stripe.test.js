@@ -1,5 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { friendlyStripeError, readFnErrorMessage } from './stripe.js';
+import { friendlyStripeError, readFnErrorMessage, formatCardLabel } from './stripe.js';
+
+// Rotulo seguro do cartao salvo: bandeira + ultimos 4. Nunca expoe o numero completo.
+describe('formatCardLabel', function() {
+  it('formata bandeira conhecida + final', function() {
+    expect(formatCardLabel({ brand: 'visa', last4: '4242' })).toBe('Visa •••• 4242');
+    expect(formatCardLabel({ brand: 'mastercard', last4: '4444' })).toBe('Mastercard •••• 4444');
+  });
+  it('bandeira desconhecida e capitalizada', function() {
+    expect(formatCardLabel({ brand: 'elo', last4: '0001' })).toBe('Elo •••• 0001');
+  });
+  it('sem cartao retorna string vazia', function() {
+    expect(formatCardLabel(null)).toBe('');
+    expect(formatCardLabel({})).toBe('');
+    expect(formatCardLabel({ brand: 'visa' })).toBe('');
+  });
+});
 
 describe('friendlyStripeError', function() {
   it('caminho feliz: mapeia codigo conhecido para mensagem amigavel', function() {

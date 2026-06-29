@@ -31,6 +31,28 @@ export const isAdminGranted = function(p) {
 export const countsAsRevenue = function(p) {
   return effectivePlan(p) !== 'free' && !isAdminGranted(p);
 };
+
+// Hierarquia dos planos (free < pro < premium) para decidir upgrade/downgrade.
+var PLAN_RANK = { free: 0, pro: 1, premium: 2 };
+export const planRank = function(planId) {
+  if (!planId) return 0;
+  var r = PLAN_RANK[planId];
+  return typeof r === 'number' ? r : 0;
+};
+
+// Decide a acao do botao de um card de plano conforme o plano ATUAL do usuario.
+// kind: 'current' (atual, desabilitado) | 'subscribe' (free -> pago) |
+//       'upgrade' (pago menor -> maior) | 'downgrade' (pago maior -> menor) |
+//       'cancel' (pago -> free). Evita oferecer "assinar" um plano inferior solto.
+export const planChangeCta = function(currentId, targetId) {
+  var current = planRank(currentId);
+  var target = planRank(targetId);
+  if (currentId === targetId || current === target) return { kind: 'current', disabled: true };
+  if (targetId === 'free') return { kind: 'cancel', disabled: false };
+  if (current === 0) return { kind: 'subscribe', disabled: false };
+  if (target > current) return { kind: 'upgrade', disabled: false };
+  return { kind: 'downgrade', disabled: false };
+};
 export const PLAN_KIND_LABEL = { transactions: 'transacoes', products: 'produtos', losses: 'perdas' };
 
 export const GH_REPO = 'AsafeTork/financia';

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Card, PageHead } from '../components/ui.jsx';
-import { PRICING_PLANS, WHITELABEL, waLink, effectivePlan } from '../lib/constants.js';
+import { Card, PageHead, Modal } from '../components/ui.jsx';
+import { PRICING_PLANS, WHITELABEL, waLink, effectivePlan, planChangeCta } from '../lib/constants.js';
 import { fmt } from '../lib/utils.js';
+import { sb } from '../lib/supabase.js';
+import { friendlyStripeError, readFnErrorMessage } from '../lib/stripe.js';
 import StripeCheckout from '../components/StripeCheckout.jsx';
 
 var CheckIcon = function({ color }) {
@@ -12,11 +14,21 @@ var CheckIcon = function({ color }) {
   );
 };
 
-function PlanCard({ plan, brand, current, onSubscribe }) {
+// Texto do botao conforme a acao decidida por planChangeCta.
+function ctaLabel(kind, plan) {
+  if (kind === 'subscribe') return 'Assinar ' + plan.name;
+  if (kind === 'upgrade') return 'Fazer upgrade';
+  if (kind === 'downgrade') return 'Mudar para ' + plan.name;
+  if (kind === 'cancel') return 'Voltar para o Grátis';
+  return 'Seu plano atual';
+}
+
+function PlanCard({ plan, brand, cta, onAction }) {
   var popular = !!plan.popular;
-  var paid = plan.id === 'pro' || plan.id === 'premium';
   var isFree = plan.id === 'free';
   var priceNote = isFree ? 'grátis para sempre, sem cartão' : 'cobrado mensalmente, cancele quando quiser';
+  var current = cta.kind === 'current';
+  var kind = cta.kind;
 
   return (
     <Card className="p-5 flex flex-col gap-4" accent={popular} color={brand.color}>
@@ -64,17 +76,30 @@ function PlanCard({ plan, brand, current, onSubscribe }) {
         })}
       </div>
 
-      {current ? (
+      {current && (
         <div className="mt-1 text-center text-sm font-semibold px-4 py-3 rounded-xl min-h-[44px] flex items-center justify-center" style={{background:'var(--brand-soft)', color: brand.color}}>Seu plano atual</div>
-      ) : paid ? (
-        <button type="button" onClick={function() { onSubscribe(plan); }}
+      )}
+      {(kind === 'subscribe' || kind === 'upgrade') && (
+        <button type="button" onClick={function() { onAction(plan, kind); }}
           className="mt-1 w-full text-sm font-semibold px-4 py-3 rounded-xl text-white transition hover:opacity-90 min-h-[44px] flex items-center justify-center gap-2"
           style={{background: brand.color}}>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-          Assinar {plan.name}
+          {ctaLabel(kind, plan)}
         </button>
-      ) : (
-        <div className="mt-1 text-center text-xs px-4 py-3" style={{color:'var(--text-sub)'}}>Plano inicial, gratuito para sempre</div>
+      )}
+      {kind === 'downgrade' && (
+        <button type="button" onClick={function() { onAction(plan, kind); }}
+          className="mt-1 w-full text-sm font-semibold px-4 py-3 rounded-xl transition hover:opacity-80 min-h-[44px] flex items-center justify-center gap-2"
+          style={{background:'var(--brand-soft)', color: brand.color}}>
+          {ctaLabel(kind, plan)}
+        </button>
+      )}
+      {kind === 'cancel' && (
+        <button type="button" onClick={function() { onAction(plan, kind); }}
+          className="mt-1 w-full text-sm font-semibold px-4 py-3 rounded-xl border transition hover:bg-gray-50 min-h-[44px] flex items-center justify-center"
+          style={{borderColor:'var(--border)', color:'var(--text-sub)'}}>
+          {ctaLabel(kind, plan)}
+        </button>
       )}
     </Card>
   );
@@ -85,14 +110,46 @@ var WL_PLAN = { id: 'white_label', name: 'Personalização', price: WHITELABEL.p
 export default function PlansView({ brand, planInfo, toast, onNav }) {
   var plan = effectivePlan(planInfo);
   var checkoutState = useState(null);
-  var checkoutPlan = checkoutState[0];
-  var setCheckoutPlan = checkoutState[1];
+  var checkout = checkoutState[0];
+  var setCheckout = checkoutState[1];
+  var cancelState = useState(false);
+  var cancelOpen = cancelState[0];
+  var setCancelOpen = cancelState[1];
+  var cancellingState = useState(false);
+  var cancelling = cancellingState[0];
+  var setCancelling = cancellingState[1];
   var wlState = useState(false);
   var wlOpen = wlState[0];
   var setWlOpen = wlState[1];
   var hasWhiteLabel = !!(brand && brand.white_label);
   var wlMsg = 'Olá! Quero o app personalizado da minha empresa (logo, nome e cores). Pode me passar como funciona?';
   var duvidaMsg = 'Olá! Tenho uma dúvida sobre o Financia.';
+
+  // Decide o que fazer ao clicar no botao de um plano.
+  var handleAction = function(p, kind) {
+    if (kind === 'cancel') { setCancelOpen(true); return; }
+    setCheckout({ plan: p, kind: kind });
+  };
+
+  var confirmCancel = async function() {
+    setCancelling(true);
+    try {
+      var res = await sb.functions.invoke('cancel-subscription', { body: {} });
+      var data = res && res.data ? res.data : null;
+      if (!data || !data.ok) {
+        var msg = await readFnErrorMessage(res, data);
+        if (toast) toast(friendlyStripeError(msg), 'error');
+        setCancelling(false);
+        return;
+      }
+      if (toast) toast('Assinatura cancelada. Você fica no plano atual até o fim do período já pago.', 'success');
+      setCancelling(false);
+      setCancelOpen(false);
+    } catch (e) {
+      if (toast) toast('Erro ao cancelar. Tente de novo.', 'error');
+      setCancelling(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-5 pb-20 lg:pb-0">
@@ -111,13 +168,26 @@ export default function PlansView({ brand, planInfo, toast, onNav }) {
 
       <div className="flex flex-col gap-3">
         {PRICING_PLANS.map(function(p) {
-          return <PlanCard key={p.id} plan={p} brand={brand} current={plan === p.id} onSubscribe={setCheckoutPlan}/>;
+          return <PlanCard key={p.id} plan={p} brand={brand} cta={planChangeCta(plan, p.id)} onAction={handleAction}/>;
         })}
       </div>
 
-      {checkoutPlan && (
-        <StripeCheckout plan={checkoutPlan} brand={brand} toast={toast}
-          onClose={function() { setCheckoutPlan(null); }}/>
+      {checkout && (
+        <StripeCheckout plan={checkout.plan} ctaKind={checkout.kind} brand={brand} toast={toast}
+          onClose={function() { setCheckout(null); }}/>
+      )}
+
+      {cancelOpen && (
+        <Modal title="Cancelar assinatura" onClose={function() { setCancelOpen(false); }}
+          onSave={confirmCancel} saving={cancelling} saveLabel="Confirmar cancelamento"
+          color="#dc2626">
+          <p className="text-sm" style={{color:'var(--text-main)'}}>
+            Você voltará para o plano Grátis ao fim do período já pago. Seus dados continuam salvos.
+          </p>
+          <p className="text-xs mt-1" style={{color:'var(--text-muted)'}}>
+            Pode reativar quando quiser. Nenhuma cobrança nova será feita.
+          </p>
+        </Modal>
       )}
 
       {wlOpen && (
