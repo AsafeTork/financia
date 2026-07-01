@@ -4,6 +4,7 @@
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { enforceRateLimit, getAdminClient } from '../_shared/security.ts';
+import { htmlFromText, sendSystemEmail } from '../_shared/mailer.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -89,6 +90,20 @@ Deno.serve(async function (req) {
       cancel_at_period_end: true,
       metadata: { user_id: user.id },
     });
+
+    if (user.email) {
+      const cancelDate = new Date(Number(updated.current_period_end) * 1000).toLocaleDateString('pt-BR');
+      const txt =
+        'Cancelamento agendado com sucesso.' + '\n\n' +
+        'Sua assinatura continuará ativa até ' + cancelDate + '.' + '\n' +
+        'Após essa data, sua conta voltará para o plano Grátis.';
+      await sendSystemEmail({
+        to: String(user.email),
+        subject: 'Cancelamento agendado - Financia',
+        text: txt,
+        html: htmlFromText(txt),
+      });
+    }
 
     return jsonResponse(200, { ok: true, status: 'scheduled', cancel_at: updated.current_period_end });
   } catch (err) {

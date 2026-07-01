@@ -2,7 +2,7 @@
 import { Card, Inp, Spin, PageHead, Modal } from '../components/ui.jsx';
 import PhoneInput, { parsePhone, buildPhone } from '../components/PhoneInput.jsx';
 import { updatePassword, signOut as doSignOut } from '../lib/auth.js';
-import { effectivePlan, PRICING_PLANS, waLink, SUPPORT_EMAIL } from '../lib/constants.js';
+import { effectivePlan, PRICING_PLANS, waLink, SUPPORT_EMAIL, planVisualDefaults } from '../lib/constants.js';
 import AdminPanel from '../admin/AdminPanel.jsx';
 import GhTokenCard from '../admin/GhTokenCard.jsx';
 import InstallButton from '../components/InstallButton.jsx';
@@ -31,6 +31,7 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
   var [cardReload, setCardReload] = useState(0);
   var planId = effectivePlan(planInfo || {});
   var planMeta = PRICING_PLANS.filter(function(p) { return p.id === planId; })[0] || PRICING_PLANS[0];
+  var planVisual = planVisualDefaults(planInfo || {});
   var [phoneData, setPhoneData] = useState(function() { var p = parsePhone(brand.phone); return buildPhone(p.iso, p.digits); });
   var [phoneSaving, setPhoneSaving] = useState(false);
   var initParsed = parsePhone(brand.phone);
@@ -142,6 +143,8 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
   ];
   if (hasWhiteLabel) {
     subActions.push({ label:'Editar personalização', desc:'Mude logo, cores e tema quando quiser', icon:'M11 5h2m-1-1v2m0 14v-2m0 0h-2m2 0h2m-9.657-2.343l1.414-1.414m0 0a8 8 0 111.414 1.414L4.929 17.07zm13.314-10.142l-1.414 1.414', act:function() { setTab('appearance'); } });
+  } else {
+    subActions.push({ label:'Tema do plano (fixo)', desc:'Sem pacote de personalização: tema ' + (planVisual.theme === 'dark' ? 'escuro' : 'claro') + ' bloqueado para o plano ' + planMeta.name, icon:'M12 11c0 3.866-3.582 7-8 7 1.093 1.206 2.593 2 4.286 2 3.314 0 6-2.686 6-6 0-1.693-.794-3.193-2-4.286.171-.001.343-.001.514-.001 4.418 0 8-3.134 8-7 0-.714-.124-1.404-.357-2.054C18.73 2.536 16.504 4 13.95 4 12.828 4 11.767 3.716 10.84 3.214A7.022 7.022 0 0012 11z', act:function() {} });
   }
   // Secao de forma de pagamento aparece em planos pagos ou se ja existe cartao salvo.
   var showPayment = planId !== 'free' || !!savedCard;

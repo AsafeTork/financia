@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { flushSync } from 'react-dom';
 import { brandAlpha, deriveCores } from './lib/utils.js';
-import { INIT_BRAND, INIT_PLAN, atLimit, limitFor } from './lib/constants.js';
+import { INIT_BRAND, INIT_PLAN, atLimit, limitFor, planVisualDefaults } from './lib/constants.js';
 import { useTx } from './hooks/useTx.js';
 import { useProducts } from './hooks/useProducts.js';
 import { useLosses } from './hooks/useLosses.js';
@@ -65,17 +65,28 @@ export default function App() {
   const [themePref, setThemePref]       = useState(function() { try { return localStorage.getItem('financia_theme'); } catch (e) { return null; } });
   const toastId                         = useRef(0);
 
-  // Tema efetivo: preferência salva do usuário tem prioridade sobre o tema da marca.
-  var effectiveTheme = themePref || (brand && brand.theme) || 'light';
+  var hasWhiteLabel = !!(brand && brand.white_label);
+  var visualPreset = hasWhiteLabel ? null : planVisualDefaults(planInfo);
+  var appBrand = hasWhiteLabel
+    ? brand
+    : Object.assign({}, brand, {
+        color: visualPreset.color,
+        color_secondary: visualPreset.color_secondary,
+        color_accent: visualPreset.color_accent,
+        theme: visualPreset.theme,
+      });
+  // Sem white-label, o tema fica travado pelo plano.
+  var effectiveTheme = hasWhiteLabel ? (themePref || (appBrand && appBrand.theme) || 'light') : ((appBrand && appBrand.theme) || 'light');
 
   const toggleTheme = useCallback(function() {
+    if (!hasWhiteLabel) return;
     setThemePref(function(prev) {
-      var current = prev || (brand && brand.theme) || 'light';
+      var current = prev || (appBrand && appBrand.theme) || 'light';
       var next = current === 'dark' ? 'light' : 'dark';
       try { localStorage.setItem('financia_theme', next); } catch (e) {}
       return next;
     });
-  }, [brand]);
+  }, [hasWhiteLabel, appBrand]);
 
   const navTo = useCallback(function(v) {
     var go = function() { setView(v); window.location.hash = v; };
@@ -100,7 +111,7 @@ export default function App() {
     el.style.setProperty('--brand-accent-soft', brandAlpha(accent, 0.12));
     el.style.setProperty('--brand-grad', 'linear-gradient(135deg, ' + primary + ' 0%, ' + accent + ' 100%)');
   }, []);
-  useEffect(function() { applyBrandVars(brand); }, [brand]);
+  useEffect(function() { applyBrandVars(appBrand); }, [appBrand]);
 
   // data-theme aplicado separado: respeita a preferência do usuário (persistida).
   useEffect(function() {
@@ -242,39 +253,39 @@ export default function App() {
 
   var currentView = (view === 'email' && !isAdminDB) ? 'dashboard' : view;
 
-  const p = {brand:brand, toast:toast, confirm:confirm};
+  const p = {brand:appBrand, toast:toast, confirm:confirm};
   const views = {
-    dashboard: React.createElement(Dashboard, {tx:tx, products:products, brand:brand, onNav:navTo, planInfo:planInfo, lossesCount:losses.length, onUpgrade:function() { navTo('planos'); }}),
+    dashboard: React.createElement(Dashboard, {tx:tx, products:products, brand:appBrand, onNav:navTo, planInfo:planInfo, lossesCount:losses.length, onUpgrade:function() { navTo('planos'); }}),
     income:    React.createElement(TxView, Object.assign({type:'income', tx:tx, products:products, onAdd:addTx, onEdit:editTx, onDelete:deleteTx, onDeductStock:function(id,qty){adjustStock(id,-qty);}, planInfo:planInfo, onNav:navTo}, p)),
     expense:   React.createElement(TxView, Object.assign({type:'expense', tx:tx, products:products, onAdd:addTx, onEdit:editTx, onDelete:deleteTx, onDeductStock:function(){}, onAddGenerated:addGenerated, uid:uid, planInfo:planInfo, onNav:navTo}, p)),
     inventory: React.createElement(InventoryView, Object.assign({products:products, losses:losses, onAddProduct:addProduct, onEditProduct:editProduct, onDeleteProduct:deleteProduct, onAddLoss:addLoss, onEditLoss:editLoss, onDeleteLoss:deleteLoss, onAdjustStock:adjustStock, planInfo:planInfo, onNav:navTo}, p)),
-    email:     React.createElement(EmailView, {brand:brand, toast:toast}),
-    report:    React.createElement(ReportView, {tx:tx, brand:brand, toast:toast, onNav:navTo, planInfo:planInfo}),
-    settings:  React.createElement(SettingsView, {brand:brand, session:session, planInfo:planInfo, onSave:saveBrand, onSavePhone:savePhone, toast:toast, confirm:confirm, isAdmin:isAdminDB, onNav:navTo}),
-    planos:    React.createElement(PlansView, {brand:brand, planInfo:planInfo, toast:toast, onNav:navTo, isAdmin:isAdminDB}),
+    email:     React.createElement(EmailView, {brand:appBrand, toast:toast}),
+    report:    React.createElement(ReportView, {tx:tx, brand:appBrand, toast:toast, onNav:navTo, planInfo:planInfo}),
+    settings:  React.createElement(SettingsView, {brand:appBrand, session:session, planInfo:planInfo, onSave:saveBrand, onSavePhone:savePhone, toast:toast, confirm:confirm, isAdmin:isAdminDB, onNav:navTo}),
+    planos:    React.createElement(PlansView, {brand:appBrand, planInfo:planInfo, toast:toast, onNav:navTo, isAdmin:isAdminDB}),
   };
 
   return (
     <div className="min-h-screen flex overflow-x-hidden" style={{background:'var(--bg-page)'}}>
       <Offline/>
-      <UpdateBanner brand={brand}/>
+      <UpdateBanner brand={appBrand}/>
       <SyncBadge status={syncStatus}/>
-      <Sidebar view={view} onNav={navTo} brand={brand} open={sidebarOpen} isAdmin={isAdminDB} session={session} onClose={function() { setSidebarOpen(false); }}/>
+      <Sidebar view={view} onNav={navTo} brand={appBrand} open={sidebarOpen} isAdmin={isAdminDB} session={session} onClose={function() { setSidebarOpen(false); }}/>
       <div className="hidden lg:block fixed top-4 right-4 z-30">
-        <ThemeToggle theme={effectiveTheme} onToggle={toggleTheme} variant="floating"/>
+        {hasWhiteLabel && <ThemeToggle theme={effectiveTheme} onToggle={toggleTheme} variant="floating"/>}
       </div>
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 w-full">
-        <Header brand={brand} syncStatus={syncStatus} theme={effectiveTheme} onToggleTheme={toggleTheme} onMenuOpen={function() { setSidebarOpen(true); }}/>
+        <Header brand={appBrand} syncStatus={syncStatus} theme={effectiveTheme} onToggleTheme={hasWhiteLabel ? toggleTheme : null} onMenuOpen={function() { setSidebarOpen(true); }}/>
         <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto pb-24 lg:pb-8 min-w-0 overflow-x-hidden">
           <Suspense fallback={<PageSkeleton/>}>
             {views[currentView]}
           </Suspense>
         </main>
       </div>
-      <BottomNav view={view} onNav={navTo} brand={brand}/>
+      <BottomNav view={view} onNav={navTo} brand={appBrand}/>
       <Toast toasts={toasts} onDismiss={dismissToast}/>
       {confirmData && <Confirm msg={confirmData.msg} onOk={function() { confirmData.onOk(); setConfirmData(null); }} onCancel={function() { setConfirmData(null); }}/>}
-      {showUpgrade && <UpgradeModal reason={typeof showUpgrade === 'object' ? showUpgrade : null} brand={brand} onClose={function() { setShowUpgrade(false); }}/>}
+      {showUpgrade && <UpgradeModal reason={typeof showUpgrade === 'object' ? showUpgrade : null} brand={appBrand} onClose={function() { setShowUpgrade(false); }}/>}
     </div>
   );
 }

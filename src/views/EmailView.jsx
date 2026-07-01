@@ -3,6 +3,7 @@ import { Card, Inp, Textarea, PageHead } from '../components/ui.jsx';
 import { TEMPLATES } from '../lib/constants.js';
 import { brandAlpha } from '../lib/utils.js';
 import { askAI } from '../lib/aiClient.js';
+import { sb } from '../lib/supabase.js';
 
 export default function EmailView({ brand, toast }) {
   const [to, setTo] = useState('');
@@ -12,6 +13,7 @@ export default function EmailView({ brand, toast }) {
   const [copied, setCopied] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const writeWithAI = async function() {
     if (!aiPrompt.trim()) return;
@@ -36,10 +38,29 @@ export default function EmailView({ brand, toast }) {
     const t = TEMPLATES.find(function(t) { return t.id === id; });
     if (t) { setSubject(t.subject); setBody(t.body); }
   };
-  const send = function() {
+  const send = async function() {
     if (!to || !subject || !body) return;
-    window.open('mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body), '_blank');
-    toast('Abrindo seu e-mail...');
+    setSending(true);
+    try {
+      var res = await sb.functions.invoke('send-custom-email', { body: { to: to, subject: subject, body: body } });
+      if (res && res.error) {
+        var msg = res.error && res.error.message ? res.error.message : 'Falha ao enviar e-mail.';
+        toast(msg, 'error');
+        setSending(false);
+        return;
+      }
+      var data = res && res.data ? res.data : null;
+      if (!data || !data.ok) {
+        var errMsg = data && data.error ? data.error : 'Falha ao enviar e-mail.';
+        toast(errMsg, 'error');
+        setSending(false);
+        return;
+      }
+      toast('E-mail enviado automaticamente.');
+    } catch (e) {
+      toast('Erro de conexão ao enviar e-mail.', 'error');
+    }
+    setSending(false);
   };
   const copy = async function() {
     await navigator.clipboard.writeText('Para: ' + to + '\nAssunto: ' + subject + '\n\n' + body);
@@ -94,9 +115,9 @@ export default function EmailView({ brand, toast }) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
             {copied ? 'Copiado!' : 'Copiar'}
           </button>
-          <button onClick={send} disabled={!to || !subject || !body} className="flex-1 flex items-center justify-center gap-2 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-40" style={{background:brand.color}}>
+          <button onClick={send} disabled={!to || !subject || !body || sending} className="flex-1 flex items-center justify-center gap-2 text-white rounded-xl py-2.5 text-sm font-semibold hover:opacity-90 disabled:opacity-40" style={{background:brand.color}}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-            Abrir no e-mail
+            {sending ? 'Enviando...' : 'Enviar automático'}
           </button>
         </div>
       </Card>

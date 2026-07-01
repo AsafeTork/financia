@@ -4,12 +4,30 @@
 // bloqueia UPDATE direto na company_profiles).
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { htmlFromText, sendSystemEmail } from '../_shared/mailer.ts';
 
 function plainResponse(status, payload) {
   return new Response(JSON.stringify(payload), {
     status: status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+function brlFromCents(cents: unknown): string {
+  const n = Number(cents || 0);
+  const v = Number.isFinite(n) ? (n / 100) : 0;
+  return 'R$ ' + v.toFixed(2).replace('.', ',');
+}
+
+async function userEmailById(supabase: any, userId: string): Promise<string> {
+  if (!userId) return '';
+  try {
+    const userRes = await supabase.auth.admin.getUserById(userId);
+    const u = userRes && userRes.data ? userRes.data.user : null;
+    return u && u.email ? String(u.email) : '';
+  } catch (_) {
+    return '';
+  }
 }
 
 Deno.serve(async function (req) {
@@ -49,6 +67,20 @@ Deno.serve(async function (req) {
           p_plan: planId,
           p_expires: expires,
         });
+        const to = await userEmailById(supabase, String(userId));
+        if (to) {
+          const txt =
+            'Pagamento confirmado.' + '\n\n' +
+            'Seu plano foi ativado com sucesso no Financia.' + '\n' +
+            'Plano: ' + String(planId || 'pro') + '\n\n' +
+            'Obrigado por assinar!';
+          await sendSystemEmail({
+            to: to,
+            subject: 'Pagamento confirmado - Financia',
+            text: txt,
+            html: htmlFromText(txt),
+          });
+        }
       }
     } else if (event.type === 'invoice.payment_succeeded') {
       // Fluxo in-app (Stripe Elements): a assinatura default_incomplete so confirma
@@ -67,7 +99,81 @@ Deno.serve(async function (req) {
             p_plan: planId,
             p_expires: expires,
           });
+          const to = await userEmailById(supabase, String(userId));
+          if (to) {
+            const txt =
+              'Cobrança confirmada com sucesso.' + '\n\n' +
+              'Plano: ' + String(planId || 'pro') + '\n' +
+              'Valor: ' + brlFromCents(invoice.amount_paid) + '\n' +
+              'Fatura: ' + String(invoice.number || invoice.id || '') + '\n\n' +
+              'Seu acesso continua ativo.';
+            await sendSystemEmail({
+              to: to,
+              subject: 'Cobrança confirmada - Financia',
+              text: txt,
+              html: htmlFromText(txt),
+            });
+          }
         }
+      }
+    } else if (event.type === 'invoice.payment_failed') {
+      const invoice = event.data.object;
+      const subId = invoice.subscription ? String(invoice.subscription) : '';
+      let userId = '';
+      let planId = 'pro';
+      if (subId) {
+        try {
+          const sub = await stripe.subscriptions.retrieve(subId);
+          const m = sub && sub.metadata ? sub.metadata : {};
+          userId = m.user_id ? String(m.user_id) : '';
+          planId = m.plan_id ? String(m.plan_id) : 'pro';
+        } catch (_) {}
+      }
+      const to = userId ? await userEmailById(supabase, userId) : '';
+      if (to) {
+        const txt =
+          'Não conseguimos confirmar a cobrança da sua assinatura.' + '\n\n' +
+          'Plano: ' + String(planId || 'pro') + '\n' +
+          'Valor pendente: ' + brlFromCents(invoice.amount_due) + '\n' +
+          'Fatura: ' + String(invoice.number || invoice.id || '') + '\n\n' +
+          'Atualize o cartão em Configurações > Assinatura para evitar interrupção.';
+        await sendSystemEmail({
+          to: to,
+          subject: 'Falha na cobrança - Financia',
+          text: txt,
+          html: htmlFromText(txt),
+        });
+      }
+    } else if (event.type === 'invoice.upcoming') {
+      const invoice = event.data.object;
+      const subId = invoice.subscription ? String(invoice.subscription) : '';
+      let userId = '';
+      let planId = 'pro';
+      if (subId) {
+        try {
+          const sub = await stripe.subscriptions.retrieve(subId);
+          const m = sub && sub.metadata ? sub.metadata : {};
+          userId = m.user_id ? String(m.user_id) : '';
+          planId = m.plan_id ? String(m.plan_id) : 'pro';
+        } catch (_) {}
+      }
+      const to = userId ? await userEmailById(supabase, userId) : '';
+      if (to) {
+        const dueDate = invoice.next_payment_attempt
+          ? new Date(Number(invoice.next_payment_attempt) * 1000).toLocaleDateString('pt-BR')
+          : 'em breve';
+        const txt =
+          'Lembrete de cobrança da sua assinatura.' + '\n\n' +
+          'Plano: ' + String(planId || 'pro') + '\n' +
+          'Próxima cobrança: ' + brlFromCents(invoice.amount_due) + '\n' +
+          'Data prevista: ' + dueDate + '\n\n' +
+          'Se precisar, atualize o cartão em Configurações > Assinatura.';
+        await sendSystemEmail({
+          to: to,
+          subject: 'Lembrete de cobrança - Financia',
+          text: txt,
+          html: htmlFromText(txt),
+        });
       }
     } else if (event.type === 'payment_intent.succeeded') {
       // Cobranca unica do add-on de personalizacao (white-label). So age quando o
@@ -76,6 +182,19 @@ Deno.serve(async function (req) {
       const pm = pi.metadata ? pi.metadata : {};
       if (pm.kind === 'white_label' && pm.user_id) {
         await supabase.rpc('set_white_label', { p_user: pm.user_id, p_on: true });
+        const to = await userEmailById(supabase, String(pm.user_id));
+        if (to) {
+          const txt =
+            'Pedido de personalização confirmado.' + '\n\n' +
+            'Recebemos seu pagamento e iniciaremos a preparação do app personalizado.' + '\n\n' +
+            'Você pode ajustar nome, logo e cores em Configurações > Aparência.';
+          await sendSystemEmail({
+            to: to,
+            subject: 'Personalização confirmada - Financia',
+            text: txt,
+            html: htmlFromText(txt),
+          });
+        }
       }
     } else if (event.type === 'customer.subscription.deleted') {
       const sub = event.data.object;
@@ -87,6 +206,18 @@ Deno.serve(async function (req) {
           p_plan: 'free',
           p_expires: null,
         });
+        const to = await userEmailById(supabase, String(userId));
+        if (to) {
+          const txt =
+            'Sua assinatura foi encerrada e sua conta voltou para o plano Grátis.' + '\n\n' +
+            'Se quiser reativar um plano pago, acesse a aba de Assinatura.';
+          await sendSystemEmail({
+            to: to,
+            subject: 'Assinatura encerrada - Financia',
+            text: txt,
+            html: htmlFromText(txt),
+          });
+        }
       }
     }
 

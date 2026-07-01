@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { sb } from '../lib/supabase.js';
 import { ldb, syncAll, toLocal, setLastSync } from '../lib/db.js';
 import { now } from '../lib/utils.js';
-import { INIT_BRAND, INIT_PLAN } from '../lib/constants.js';
+import { INIT_BRAND, INIT_PLAN, planVisualDefaults } from '../lib/constants.js';
 import { getRecurring, periodOf, pendingRecurring } from '../lib/recurring.js';
 
 export function useSession(p) {
@@ -211,17 +211,33 @@ export function useSession(p) {
 
   var saveBrand = async function(nb) {
     var userId = session.user.id;
-    var row = {user_id:userId, name:nb.name, logo:nb.logo, color:nb.color, color_secondary:nb.color_secondary||null, color_accent:nb.color_accent||null, theme:nb.theme||'light', logo_url:nb.logo_url||null, updated_at:now(), _synced:0, _updated_at:now()};
+    var existing = null;
+    try { existing = await ldb.profiles.get(userId); } catch (e0) {}
+    var hasWhiteLabel = !!(existing && existing.white_label);
+    var visual = hasWhiteLabel ? null : planVisualDefaults({
+      plan: existing && existing.plan ? existing.plan : 'free',
+      plan_expires_at: existing && existing.plan_expires_at ? existing.plan_expires_at : null,
+    });
+    var finalColor = hasWhiteLabel ? nb.color : visual.color;
+    var finalSecondary = hasWhiteLabel ? (nb.color_secondary || null) : visual.color_secondary;
+    var finalAccent = hasWhiteLabel ? (nb.color_accent || null) : visual.color_accent;
+    var finalTheme = hasWhiteLabel ? (nb.theme || 'light') : visual.theme;
+    var row = {user_id:userId, name:nb.name, logo:nb.logo, color:finalColor, color_secondary:finalSecondary, color_accent:finalAccent, theme:finalTheme, logo_url:nb.logo_url||null, updated_at:now(), _synced:0, _updated_at:now()};
     try { await ldb.profiles.put(row); }
     catch(e) { toast('Erro ao salvar configurações: ' + (e.message || 'tente novamente'), 'error'); return; }
-    setBrand(nb);
+    setBrand(Object.assign({}, nb, {
+      color: finalColor,
+      color_secondary: finalSecondary,
+      color_accent: finalAccent,
+      theme: finalTheme,
+    }));
     toast('Configurações salvas', 'success');
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({type:'UPDATE_BRAND', name:nb.name, logo_url:nb.logo_url||null, color:nb.color||'#002f59'});
     }
     if (navigator.onLine) {
       try {
-        var res = await sb.from('company_profiles').upsert({user_id:userId, name:nb.name, logo:nb.logo, color:nb.color, color_secondary:nb.color_secondary||null, color_accent:nb.color_accent||null, theme:nb.theme||'light', logo_url:nb.logo_url||null});
+        var res = await sb.from('company_profiles').upsert({user_id:userId, name:nb.name, logo:nb.logo, color:finalColor, color_secondary:finalSecondary, color_accent:finalAccent, theme:finalTheme, logo_url:nb.logo_url||null});
         if (!res.error) await ldb.profiles.update(userId, {_synced:1});
         else toast('Não sincronizado — tentaremos em breve', 'warning');
       } catch(e) { toast('Não sincronizado — tentaremos em breve', 'warning'); }

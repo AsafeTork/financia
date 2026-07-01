@@ -125,6 +125,35 @@ export const PRICING_PLANS = [
   },
 ];
 
+// Tema/base visual padrão por plano quando o cliente NÃO possui pacote white-label.
+// Sem pacote: usa identidade fixa por plano e não permite personalização manual.
+export const PLAN_VISUAL_DEFAULTS = {
+  free: {
+    color: '#0f766e',
+    color_secondary: '#ccfbf1',
+    color_accent: '#14b8a6',
+    theme: 'light',
+  },
+  pro: {
+    color: '#1d4ed8',
+    color_secondary: '#dbeafe',
+    color_accent: '#2563eb',
+    theme: 'light',
+  },
+  premium: {
+    color: '#581c87',
+    color_secondary: '#ede9fe',
+    color_accent: '#8b5cf6',
+    theme: 'dark',
+  },
+};
+
+export const planVisualDefaults = function(planInfo) {
+  var plan = effectivePlan(planInfo);
+  var preset = PLAN_VISUAL_DEFAULTS[plan];
+  return preset || PLAN_VISUAL_DEFAULTS.free;
+};
+
 // Temas prontos por segmento — para o admin aplicar a identidade do cliente
 // em um clique, sem precisar entender de cor (primary/secondary/accent).
 export const THEME_PRESETS = [

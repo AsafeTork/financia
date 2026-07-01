@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { Card, Empty, Skeleton } from '../components/ui.jsx';
 import { sb } from '../lib/supabase.js';
-import { triggerApkBuild, fetchClients, deleteClient, clearClientData, fetchClientUsage, fetchDbStats, fetchStripeOverview } from '../lib/db.js';
+import { triggerApkBuild, fetchClients, deleteClient, fetchClientUsage, fetchDbStats, fetchStripeOverview } from '../lib/db.js';
 import { genPwd, luminance, lightenHex, fmtDate, formatBytes, dbUsage } from '../lib/utils.js';
 import { GH_REPO, effectivePlan, PRICING_PLANS, countsAsRevenue, isAdminGranted, waLinkTo } from '../lib/constants.js';
 
@@ -33,7 +33,6 @@ export default function AdminPanel({ toast, confirm, session }) {
   const [uploading, setUploading] = useState(false);
   const [editClient, setEditClient] = useState(null);
   const [copied, setCopied] = useState(null);
-  const [clearTarget, setClearTarget] = useState(null);
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('all');
   const [usage, setUsage] = useState({});
@@ -206,20 +205,37 @@ export default function AdminPanel({ toast, confirm, session }) {
     toast('Copiado!');
   };
 
-  const handleClear = function(c, tables) {
-    var label = tables.length === 3 ? 'TODOS os dados' : tables.join(', ');
-    confirm('Limpar ' + label + ' de "' + (c.name || c.user_id) + '"? Isso nao pode ser desfeito.', async function() {
-      const ok = await clearClientData(c.user_id, tables);
-      if (ok) { toast('Dados limpos.'); setClearTarget(null); reload(); }
-      else toast('Erro ao limpar dados.', 'error');
-    });
-  };
-
   const handleDelete = function(c) {
     confirm('Excluir todos os dados de "' + (c.name || c.user_id) + '"? Isso não pode ser desfeito.', async function() {
       const ok = await deleteClient(c.user_id);
       if (ok) { toast('Cliente excluído.'); reload(); }
       else toast('Erro ao excluir.', 'error');
+    });
+  };
+
+  const handleImpersonate = function(c) {
+    sb.rpc('admin_impersonate_start', {target_uid: c.user_id}).then(function(res) {
+      if (res.error) { toast('Erro: ' + res.error.message, 'error'); return; }
+      var d = res.data;
+      localStorage.setItem('_imp', JSON.stringify({
+        email: d.email,
+        pass: d.temp_pass,
+        uid: c.user_id,
+        exp: Date.now() + 30000
+      }));
+      window.open(window.location.origin + window.location.pathname + '?imp=1', '_blank');
+      setTimeout(function() { localStorage.removeItem('_imp'); }, 30000);
+      toast('Abrindo conta de ' + c.name, 'success');
+    }).catch(function() { toast('Erro ao iniciar acesso ao cliente.', 'error'); });
+  };
+
+  const handleBuildClientApk = function(c) {
+    triggerApkBuild(c.name, c.logo_url, c.color).then(function(r) {
+      if (r.ok) { toast('Build iniciado! Veja em Actions no GitHub.', 'success'); return; }
+      if (r.reason === 'no_token') { toast('Configure o token GitHub antes.', 'error'); return; }
+      if (r.reason === 'api_error' && r.status === 401) { toast('Token invalido ou expirado.', 'error'); return; }
+      if (r.reason === 'api_error' && r.status === 404) { toast('Repositorio ou workflow nao encontrado.', 'error'); return; }
+      toast('Erro ao acionar build (status ' + (r.status || 'rede') + ').', 'error');
     });
   };
 
@@ -415,82 +431,28 @@ export default function AdminPanel({ toast, confirm, session }) {
                           </div>
                           <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0, 8)}{c.updated_at ? ' · ativo ' + fmtDate(String(c.updated_at).slice(0, 10)) : ''}</p>
                         </div>
-                        {wa && (
-                          <a href={wa} target="_blank" rel="noreferrer" aria-label="Falar no WhatsApp"
-                            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-white transition hover:opacity-90" style={{background:'#16a34a'}}>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {wa && (
+                            <a href={wa} target="_blank" rel="noreferrer" aria-label="Falar no WhatsApp"
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white transition hover:opacity-90" style={{background:'#16a34a'}}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.477-.913z"/></svg>
-                          </a>
-                        )}
+                            </a>
+                          )}
+                          <button onClick={function() { setEditClient(c); }} aria-label="Editar cliente"
+                            className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition flex items-center justify-center">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                          </button>
+                          <button onClick={function() { handleDelete(c); }} aria-label="Excluir cliente"
+                            className="w-9 h-9 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition flex items-center justify-center">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                          </button>
+                        </div>
                       </div>
                       {usage[c.user_id] && (
                         <div className="flex items-center gap-3 text-xs px-0.5 flex-wrap" style={{color:'var(--text-sub)'}}>
                           <span className="font-semibold tabular">{usage[c.user_id].tx_count}</span><span className="-ml-2.5">lançamentos</span>
                           <span className="font-semibold tabular">{usage[c.user_id].prod_count}</span><span className="-ml-2.5">produtos</span>
                           <span className="font-semibold tabular">{usage[c.user_id].loss_count}</span><span className="-ml-2.5">perdas</span>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {wa && (
-                          <a href={wa} target="_blank" rel="noreferrer"
-                            className="py-2 text-xs font-semibold rounded-lg border border-green-200 text-green-600 hover:bg-green-50 min-h-[44px] flex items-center justify-center gap-1.5">
-                            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.477-.913z"/></svg>
-                            WhatsApp
-                          </a>
-                        )}
-                        <button onClick={function() {
-                          sb.rpc('admin_impersonate_start', {target_uid: c.user_id}).then(function(res) {
-                            if (res.error) { toast('Erro: ' + res.error.message, 'error'); return; }
-                            var d = res.data;
-                            localStorage.setItem('_imp', JSON.stringify({
-                              email: d.email,
-                              pass: d.temp_pass,
-                              uid: c.user_id,
-                              exp: Date.now() + 30000
-                            }));
-                            window.open(window.location.origin + window.location.pathname + '?imp=1', '_blank');
-                            setTimeout(function() { localStorage.removeItem('_imp'); }, 30000);
-                            toast('Abrindo conta de ' + c.name, 'success');
-                          }).catch(function() { toast('Erro ao iniciar acesso ao cliente.', 'error'); });
-                        }} className="py-2 text-xs font-semibold rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 min-h-[44px] flex items-center justify-center gap-1.5">
-                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-                          Entrar
-                        </button>
-                        <button onClick={function() { setEditClient(c); }} className="py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[44px] flex items-center justify-center gap-1.5">
-                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                          Editar
-                        </button>
-                        <button onClick={function() { triggerApkBuild(c.name, c.logo_url, c.color).then(function(r) {
-                              if (r.ok) { toast('Build iniciado! Veja em Actions no GitHub.', 'success'); return; }
-                              if (r.reason === 'no_token') { toast('Configure o token GitHub antes.', 'error'); return; }
-                              if (r.reason === 'api_error' && r.status === 401) { toast('Token invalido ou expirado.', 'error'); return; }
-                              if (r.reason === 'api_error' && r.status === 404) { toast('Repositorio ou workflow nao encontrado.', 'error'); return; }
-                              toast('Erro ao acionar build (status ' + (r.status || 'rede') + ').', 'error');
-                            }); }} className="py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 min-h-[44px] flex items-center justify-center gap-1.5">
-                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/></svg>
-                          Gerar APK
-                        </button>
-                        <button onClick={function() { handleDelete(c); }} className="py-2 text-xs font-semibold rounded-lg border border-red-200 text-red-500 hover:bg-red-50 min-h-[44px] flex items-center justify-center gap-1.5">
-                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                          Excluir
-                        </button>
-                      </div>
-                      <button onClick={function() { setClearTarget(clearTarget === c.user_id ? null : c.user_id); }}
-                        className="w-full py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-500 hover:bg-orange-50 min-h-[44px]">
-                        {clearTarget === c.user_id ? 'Cancelar' : 'Limpar dados'}
-                      </button>
-                      {clearTarget === c.user_id && (
-                        <div className="flex flex-col gap-2 p-3 rounded-lg bg-orange-50 border border-orange-200">
-                          <p className="text-xs font-semibold text-orange-700">Selecione o que limpar:</p>
-                          <div className="grid grid-cols-2 gap-1.5">
-                            <button onClick={function() { handleClear(c, ['transactions']); }}
-                              className="py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-100 min-h-[44px]">Transacoes</button>
-                            <button onClick={function() { handleClear(c, ['products']); }}
-                              className="py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-100 min-h-[44px]">Produtos</button>
-                            <button onClick={function() { handleClear(c, ['losses']); }}
-                              className="py-2 text-xs font-semibold rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-100 min-h-[44px]">Perdas</button>
-                            <button onClick={function() { handleClear(c, ['transactions','products','losses']); }}
-                              className="py-2 text-xs font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 min-h-[44px]">Tudo</button>
-                          </div>
                         </div>
                       )}
                     </div>
@@ -600,6 +562,8 @@ export default function AdminPanel({ toast, confirm, session }) {
         <ClientEditModal
           client={editClient}
           adminEmail={adminEmail}
+          onImpersonate={handleImpersonate}
+          onBuildApk={handleBuildClientApk}
           onSave={function(updated) { setClients(function(cs) { return cs.map(function(c) { return c.user_id === updated.user_id ? updated : c; }); }); setEditClient(null); reload(); }}
           onClose={function() { setEditClient(null); }}
           toast={toast}
