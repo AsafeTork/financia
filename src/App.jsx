@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { flushSync } from 'react-dom';
 import { brandAlpha, deriveCores } from './lib/utils.js';
-import { INIT_BRAND, INIT_PLAN, atLimit, limitFor, planVisualDefaults, WHITE_LABEL_VISUAL_DEFAULT } from './lib/constants.js';
+import { INIT_BRAND, INIT_PLAN, atLimit, limitFor, planVisualDefaults, WHITE_LABEL_VISUAL_DEFAULT, PLAN_VISUAL_DEFAULTS } from './lib/constants.js';
 import { useTx } from './hooks/useTx.js';
 import { useProducts } from './hooks/useProducts.js';
 import { useLosses } from './hooks/useLosses.js';
@@ -68,14 +68,36 @@ export default function App() {
   var sameHex = function(a, b) {
     return String(a || '').toLowerCase() === String(b || '').toLowerCase();
   };
+  var matchesPlanPalette = function(b) {
+    if (!b) return false;
+    var keys = Object.keys(PLAN_VISUAL_DEFAULTS);
+    for (var i = 0; i < keys.length; i++) {
+      var p = PLAN_VISUAL_DEFAULTS[keys[i]];
+      if (!p) continue;
+      if (sameHex(b.color, p.color)
+        && sameHex(b.color_secondary, p.color_secondary)
+        && sameHex(b.color_accent, p.color_accent)
+        && String(b.theme || 'light') === String(p.theme || 'light')) {
+        return true;
+      }
+    }
+    return false;
+  };
   var hasWhiteLabel = !!(brand && brand.white_label);
   var visualPreset = hasWhiteLabel ? null : planVisualDefaults(planInfo);
   var lockedPlanVisual = hasWhiteLabel ? planVisualDefaults(planInfo) : null;
+  var missingCustomPalette = !!(hasWhiteLabel && (
+    !brand.color || !brand.color_secondary || !brand.color_accent
+  ));
   var useWhiteLabelFallback = !!(hasWhiteLabel && lockedPlanVisual
-    && sameHex(brand.color, lockedPlanVisual.color)
-    && sameHex(brand.color_secondary, lockedPlanVisual.color_secondary)
-    && sameHex(brand.color_accent, lockedPlanVisual.color_accent)
-    && String(brand.theme || 'light') === String(lockedPlanVisual.theme || 'light'));
+    && (
+      (sameHex(brand.color, lockedPlanVisual.color)
+        && sameHex(brand.color_secondary, lockedPlanVisual.color_secondary)
+        && sameHex(brand.color_accent, lockedPlanVisual.color_accent)
+        && String(brand.theme || 'light') === String(lockedPlanVisual.theme || 'light'))
+      || matchesPlanPalette(brand)
+      || missingCustomPalette
+    ));
   var appBrand = hasWhiteLabel
     ? (useWhiteLabelFallback
       ? Object.assign({}, brand, {

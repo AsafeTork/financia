@@ -129,21 +129,21 @@ export const PRICING_PLANS = [
 // Sem pacote: usa identidade fixa por plano e não permite personalização manual.
 export const PLAN_VISUAL_DEFAULTS = {
   free: {
-    color: '#6ec6c8',
-    color_secondary: '#e1f7f2',
-    color_accent: '#8cf2d1',
+    color: '#0f3d3e',
+    color_secondary: '#ccfbf1',
+    color_accent: '#0d9488',
     theme: 'light',
   },
   pro: {
-    color: '#1a6b5c',
-    color_secondary: '#d7efe9',
-    color_accent: '#6ec6c8',
+    color: '#0c3436',
+    color_secondary: '#bdeee6',
+    color_accent: '#0a7f74',
     theme: 'light',
   },
   premium: {
-    color: '#002f59',
-    color_secondary: '#dbe8f3',
-    color_accent: '#1a6b5c',
+    color: '#082829',
+    color_secondary: '#a9ddd4',
+    color_accent: '#06665e',
     theme: 'dark',
   },
 };
