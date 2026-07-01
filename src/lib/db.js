@@ -194,9 +194,11 @@ export const fetchStripeOverview = async function() {
 };
 
 /* Define/limpa o preco customizado de um cliente (centavos; null limpa). Aplica na assinatura ativa se houver. */
-export const setClientCustomPrice = async function(targetUserId, cents) {
+export const setClientCustomPrice = async function(targetUserId, cents, planId) {
   try {
-    const res = await sb.functions.invoke('admin-set-custom-price', { body: { target_user_id: targetUserId, cents: cents } });
+    const payload = { target_user_id: targetUserId, cents: cents };
+    if (planId) payload.plan_id = planId;
+    const res = await sb.functions.invoke('admin-set-custom-price', { body: payload });
     if (res && res.error) {
       var detail = res.data && res.data.error ? res.data.error : 'erro';
       return { ok: false, error: detail };

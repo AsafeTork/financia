@@ -72,6 +72,7 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
   var [theme, setTheme]              = useState(client.theme || 'light');
   var [name, setName]                = useState(client.name || '');
   var [plan, setPlan]                = useState(client.plan || 'free');
+  var [whiteLabel, setWhiteLabel]    = useState(!!client.white_label);
   var [saving, setSaving]            = useState(false);
   var [extractedColors, setExtractedColors] = useState([]);
   var [logoUrl, setLogoUrl]          = useState(client.logo_url || null);
@@ -79,31 +80,33 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
   var [aiSegment, setAiSegment]      = useState(client.segment || '');
   var [aiLoading, setAiLoading]      = useState(false);
   var [aiRationale, setAiRationale]  = useState('');
-  var [customReais, setCustomReais]  = useState(client.custom_price_cents ? String((client.custom_price_cents / 100).toFixed(2)).replace('.', ',') : '');
+  var [customProReais, setCustomProReais] = useState(client.custom_price_cents_pro ? String((client.custom_price_cents_pro / 100).toFixed(2)).replace('.', ',') : '');
+  var [customPremiumReais, setCustomPremiumReais] = useState(client.custom_price_cents_premium ? String((client.custom_price_cents_premium / 100).toFixed(2)).replace('.', ',') : '');
   var [priceSaving, setPriceSaving]  = useState(false);
   var fileRef = useRef();
 
   var planMeta = PRICING_PLANS.filter(function(p) { return p.id === effectivePlan(client); })[0] || PRICING_PLANS[0];
   var clientWa = waLinkTo(client.phone, 'Olá! Aqui é da equipe Financia. Posso ajudar?');
 
-  var applyCustomPrice = async function() {
-    var raw = String(customReais).replace(/\s/g, '').replace(',', '.').trim();
+  var applyCustomPrice = async function(planId, value) {
+    var raw = String(value).replace(/\s/g, '').replace(',', '.').trim();
     var cents = raw ? Math.round(parseFloat(raw) * 100) : null;
     if (raw && (isNaN(cents) || cents < 0)) { toast('Valor inválido.', 'error'); return; }
     setPriceSaving(true);
-    var res = await setClientCustomPrice(client.user_id, cents);
+    var res = await setClientCustomPrice(client.user_id, cents, planId);
     setPriceSaving(false);
     if (!res.ok) { toast('Erro ao salvar preço: ' + res.error, 'error'); return; }
-    if (!cents) { toast('Desconto removido.'); return; }
-    toast(res.applied ? 'Preço aplicado — vale no próximo ciclo.' : 'Preço salvo — vale ao assinar/trocar de plano.');
+    if (!cents) { toast('Desconto removido para ' + planId.toUpperCase() + '.'); return; }
+    toast(res.applied ? ('Preço de ' + planId.toUpperCase() + ' aplicado — vale no próximo ciclo.') : ('Preço de ' + planId.toUpperCase() + ' salvo para novas assinaturas.'));
   };
 
-  var clearCustomPrice = async function() {
+  var clearCustomPrice = async function(planId) {
     setPriceSaving(true);
-    var res = await setClientCustomPrice(client.user_id, null);
+    var res = await setClientCustomPrice(client.user_id, null, planId);
     setPriceSaving(false);
     if (!res.ok) { toast('Erro ao remover: ' + res.error, 'error'); return; }
-    setCustomReais('');
+    if (planId === 'pro') setCustomProReais('');
+    if (planId === 'premium') setCustomPremiumReais('');
     toast('Desconto removido.');
   };
 
@@ -223,8 +226,13 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
         var planRes = await sb.rpc('set_client_plan', {a_target: client.user_id, b_plan: plan, c_actor: adminEmail || 'admin'});
         if (planRes.error) { toast('Erro ao alterar plano: ' + planRes.error.message, 'error'); return; }
       }
+      if (whiteLabel !== !!client.white_label) {
+        var wlRes = await sb.rpc('set_white_label', { p_user: client.user_id, p_on: !!whiteLabel });
+        if (wlRes && wlRes.error) { toast('Erro ao atualizar pacote de personalização.', 'error'); return; }
+      }
       toast(planChanged ? ('Plano alterado para ' + plan.toUpperCase()) : 'Atualizado!');
       var updated = Object.assign({}, client, updateData);
+      updated.white_label = !!whiteLabel;
       if (planChanged) {
         updated.plan = plan;
         updated.plan_expires_at = null;
@@ -276,12 +284,12 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             </p>
           )}
 
-          {!client.white_label && (
+          {!whiteLabel && (
             <div className="rounded-xl p-3 text-xs" style={{background:'var(--bg-subtle)', border:'1px solid var(--border)', color:'var(--text-sub)'}}>
               Personalização visual (logo, cores e tema) fica disponível quando o cliente compra o pacote de personalização. Nome e plano continuam editáveis.
             </div>
           )}
-          {client.white_label && (<React.Fragment>
+          {whiteLabel && (<React.Fragment>
           {/* Logo */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Logo</label>
@@ -458,34 +466,60 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             )}
           </div>
 
+          <div className="flex flex-col gap-2 rounded-xl p-3" style={{border:'1px solid var(--border)', background:'var(--bg-subtle)'}}>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pacote de personalização</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs" style={{color:'var(--text-sub)'}}>Ativar/desativar como cortesia para este cliente.</p>
+              <button type="button" onClick={function() { setWhiteLabel(!whiteLabel); }}
+                className={'min-h-[44px] px-3 rounded-xl text-xs font-semibold border ' + (whiteLabel ? 'text-green-700 border-green-300 bg-green-50' : 'text-gray-600 border-gray-200 bg-white')}>
+                {whiteLabel ? 'Cortesia ativa' : 'Dar cortesia'}
+              </button>
+            </div>
+          </div>
+
           {/* Preço / desconto customizado */}
-          <div className="flex flex-col gap-2 rounded-xl p-3" style={{border:'1px solid #fde68a', background:'#fffbeb'}}>
+          <div className="flex flex-col gap-3 rounded-xl p-3" style={{border:'1px solid #fde68a', background:'#fffbeb'}}>
             <div className="flex items-center gap-2">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14l6-6M9.5 9h.01M14.5 15h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <p className="text-xs font-bold" style={{color:'#92400e'}}>Preço customizado (desconto)</p>
+              <p className="text-xs font-bold" style={{color:'#92400e'}}>Preço customizado por plano</p>
             </div>
             <p className="text-xs" style={{color:'#92400e'}}>
-              Valor de tabela do plano {planMeta.name}: <b>{fmt(planMeta.price)}</b>/mês. Defina um valor menor só para este cliente. Aplica ao assinar/trocar e, se já houver assinatura ativa, no próximo ciclo.
+              Defina desconto específico para Pro e Premium. O usuário verá o preço especial no card de cada plano.
             </p>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold" style={{color:'#92400e'}}>R$</span>
-              <input value={customReais}
-                onChange={function(e) { setCustomReais(e.target.value.replace(/[^0-9.,]/g, '')); }}
-                placeholder="ex: 29,90" inputMode="decimal"
-                className="border rounded-xl px-3 py-2 text-sm font-mono flex-1 focus:outline-none" style={{background:'var(--bg-input)', color:'var(--text-main)', borderColor:'#fde68a'}}/>
-              <span className="text-xs" style={{color:'#92400e'}}>/mês</span>
-            </div>
-            <div className="flex gap-2">
-              {client.custom_price_cents && (
-                <button onClick={clearCustomPrice} disabled={priceSaving}
-                  className="flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold border disabled:opacity-50" style={{borderColor:'#fca5a5', color:'#dc2626', background:'var(--bg-card)'}}>
-                  Remover desconto
-                </button>
-              )}
-              <button onClick={applyCustomPrice} disabled={priceSaving}
-                className="flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold text-white disabled:opacity-50 hover:opacity-90 transition" style={{background:'#d97706'}}>
-                {priceSaving ? 'Salvando...' : 'Aplicar preço'}
-              </button>
+            <div className="flex flex-col gap-2">
+              {[
+                ['pro', 'Pro', planMeta.name === 'Pro' ? planMeta.price : 49.9, customProReais, setCustomProReais],
+                ['premium', 'Premium', planMeta.name === 'Premium' ? planMeta.price : 99.9, customPremiumReais, setCustomPremiumReais],
+              ].map(function(row) {
+                var key = row[0];
+                var label = row[1];
+                var base = row[2];
+                var value = row[3];
+                var setValue = row[4];
+                return (
+                  <div key={key} className="rounded-xl p-2.5" style={{border:'1px solid #fde68a', background:'#fff7ed'}}>
+                    <p className="text-xs mb-1" style={{color:'#92400e'}}>Plano {label} (tabela: <b>{fmt(base)}</b>/mês)</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold" style={{color:'#92400e'}}>R$</span>
+                      <input value={value}
+                        onChange={function(e) { setValue(e.target.value.replace(/[^0-9.,]/g, '')); }}
+                        placeholder="ex: 29,90" inputMode="decimal"
+                        className="border rounded-xl px-3 py-2 text-sm font-mono flex-1 focus:outline-none" style={{background:'var(--bg-input)', color:'var(--text-main)', borderColor:'#fde68a'}}/>
+                      <span className="text-xs" style={{color:'#92400e'}}>/mês</span>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={function() { clearCustomPrice(key); }} disabled={priceSaving}
+                        className="flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold border disabled:opacity-50" style={{borderColor:'#fca5a5', color:'#dc2626', background:'var(--bg-card)'}}>
+                        Remover
+                      </button>
+                      <button onClick={function() { applyCustomPrice(key, value); }} disabled={priceSaving}
+                        className="flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold text-white disabled:opacity-50 hover:opacity-90 transition" style={{background:'#d97706'}}>
+                        {priceSaving ? 'Salvando...' : 'Aplicar'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

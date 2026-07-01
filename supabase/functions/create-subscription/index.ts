@@ -188,11 +188,19 @@ Deno.serve(async function (req) {
     if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
     const isAdmin = await isAdminUser(admin, user.id);
 
-    // Preco customizado (desconto manual do admin) do proprio usuario, se houver.
+    // Preço customizado (desconto manual do admin) por plano, se houver.
     let customCents = 0;
     try {
-      const prof = await supabase.from('company_profiles').select('custom_price_cents').eq('user_id', user.id).maybeSingle();
-      if (prof && prof.data && prof.data.custom_price_cents) customCents = prof.data.custom_price_cents;
+      const prof = await supabase
+        .from('company_profiles')
+        .select('custom_price_cents, custom_price_cents_pro, custom_price_cents_premium')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (prof && prof.data) {
+        if (planId === 'pro' && prof.data.custom_price_cents_pro) customCents = prof.data.custom_price_cents_pro;
+        else if (planId === 'premium' && prof.data.custom_price_cents_premium) customCents = prof.data.custom_price_cents_premium;
+        else if (prof.data.custom_price_cents) customCents = prof.data.custom_price_cents;
+      }
     } catch (profErr) {
       customCents = 0;
     }

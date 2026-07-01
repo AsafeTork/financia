@@ -5,7 +5,7 @@
 //     (proration_behavior 'none' -> sem cobranca surpresa, vale no proximo ciclo).
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { asPositiveInt, enforceRateLimit, getAdminClient, sanitizeUuid } from '../_shared/security.ts';
+import { asPositiveInt, enforceRateLimit, getAdminClient, sanitizePlanId, sanitizeUuid } from '../_shared/security.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -112,6 +112,7 @@ Deno.serve(async function (req) {
     let body = {};
     try { body = await req.json(); } catch (parseErr) { body = {}; }
     const targetUserId = sanitizeUuid(body && body.target_user_id);
+    const planIdInput = sanitizePlanId(body && body.plan_id);
     const rawCents = body && (body.cents === 0 || body.cents) ? body.cents : null;
     const cents = (rawCents === null || rawCents === undefined) ? null : asPositiveInt(rawCents, 0, 100000000);
     if (!targetUserId) {
@@ -125,24 +126,41 @@ Deno.serve(async function (req) {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    // 1) Grava via RPC (com a auth do admin chamador: a RPC valida role='admin').
+    // 1) Autentica e valida admin chamador.
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
     const callerRes = await supabase.auth.getUser();
     const caller = callerRes && callerRes.data ? callerRes.data.user : null;
     if (!caller) return jsonResponse(401, { error: 'unauthorized' });
+    const admin = createClient(supabaseUrl, serviceKey);
+    const roleRes = await admin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', caller.id)
+      .maybeSingle();
+    const isAdmin = roleRes && roleRes.data && roleRes.data.role === 'admin';
+    if (!isAdmin) return jsonResponse(403, { error: 'forbidden' });
     const secAdmin = getAdminClient();
     const allowed = await enforceRateLimit(secAdmin, caller.id, 'admin_set_custom_price', 60, 20);
     if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
-    const rpcRes = await supabase.rpc('admin_set_custom_price', { a_target: targetUserId, b_cents: cents });
-    if (rpcRes && rpcRes.error) {
-      const msg = rpcRes.error.message || 'rpc_failed';
-      const code = msg.indexOf('not authorized') !== -1 ? 403 : 400;
-      return jsonResponse(code, { error: String(msg) });
+
+    if (planIdInput) {
+      const col = planIdInput === 'premium' ? 'custom_price_cents_premium' : 'custom_price_cents_pro';
+      const updateData = {};
+      updateData[col] = (cents && cents > 0) ? cents : null;
+      const upd = await admin.from('company_profiles').update(updateData).eq('user_id', targetUserId);
+      if (upd && upd.error) return jsonResponse(400, { error: String(upd.error.message || 'update_failed') });
+    } else {
+      const rpcRes = await supabase.rpc('admin_set_custom_price', { a_target: targetUserId, b_cents: cents });
+      if (rpcRes && rpcRes.error) {
+        const msg = rpcRes.error.message || 'rpc_failed';
+        const code = msg.indexOf('not authorized') !== -1 ? 403 : 400;
+        return jsonResponse(code, { error: String(msg) });
+      }
     }
+
     // 2) Aplica na assinatura ativa, se existir.
-    const admin = createClient(supabaseUrl, serviceKey);
     const userRes = await admin.auth.admin.getUserById(targetUserId);
     const targetUser = userRes && userRes.data ? userRes.data.user : null;
     const email = targetUser ? targetUser.email : null;
@@ -166,9 +184,13 @@ Deno.serve(async function (req) {
     }
 
     const planId = planOfSub(sub);
+    if (planIdInput && planIdInput !== planId) {
+      return jsonResponse(200, { ok: true, applied: false });
+    }
+    const planForPrice = planIdInput || planId;
     const newPriceId = (cents && cents > 0)
-      ? await customPriceId(stripe, planId, cents, targetUserId)
-      : await standardPriceId(stripe, planId);
+      ? await customPriceId(stripe, planForPrice, cents, targetUserId)
+      : await standardPriceId(stripe, planForPrice);
 
     if (item.price && item.price.id === newPriceId) {
       return jsonResponse(200, { ok: true, applied: false });
@@ -178,7 +200,7 @@ Deno.serve(async function (req) {
     await stripe.subscriptions.update(sub.id, {
       items: [{ id: item.id, price: newPriceId }],
       proration_behavior: 'none',
-      metadata: { user_id: targetUserId, plan_id: planId },
+      metadata: { user_id: targetUserId, plan_id: planForPrice },
     });
 
     return jsonResponse(200, { ok: true, applied: true });

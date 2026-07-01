@@ -89,7 +89,14 @@ export function useSession(p) {
     var profile = results[0], prods = results[1], txs = results[2], lss = results[3], roleMeta = results[4];
     if (profile) {
       setBrand({name:profile.name, logo:profile.logo, color:profile.color, color_secondary:profile.color_secondary||null, color_accent:profile.color_accent||null, theme:profile.theme||'light', logo_url:profile.logo_url||null, phone:profile.phone||'', white_label:!!profile.white_label, niche:profile.niche||''});
-      setPlanInfo({plan:profile.plan||'free', plan_expires_at:profile.plan_expires_at||null, plan_activated_by:profile.plan_activated_by||null});
+      setPlanInfo({
+        plan:profile.plan||'free',
+        plan_expires_at:profile.plan_expires_at||null,
+        plan_activated_by:profile.plan_activated_by||null,
+        custom_price_cents:profile.custom_price_cents||0,
+        custom_price_cents_pro:profile.custom_price_cents_pro||0,
+        custom_price_cents_premium:profile.custom_price_cents_premium||0,
+      });
     }
     setProducts(prods);
 
@@ -179,7 +186,14 @@ export function useSession(p) {
           if (pr.data) {
             var prof = pr.data;
             setBrand({name:prof.name, logo:prof.logo, color:prof.color, color_secondary:prof.color_secondary||null, color_accent:prof.color_accent||null, theme:prof.theme||'light', logo_url:prof.logo_url||null, phone:prof.phone||'', white_label:!!prof.white_label, niche:prof.niche||''});
-            setPlanInfo({plan:prof.plan||'free', plan_expires_at:prof.plan_expires_at||null, plan_activated_by:prof.plan_activated_by||null});
+            setPlanInfo({
+              plan:prof.plan||'free',
+              plan_expires_at:prof.plan_expires_at||null,
+              plan_activated_by:prof.plan_activated_by||null,
+              custom_price_cents:prof.custom_price_cents||0,
+              custom_price_cents_pro:prof.custom_price_cents_pro||0,
+              custom_price_cents_premium:prof.custom_price_cents_premium||0,
+            });
             await ldb.profiles.put(toLocal(prof));
           }
           if (pdr.data) {

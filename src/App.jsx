@@ -75,18 +75,16 @@ export default function App() {
         color_accent: visualPreset.color_accent,
         theme: visualPreset.theme,
       });
-  // Sem white-label, o tema fica travado pelo plano.
-  var effectiveTheme = hasWhiteLabel ? (themePref || (appBrand && appBrand.theme) || 'light') : ((appBrand && appBrand.theme) || 'light');
+  var effectiveTheme = themePref || (appBrand && appBrand.theme) || 'light';
 
   const toggleTheme = useCallback(function() {
-    if (!hasWhiteLabel) return;
     setThemePref(function(prev) {
       var current = prev || (appBrand && appBrand.theme) || 'light';
       var next = current === 'dark' ? 'light' : 'dark';
       try { localStorage.setItem('financia_theme', next); } catch (e) {}
       return next;
     });
-  }, [hasWhiteLabel, appBrand]);
+  }, [appBrand]);
 
   const navTo = useCallback(function(v) {
     var go = function() { setView(v); window.location.hash = v; };
@@ -113,10 +111,10 @@ export default function App() {
   }, []);
   useEffect(function() { applyBrandVars(appBrand); }, [appBrand]);
 
-  // data-theme aplicado separado: respeita a preferência do usuário (persistida).
+  // Tema customizado só dentro da área logada; login/landing ficam no padrão.
   useEffect(function() {
-    document.documentElement.setAttribute('data-theme', effectiveTheme);
-  }, [effectiveTheme]);
+    document.documentElement.setAttribute('data-theme', session ? effectiveTheme : 'light');
+  }, [effectiveTheme, session]);
 
   useEffect(function() {
     if (!dataLoading) return;
@@ -272,10 +270,10 @@ export default function App() {
       <SyncBadge status={syncStatus}/>
       <Sidebar view={view} onNav={navTo} brand={appBrand} open={sidebarOpen} isAdmin={isAdminDB} session={session} onClose={function() { setSidebarOpen(false); }}/>
       <div className="hidden lg:block fixed top-4 right-4 z-30">
-        {hasWhiteLabel && <ThemeToggle theme={effectiveTheme} onToggle={toggleTheme} variant="floating"/>}
+        <ThemeToggle theme={effectiveTheme} onToggle={toggleTheme} variant="floating"/>
       </div>
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 w-full">
-        <Header brand={appBrand} syncStatus={syncStatus} theme={effectiveTheme} onToggleTheme={hasWhiteLabel ? toggleTheme : null} onMenuOpen={function() { setSidebarOpen(true); }}/>
+        <Header brand={appBrand} syncStatus={syncStatus} theme={effectiveTheme} onToggleTheme={toggleTheme} onMenuOpen={function() { setSidebarOpen(true); }}/>
         <main className="flex-1 p-4 lg:p-8 max-w-2xl w-full mx-auto pb-24 lg:pb-8 min-w-0 overflow-x-hidden">
           <Suspense fallback={<PageSkeleton/>}>
             {views[currentView]}

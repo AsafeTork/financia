@@ -57,6 +57,11 @@ function PlanCard({ plan, brand, cta, onAction, open, onToggle }) {
           </span>
           {plan.period && <span className="text-sm mb-1" style={{color:'var(--text-sub)'}}>{plan.period}</span>}
         </div>
+        {plan.original_price && plan.original_price > plan.price && (
+          <p className="text-xs mt-0.5" style={{color:'var(--text-muted)'}}>
+            De <span style={{textDecoration:'line-through'}}>{fmt(plan.original_price)}</span> por <b>{fmt(plan.price)}</b>/mês
+          </p>
+        )}
         <p className="text-xs mt-1.5" style={{color:'var(--text-sub)'}}>{priceNote}</p>
       </div>
 
@@ -128,6 +133,8 @@ export default function PlansView({ brand, planInfo, toast, onNav, isAdmin }) {
   var openPlan = openState[0];
   var setOpenPlan = openState[1];
   var customCents = planInfo && planInfo.custom_price_cents ? planInfo.custom_price_cents : 0;
+  var customProCents = planInfo && planInfo.custom_price_cents_pro ? planInfo.custom_price_cents_pro : 0;
+  var customPremiumCents = planInfo && planInfo.custom_price_cents_premium ? planInfo.custom_price_cents_premium : 0;
   var isAdminTest = !!isAdmin;
   var whiteLabelPrice = isAdminTest ? ADMIN_TEST_PRICE : WHITELABEL.price;
   var wlPlan = { id: 'white_label', name: 'Personalização', price: whiteLabelPrice, period: '' };
@@ -179,14 +186,18 @@ export default function PlansView({ brand, planInfo, toast, onNav, isAdmin }) {
         sub="Escolha o plano ou tenha o app com a cara da sua empresa"
       />
 
-      {customCents > 0 && (
+      {(customCents > 0 || customProCents > 0 || customPremiumCents > 0) && (
         <div className="rounded-2xl p-4 flex items-center gap-3" style={{background:'var(--brand-soft)', border:'1px solid var(--border)'}}>
           <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{background: brand.color}}>
             <svg className="w-5 h-5" fill="none" stroke="#ffffff" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6M9.5 9h.01M14.5 15h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold" style={{color: brand.color}}>Você tem um preço especial</p>
-            <p className="text-xs" style={{color:'var(--text-sub)'}}>Combinado com você: <b>{fmt(customCents / 100)}/mês</b> no plano que assinar.</p>
+            <p className="text-xs" style={{color:'var(--text-sub)'}}>
+              {customProCents > 0 && <span>Pro: <b>{fmt(customProCents / 100)}/mês</b>{customPremiumCents > 0 ? ' · ' : ''}</span>}
+              {customPremiumCents > 0 && <span>Premium: <b>{fmt(customPremiumCents / 100)}/mês</b></span>}
+              {customProCents <= 0 && customPremiumCents <= 0 && customCents > 0 && <span>Combinado com você: <b>{fmt(customCents / 100)}/mês</b> no plano que assinar.</span>}
+            </p>
           </div>
         </div>
       )}
@@ -204,7 +215,12 @@ export default function PlansView({ brand, planInfo, toast, onNav, isAdmin }) {
 
       <div className="flex flex-col gap-3">
         {PRICING_PLANS.map(function(p) {
-          return <PlanCard key={p.id} plan={p} brand={brand} cta={planChangeCta(plan, p.id)} onAction={handleAction}
+          var price = p.price;
+          var originalPrice = null;
+          if (p.id === 'pro' && customProCents > 0) { originalPrice = p.price; price = customProCents / 100; }
+          if (p.id === 'premium' && customPremiumCents > 0) { originalPrice = p.price; price = customPremiumCents / 100; }
+          var planCard = Object.assign({}, p, { price: price, original_price: originalPrice });
+          return <PlanCard key={p.id} plan={planCard} brand={brand} cta={planChangeCta(plan, p.id)} onAction={handleAction}
             open={openPlan === p.id} onToggle={function() { setOpenPlan(openPlan === p.id ? null : p.id); }}/>;
         })}
       </div>
