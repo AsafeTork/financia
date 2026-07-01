@@ -97,33 +97,37 @@ export async function enforceRateLimit(
   maxRequests: number
 ): Promise<boolean> {
   if (!admin) return true;
-  var uid = userId || null;
-  var key = 'rl:' + action + ':' + (uid || 'anon');
-  var since = new Date(Date.now() - windowSeconds * 1000).toISOString();
+  try {
+    var uid = userId || null;
+    var key = 'rl:' + action + ':' + (uid || 'anon');
+    var since = new Date(Date.now() - windowSeconds * 1000).toISOString();
 
-  var q = admin.from('ai_cache')
-    .select('id', { count: 'exact', head: true })
-    .eq('scope', 'rate_limit')
-    .eq('cache_key', key)
-    .gt('created_at', since);
+    var q = admin.from('ai_cache')
+      .select('id', { count: 'exact', head: true })
+      .eq('scope', 'rate_limit')
+      .eq('cache_key', key)
+      .gt('created_at', since);
 
-  if (uid) q = q.eq('user_id', uid);
+    if (uid) q = q.eq('user_id', uid);
 
-  var res = await q;
-  var count = res && typeof res.count === 'number' ? res.count : 0;
-  if (count >= maxRequests) return false;
+    var res = await q;
+    var count = res && typeof res.count === 'number' ? res.count : 0;
+    if (count >= maxRequests) return false;
 
-  await admin.from('ai_cache').insert({
-    scope: 'rate_limit',
-    cache_key: key,
-    request_hash: null,
-    user_id: uid,
-    action: action,
-    response: null,
-    status: 200,
-    expires_at: new Date(Date.now() + windowSeconds * 1000).toISOString(),
-  });
-  return true;
+    await admin.from('ai_cache').insert({
+      scope: 'rate_limit',
+      cache_key: key,
+      request_hash: null,
+      user_id: uid,
+      action: action,
+      response: null,
+      status: 200,
+      expires_at: new Date(Date.now() + windowSeconds * 1000).toISOString(),
+    });
+    return true;
+  } catch (_) {
+    return true;
+  }
 }
 
 export async function cacheGet(
@@ -132,19 +136,23 @@ export async function cacheGet(
   payload: unknown
 ): Promise<any | null> {
   if (!admin) return null;
-  var hash = await requestHash(payload);
-  var nowIso = new Date().toISOString();
-  var res = await admin.from('ai_cache')
-    .select('response')
-    .eq('scope', 'cache')
-    .eq('cache_key', cacheKey)
-    .eq('request_hash', hash)
-    .gt('expires_at', nowIso)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (!res || !res.data) return null;
-  return res.data.response || null;
+  try {
+    var hash = await requestHash(payload);
+    var nowIso = new Date().toISOString();
+    var res = await admin.from('ai_cache')
+      .select('response')
+      .eq('scope', 'cache')
+      .eq('cache_key', cacheKey)
+      .eq('request_hash', hash)
+      .gt('expires_at', nowIso)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!res || !res.data) return null;
+    return res.data.response || null;
+  } catch (_) {
+    return null;
+  }
 }
 
 export async function cacheSet(
@@ -156,15 +164,17 @@ export async function cacheSet(
   userId?: string | null
 ): Promise<void> {
   if (!admin) return;
-  var hash = await requestHash(payload);
-  await admin.from('ai_cache').insert({
-    scope: 'cache',
-    cache_key: cacheKey,
-    request_hash: hash,
-    user_id: userId || null,
-    action: cacheKey,
-    response: response == null ? {} : response,
-    status: 200,
-    expires_at: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
-  });
+  try {
+    var hash = await requestHash(payload);
+    await admin.from('ai_cache').insert({
+      scope: 'cache',
+      cache_key: cacheKey,
+      request_hash: hash,
+      user_id: userId || null,
+      action: cacheKey,
+      response: response == null ? {} : response,
+      status: 200,
+      expires_at: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
+    });
+  } catch (_) {}
 }

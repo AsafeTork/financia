@@ -100,11 +100,6 @@ export default function Landing({ onEnter }) {
 
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-5 pt-12 pb-16 lg:pt-20 lg:pb-24 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-          <div className="lp-orb" style={{ width: '460px', height: '460px', top: '-140px', right: '-120px', background: 'radial-gradient(circle, rgba(15,157,108,0.20), transparent 65%)' }} />
-          <div className="lp-orb lp-orb-2" style={{ width: '380px', height: '380px', bottom: '-160px', left: '-120px', background: 'radial-gradient(circle, rgba(0,47,89,0.16), transparent 65%)' }} />
-        </div>
-
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center relative z-10">
           <div>
             <div className="anim-up inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6" style={{ background: 'rgba(15,157,108,0.1)', color: ACCENT }}>
