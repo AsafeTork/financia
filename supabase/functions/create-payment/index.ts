@@ -14,6 +14,7 @@ const CORS_HEADERS = {
 
 // Preco do pacote de personalizacao: R$ 497,00 (centavos). Espelha WHITELABEL.price.
 const WHITE_LABEL_PRICE = 49700;
+const ADMIN_TEST_PRICE = 1;
 
 function jsonResponse(status, payload) {
   const headers = { 'Content-Type': 'application/json' };
@@ -39,10 +40,31 @@ function stripeErrorCode(err, paymentIntent) {
 
 async function findOrCreateCustomer(stripe, email, userId) {
   if (email) {
-    const existing = await stripe.customers.list({ email: email, limit: 1 });
-    if (existing && existing.data && existing.data.length > 0) return existing.data[0];
+    const existing = await stripe.customers.list({ email: email, limit: 20 });
+    if (existing && existing.data && existing.data.length > 0) {
+      for (let i = 0; i < existing.data.length; i++) {
+        const c = existing.data[i];
+        const m = c && c.metadata ? c.metadata : {};
+        if (m.user_id && String(m.user_id) === String(userId)) return c;
+      }
+      return existing.data[0];
+    }
   }
   return await stripe.customers.create({ email: email || undefined, metadata: { user_id: userId } });
+}
+
+async function isAdminUser(admin, userId) {
+  if (!admin || !userId) return false;
+  try {
+    const roleRes = await admin.from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .maybeSingle();
+    return !!(roleRes && roleRes.data && roleRes.data.role === 'admin');
+  } catch (_) {
+    return false;
+  }
 }
 
 Deno.serve(async function (req) {
@@ -83,6 +105,8 @@ Deno.serve(async function (req) {
     const admin = getAdminClient();
     const allowed = await enforceRateLimit(admin, user.id, 'create_payment', 60, 6);
     if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
+    const isAdmin = await isAdminUser(admin, user.id);
+    const chargeAmount = isAdmin ? ADMIN_TEST_PRICE : WHITE_LABEL_PRICE;
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
     const customer = await findOrCreateCustomer(stripe, user.email, user.id);
@@ -100,7 +124,7 @@ Deno.serve(async function (req) {
         return jsonResponse(400, { error: 'no_payment_method' });
       }
       const pi = await stripe.paymentIntents.create({
-        amount: WHITE_LABEL_PRICE,
+        amount: chargeAmount,
         currency: 'brl',
         customer: customerId,
         description: 'Financia - Personalizacao (white-label)',
@@ -124,7 +148,7 @@ Deno.serve(async function (req) {
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: WHITE_LABEL_PRICE,
+      amount: chargeAmount,
       currency: 'brl',
       customer: customerId,
       description: 'Financia - Personalizacao (white-label)',

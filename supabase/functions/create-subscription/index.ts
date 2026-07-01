@@ -18,6 +18,7 @@ const CORS_HEADERS = {
 };
 
 const PLAN_PRICES = { pro: 4990, premium: 9990 };
+const ADMIN_TEST_PRICE = 1;
 const PLAN_RANK = { free: 0, pro: 1, premium: 2 };
 const ACTIVE_STATUSES = ['active', 'trialing', 'past_due', 'unpaid'];
 
@@ -55,10 +56,31 @@ function stripeErrorCode(err, paymentIntent) {
 
 async function findOrCreateCustomer(stripe, email, userId) {
   if (email) {
-    const existing = await stripe.customers.list({ email: email, limit: 1 });
-    if (existing && existing.data && existing.data.length > 0) return existing.data[0];
+    const existing = await stripe.customers.list({ email: email, limit: 20 });
+    if (existing && existing.data && existing.data.length > 0) {
+      for (let i = 0; i < existing.data.length; i++) {
+        const c = existing.data[i];
+        const m = c && c.metadata ? c.metadata : {};
+        if (m.user_id && String(m.user_id) === String(userId)) return c;
+      }
+      return existing.data[0];
+    }
   }
   return await stripe.customers.create({ email: email || undefined, metadata: { user_id: userId } });
+}
+
+async function isAdminUser(admin, userId) {
+  if (!admin || !userId) return false;
+  try {
+    const roleRes = await admin.from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .maybeSingle();
+    return !!(roleRes && roleRes.data && roleRes.data.role === 'admin');
+  } catch (_) {
+    return false;
+  }
 }
 
 async function findOrCreateProduct(stripe, planId) {
@@ -164,6 +186,7 @@ Deno.serve(async function (req) {
     const admin = getAdminClient();
     const allowed = await enforceRateLimit(admin, user.id, 'create_subscription', 60, 8);
     if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
+    const isAdmin = await isAdminUser(admin, user.id);
 
     // Preco customizado (desconto manual do admin) do proprio usuario, se houver.
     let customCents = 0;
@@ -173,6 +196,7 @@ Deno.serve(async function (req) {
     } catch (profErr) {
       customCents = 0;
     }
+    if (isAdmin) customCents = ADMIN_TEST_PRICE;
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
     const customer = await findOrCreateCustomer(stripe, user.email, user.id);

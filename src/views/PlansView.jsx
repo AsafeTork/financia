@@ -111,9 +111,9 @@ function PlanCard({ plan, brand, cta, onAction, open, onToggle }) {
   );
 }
 
-var WL_PLAN = { id: 'white_label', name: 'Personalização', price: WHITELABEL.price, period: '' };
+var ADMIN_TEST_PRICE = 0.01;
 
-export default function PlansView({ brand, planInfo, toast, onNav }) {
+export default function PlansView({ brand, planInfo, toast, onNav, isAdmin }) {
   var plan = effectivePlan(planInfo);
   var checkoutState = useState(null);
   var checkout = checkoutState[0];
@@ -128,6 +128,9 @@ export default function PlansView({ brand, planInfo, toast, onNav }) {
   var openPlan = openState[0];
   var setOpenPlan = openState[1];
   var customCents = planInfo && planInfo.custom_price_cents ? planInfo.custom_price_cents : 0;
+  var isAdminTest = !!isAdmin;
+  var whiteLabelPrice = isAdminTest ? ADMIN_TEST_PRICE : WHITELABEL.price;
+  var wlPlan = { id: 'white_label', name: 'Personalização', price: whiteLabelPrice, period: '' };
   var wlState = useState(false);
   var wlOpen = wlState[0];
   var setWlOpen = wlState[1];
@@ -187,6 +190,17 @@ export default function PlansView({ brand, planInfo, toast, onNav }) {
           </div>
         </div>
       )}
+      {isAdminTest && (
+        <div className="rounded-2xl p-4 flex items-center gap-3" style={{background:'#ecfeff', border:'1px solid #a5f3fc'}}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'#0891b2'}}>
+            <svg className="w-5 h-5" fill="none" stroke="#ffffff" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold" style={{color:'#0e7490'}}>Modo de teste admin ativo</p>
+            <p className="text-xs" style={{color:'#155e75'}}>Cobranças para teste no admin estão em <b>R$ 0,01</b>.</p>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3">
         {PRICING_PLANS.map(function(p) {
@@ -214,7 +228,7 @@ export default function PlansView({ brand, planInfo, toast, onNav }) {
       )}
 
       {wlOpen && (
-        <StripeCheckout plan={WL_PLAN} mode="payment" brand={brand} toast={toast}
+        <StripeCheckout plan={wlPlan} mode="payment" brand={brand} toast={toast}
           onClose={function() { setWlOpen(false); }}/>
       )}
 
@@ -233,7 +247,7 @@ export default function PlansView({ brand, planInfo, toast, onNav }) {
         </div>
 
         <div className="flex items-end gap-2">
-          <span className="font-display text-3xl font-bold" style={{color:'var(--text-main)'}}>{fmt(WHITELABEL.price)}</span>
+          <span className="font-display text-3xl font-bold" style={{color:'var(--text-main)'}}>{fmt(whiteLabelPrice)}</span>
           <span className="text-sm mb-1 font-semibold" style={{color: brand.color}}>pagamento único</span>
         </div>
 
@@ -259,7 +273,7 @@ export default function PlansView({ brand, planInfo, toast, onNav }) {
               className="w-full text-sm font-semibold px-4 py-3 rounded-xl text-white transition hover:opacity-90 min-h-[44px] flex items-center justify-center gap-2"
               style={{background: brand.color}}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-              Comprar personalização — {fmt(WHITELABEL.price)}
+              Comprar personalização — {fmt(whiteLabelPrice)}
             </button>
             <a href={waLink(wlMsg)} target="_blank" rel="noopener noreferrer"
               className="text-center text-xs font-semibold transition hover:opacity-70" style={{color: brand.color}}>

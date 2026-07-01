@@ -9,6 +9,7 @@ import InstallButton from '../components/InstallButton.jsx';
 import UpdateCardModal from '../components/UpdateCardModal.jsx';
 import CardPreview from '../components/CardPreview.jsx';
 import { sb } from '../lib/supabase.js';
+import { triggerApkBuild } from '../lib/db.js';
 
 export default function SettingsView({ brand, session, planInfo, onSave, onSavePhone, toast, confirm, isAdmin, onNav }) {
   var [tab, setTab] = useState(function() {
@@ -78,9 +79,17 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
 
   var hasWhiteLabel = !!(brand && brand.white_label);
   var [appForm, setAppForm] = useState(function() {
-    return { color: brand.color || '#002f59', color_secondary: brand.color_secondary || '', logo_url: brand.logo_url || '' };
+    return {
+      name: brand.name || '',
+      color: brand.color || '#002f59',
+      color_secondary: brand.color_secondary || '',
+      color_accent: brand.color_accent || '',
+      theme: brand.theme || 'light',
+      logo_url: brand.logo_url || '',
+    };
   });
   var [appSaving, setAppSaving] = useState(false);
+  var [apkBusy, setApkBusy] = useState(false);
   var onLogoFile = function(e) {
     var file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -94,9 +103,35 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
   };
   var saveAppearance = async function() {
     setAppSaving(true);
-    var nb = Object.assign({}, brand, { color: appForm.color, color_secondary: appForm.color_secondary || null, logo_url: appForm.logo_url || null });
+    var nb = Object.assign({}, brand, {
+      name: appForm.name || brand.name,
+      color: appForm.color,
+      color_secondary: appForm.color_secondary || null,
+      color_accent: appForm.color_accent || null,
+      theme: appForm.theme || 'light',
+      logo_url: appForm.logo_url || null,
+    });
     await onSave(nb);
     setAppSaving(false);
+  };
+  var buildPersonalizedApk = async function() {
+    if (!hasWhiteLabel) return;
+    setApkBusy(true);
+    try {
+      var res = await triggerApkBuild(appForm.name || brand.name, appForm.logo_url || brand.logo_url, appForm.color || brand.color);
+      if (res && res.ok) {
+        toast('Build do APK personalizado iniciado! Em alguns minutos, abra o botão de download.', 'success');
+      } else if (res && res.reason === 'no_token') {
+        toast('Token do GitHub ausente. Peça ao admin para configurar o token nas Configurações.', 'error');
+      } else if (res && res.reason === 'rate_limited') {
+        toast('Aguarde alguns minutos antes de pedir outro build.', 'warning');
+      } else {
+        toast('Não foi possível iniciar o build do APK agora.', 'error');
+      }
+    } catch (e) {
+      toast('Erro ao iniciar build do APK personalizado.', 'error');
+    }
+    setApkBusy(false);
   };
   var devMsg = 'Olá! Tenho o pacote de personalização e quero gerar o APK customizado do meu app.';
 
@@ -105,6 +140,9 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
   var subActions = [
     { label:'Gerenciar plano', desc:'Escolha entre Grátis, Pro e Premium', icon:'M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z', act:function() { if (onNav) onNav('planos'); } },
   ];
+  if (hasWhiteLabel) {
+    subActions.push({ label:'Editar personalização', desc:'Mude logo, cores e tema quando quiser', icon:'M11 5h2m-1-1v2m0 14v-2m0 0h-2m2 0h2m-9.657-2.343l1.414-1.414m0 0a8 8 0 111.414 1.414L4.929 17.07zm13.314-10.142l-1.414 1.414', act:function() { setTab('appearance'); } });
+  }
   // Secao de forma de pagamento aparece em planos pagos ou se ja existe cartao salvo.
   var showPayment = planId !== 'free' || !!savedCard;
 
@@ -254,7 +292,7 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
         <Card className="p-6 flex flex-col gap-5">
           <div>
             <p className="text-sm font-semibold mb-1" style={{color:'var(--text-main)'}}>Identidade visual</p>
-            <p className="text-xs mb-4" style={{color:'var(--text-muted)'}}>Defina as 2 cores principais e a logo da sua empresa.</p>
+            <p className="text-xs mb-4" style={{color:'var(--text-muted)'}}>Defina nome, logo, cores e tema. Você pode alterar quando quiser.</p>
 
             <div className="flex items-center gap-4 mb-5">
               <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden flex items-center justify-center" style={{background: appForm.color}}>
@@ -273,8 +311,10 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
               </div>
             </div>
 
+            <Inp label="Nome do app" value={appForm.name} onChange={function(e) { setAppField('name', e.target.value); }} placeholder="Ex.: Minha Empresa"/>
+
             <div className="grid grid-cols-2 gap-3">
-              {[{k:'color',l:'Cor principal'},{k:'color_secondary',l:'Cor secundária'}].map(function(field) {
+              {[{k:'color',l:'Cor principal'},{k:'color_secondary',l:'Cor secundária'},{k:'color_accent',l:'Cor de destaque'}].map(function(field) {
                 var val = appForm[field.k] || '#002f59';
                 return (
                   <div key={field.k} className="flex flex-col gap-1.5">
@@ -287,16 +327,45 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
                 );
               })}
             </div>
+            <div className="mt-3">
+              <label className="text-xs font-semibold" style={{color:'var(--text-sub)'}}>Tema base</label>
+              <div className="flex gap-2 mt-1.5">
+                <button type="button" onClick={function() { setAppField('theme', 'light'); }}
+                  className="flex-1 min-h-[44px] rounded-xl border text-sm font-semibold"
+                  style={appForm.theme === 'light' ? { borderColor: brand.color, color: brand.color, background:'var(--brand-soft)' } : { borderColor:'var(--border)', color:'var(--text-sub)' }}>
+                  Claro
+                </button>
+                <button type="button" onClick={function() { setAppField('theme', 'dark'); }}
+                  className="flex-1 min-h-[44px] rounded-xl border text-sm font-semibold"
+                  style={appForm.theme === 'dark' ? { borderColor: brand.color, color: brand.color, background:'var(--brand-soft)' } : { borderColor:'var(--border)', color:'var(--text-sub)' }}>
+                  Escuro
+                </button>
+              </div>
+            </div>
           </div>
 
           <button onClick={saveAppearance} disabled={appSaving} className="w-full text-white rounded-xl py-3 text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-40 min-h-12" style={{background: brand.color}}>
             {appSaving ? <Spin white/> : 'Salvar aparência'}
           </button>
 
+          <button type="button" onClick={buildPersonalizedApk} disabled={apkBusy}
+            className="w-full rounded-xl py-3 text-sm font-semibold text-white flex items-center justify-center gap-2 transition hover:opacity-90 min-h-12 disabled:opacity-50" style={{background: brand.color}}>
+            {apkBusy ? <Spin white/> : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V3m0 13l4-4m-4 4l-4-4M4 21h16"/></svg>
+            )}
+            Gerar APK personalizado
+          </button>
+
+          <a href="https://github.com/AsafeTork/financia/releases/latest" target="_blank" rel="noreferrer"
+            className="w-full rounded-xl py-3 text-sm font-semibold flex items-center justify-center gap-2 transition hover:opacity-90 min-h-12" style={{border:'1px solid var(--border)', color:'var(--text-main)'}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 21h16"/></svg>
+            Baixar APK personalizado
+          </a>
+
           <a href={waLink(devMsg)} target="_blank" rel="noreferrer"
             className="w-full rounded-xl py-3 text-sm font-semibold flex items-center justify-center gap-2 transition hover:opacity-90 min-h-12" style={{border:'1px solid var(--border)', color:'var(--text-main)'}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
-            Falar com o Desenvolvedor (gerar APK)
+            Falar com o Desenvolvedor
           </a>
         </Card>
       )}

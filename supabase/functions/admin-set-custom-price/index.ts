@@ -23,10 +23,17 @@ function jsonResponse(status, payload) {
   return new Response(JSON.stringify(payload), { status: status, headers: headers });
 }
 
-async function findCustomer(stripe, email) {
+async function findCustomer(stripe, email, userId) {
   if (!email) return null;
-  const existing = await stripe.customers.list({ email: email, limit: 1 });
-  if (existing && existing.data && existing.data.length > 0) return existing.data[0];
+  const existing = await stripe.customers.list({ email: email, limit: 20 });
+  if (existing && existing.data && existing.data.length > 0) {
+    for (let i = 0; i < existing.data.length; i++) {
+      const c = existing.data[i];
+      const m = c && c.metadata ? c.metadata : {};
+      if (m.user_id && String(m.user_id) === String(userId)) return c;
+    }
+    return existing.data[0];
+  }
   return null;
 }
 
@@ -144,7 +151,7 @@ Deno.serve(async function (req) {
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
-    const customer = await findCustomer(stripe, email);
+    const customer = await findCustomer(stripe, email, targetUserId);
     if (!customer) {
       return jsonResponse(200, { ok: true, applied: false });
     }
