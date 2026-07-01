@@ -88,7 +88,9 @@ export default function AdminPanel({ toast, confirm, session }) {
   var dbBytes = dbStats && dbStats.db_bytes ? dbStats.db_bytes : 0;
   var dbu = dbUsage(dbBytes, DB_LIMIT_BYTES);
   var dbTables = dbStats && dbStats.tables ? dbStats.tables : [];
-  var maxTableBytes = dbTables.reduce(function(m, t) { return t.bytes > m ? t.bytes : m; }, 1);
+  var shownTables = dbTables.slice(0, 5);
+  var shownBytes = shownTables.reduce(function(s, t) { return s + (t.bytes || 0); }, 0);
+  var otherBytes = Math.max(0, dbBytes - shownBytes);
 
   const visibleClients = clients.filter(function(c) {
     if (planFilter !== 'all' && effectivePlan(c) !== planFilter) return false;
@@ -277,8 +279,8 @@ export default function AdminPanel({ toast, confirm, session }) {
               </p>
             )}
             <div className="flex flex-col gap-1">
-              {dbTables.slice(0, 5).map(function(t) {
-                var w = Math.max(4, Math.round((t.bytes / maxTableBytes) * 100));
+              {shownTables.map(function(t) {
+                var w = dbBytes > 0 ? Math.max(2, Math.round((t.bytes / dbBytes) * 100)) : 0;
                 return (
                   <div key={t.name} className="flex items-center gap-2">
                     <span className="text-[11px] truncate flex-shrink-0" style={{color:'var(--text-sub)', width:96}}>{t.name}</span>
@@ -289,7 +291,17 @@ export default function AdminPanel({ toast, confirm, session }) {
                   </div>
                 );
               })}
+              {otherBytes > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] truncate flex-shrink-0" style={{color:'var(--text-sub)', width:96}}>outros/índices</span>
+                  <div className="h-1.5 rounded-full flex-1 overflow-hidden" style={{background:'var(--bg-subtle)'}}>
+                    <div className="h-full rounded-full" style={{width: Math.max(2, Math.round((otherBytes / dbBytes) * 100)) + '%', background:'#94a3b8'}}/>
+                  </div>
+                  <span className="text-[10px] tabular flex-shrink-0" style={{color:'var(--text-muted)', width:64, textAlign:'right'}}>{formatBytes(otherBytes)}</span>
+                </div>
+              )}
             </div>
+            <p className="text-[10px]" style={{color:'var(--text-muted)'}}>Valor total inclui índices e objetos além das tabelas listadas.</p>
           </div>
         ) : (
           <p className="text-xs" style={{color:'var(--text-muted)'}}>Não foi possível ler o tamanho do banco agora.</p>

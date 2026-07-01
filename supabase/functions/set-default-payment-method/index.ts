@@ -23,7 +23,7 @@ function jsonResponse(status, payload) {
 
 async function findCustomerId(stripe, email) {
   if (!email) return null;
-  const existing = await stripe.customers.list({ email: email, limit: 1 });
+  const existing = await stripe.customers.list({ email: email, limit: 20 });
   if (existing && existing.data && existing.data.length > 0) return existing.data[0].id;
   return null;
 }
@@ -67,9 +67,14 @@ Deno.serve(async function (req) {
     if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
-    const customerId = await findCustomerId(stripe, user.email);
+    const pm = await stripe.paymentMethods.retrieve(pmId);
+    var customerId = pm && pm.customer ? String(pm.customer) : null;
+    if (!customerId) customerId = await findCustomerId(stripe, user.email);
     if (!customerId) {
       return jsonResponse(404, { error: 'no_customer' });
+    }
+    if (!pm || !pm.customer) {
+      await stripe.paymentMethods.attach(pmId, { customer: customerId });
     }
 
     // Define o cartao padrao para faturas futuras do customer.

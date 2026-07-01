@@ -110,7 +110,7 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
 
   const allTabs = [{key:'account',label:'Conta'}, {key:'subscription',label:'Assinatura'}];
   if (hasWhiteLabel) allTabs.push({key:'appearance',label:'Aparência'});
-  allTabs.push({key:'clients',label:'Clientes',adminOnly:true});
+  allTabs.push({key:'clients',label:'Painel admin',adminOnly:true});
   const tabs = allTabs.filter(function(t) { return !t.adminOnly || isAdmin; });
 
   return (

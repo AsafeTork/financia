@@ -211,7 +211,7 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
       var res = await sb.functions.invoke('create-payment', { body: { kind: 'white_label', use_saved_card: true } });
       var data = res && res.data ? res.data : null;
       if (data && data.status === 'paid') { done(); return; }
-      if (data && data.clientSecret && data.requiresAction) {
+      if (data && data.clientSecret) {
         var stripe = await stripePromise;
         if (!stripe) { setActionErr('Não foi possível carregar o Stripe. Tente de novo.'); setConfirming(false); return; }
         var r = await stripe.handleNextAction({ clientSecret: data.clientSecret });
@@ -219,7 +219,6 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
         done();
         return;
       }
-      if (data && data.clientSecret) { setClientSecret(data.clientSecret); setUseOtherCard(false); setPhase('form'); setConfirming(false); return; }
       var msg = await readFnErrorMessage(res, data);
       setActionErr(friendlyStripeError(msg));
       setConfirming(false);
@@ -246,7 +245,7 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
         }
         return;
       }
-      if (data && data.clientSecret && data.requiresAction) {
+      if (data && data.clientSecret && (data.requiresAction || useSaved || isChange)) {
         var stripe = await stripePromise;
         if (!stripe) { setActionErr('Não foi possível carregar o Stripe. Tente de novo.'); setConfirming(false); return; }
         var r = await stripe.handleNextAction({ clientSecret: data.clientSecret });

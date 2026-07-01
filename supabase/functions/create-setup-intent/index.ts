@@ -65,7 +65,7 @@ Deno.serve(async function (req) {
     const setupIntent = await stripe.setupIntents.create({
       customer: customerId,
       usage: 'off_session',
-      automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+      automatic_payment_methods: { enabled: true },
       metadata: { user_id: user.id },
     });
 
