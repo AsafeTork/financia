@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { getStripe, getPublishableKey, stripeAppearance, friendlyStripeError, readFnErrorMessage } from '../lib/stripe.js';
+import { getStripe, getPublishableKey, stripeAppearance, friendlyStripeError, friendlyStripeClientError, readFnErrorMessage } from '../lib/stripe.js';
 import { sb } from '../lib/supabase.js';
 import { fmt } from '../lib/utils.js';
 import { Spin } from './ui.jsx';
@@ -38,13 +38,13 @@ function PaymentForm({ plan, brand, onDone, onClose, mode }) {
         redirect: 'if_required',
       });
       if (res.error) {
-        setPayErr(res.error.message || 'Não foi possível concluir o pagamento.');
+        setPayErr(friendlyStripeClientError(res.error));
         setSubmitting(false);
         return;
       }
       onDone();
     } catch (err) {
-      setPayErr('Erro inesperado no pagamento. Tente de novo.');
+      setPayErr(friendlyStripeError(err && err.message ? err.message : 'payment_failed'));
       setSubmitting(false);
     }
   };
@@ -215,7 +215,7 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
         var stripe = await stripePromise;
         if (!stripe) { setActionErr('Não foi possível carregar o Stripe. Tente de novo.'); setConfirming(false); return; }
         var r = await stripe.handleNextAction({ clientSecret: data.clientSecret });
-        if (r && r.error) { setActionErr(r.error.message || 'Autenticação do cartão falhou.'); setConfirming(false); return; }
+        if (r && r.error) { setActionErr(friendlyStripeClientError(r.error)); setConfirming(false); return; }
         done();
         return;
       }
@@ -249,7 +249,7 @@ export default function StripeCheckout({ plan, brand, onClose, onDone, toast, mo
         var stripe = await stripePromise;
         if (!stripe) { setActionErr('Não foi possível carregar o Stripe. Tente de novo.'); setConfirming(false); return; }
         var r = await stripe.handleNextAction({ clientSecret: data.clientSecret });
-        if (r && r.error) { setActionErr(r.error.message || 'Autenticação do cartão falhou.'); setConfirming(false); return; }
+        if (r && r.error) { setActionErr(friendlyStripeClientError(r.error)); setConfirming(false); return; }
         done();
         return;
       }

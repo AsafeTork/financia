@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { friendlyStripeError, readFnErrorMessage, formatCardLabel } from './stripe.js';
+import { friendlyStripeError, friendlyStripeClientError, readFnErrorMessage, formatCardLabel } from './stripe.js';
 
 // Rotulo seguro do cartao salvo: bandeira + ultimos 4. Nunca expoe o numero completo.
 describe('formatCardLabel', function() {
@@ -48,6 +48,29 @@ describe('friendlyStripeError', function() {
 
   it('no_payment_method -> mensagem de cartao nao informado', function() {
     expect(friendlyStripeError('no_payment_method')).toMatch(/cart/i);
+  });
+
+  it('insufficient_funds -> mensagem de saldo insuficiente', function() {
+    expect(friendlyStripeError('insufficient_funds')).toMatch(/saldo insuficiente/i);
+  });
+
+  it('mensagem contendo codigo conhecido tambem mapeia', function() {
+    expect(friendlyStripeError('Your card was declined (insufficient_funds).')).toMatch(/saldo insuficiente/i);
+  });
+});
+
+describe('friendlyStripeClientError', function() {
+  it('prioriza decline_code do erro do Stripe.js', function() {
+    var msg = friendlyStripeClientError({ decline_code: 'insufficient_funds', message: 'generic' });
+    expect(msg).toMatch(/saldo insuficiente/i);
+  });
+
+  it('usa setup_intent.last_setup_error quando disponivel', function() {
+    var msg = friendlyStripeClientError({
+      code: 'card_declined',
+      setup_intent: { last_setup_error: { decline_code: 'do_not_honor' } },
+    });
+    expect(msg).toMatch(/banco emissor/i);
   });
 });
 

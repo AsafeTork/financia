@@ -22,6 +22,21 @@ function jsonResponse(status, payload) {
   return new Response(JSON.stringify(payload), { status: status, headers: headers });
 }
 
+function stripeErrorCode(err, paymentIntent) {
+  const raw = err && err.raw ? err.raw : null;
+  const piErr = paymentIntent && paymentIntent.last_payment_error ? paymentIntent.last_payment_error : null;
+  const keys = [
+    raw && raw.decline_code ? raw.decline_code : '',
+    raw && raw.code ? raw.code : '',
+    piErr && piErr.decline_code ? piErr.decline_code : '',
+    piErr && piErr.code ? piErr.code : '',
+  ];
+  for (let i = 0; i < keys.length; i++) {
+    if (keys[i]) return String(keys[i]);
+  }
+  return 'payment_failed';
+}
+
 async function findOrCreateCustomer(stripe, email, userId) {
   if (email) {
     const existing = await stripe.customers.list({ email: email, limit: 1 });
@@ -105,7 +120,7 @@ Deno.serve(async function (req) {
       if (pi.client_secret && (pi.status === 'requires_action' || pi.status === 'requires_confirmation')) {
         return jsonResponse(200, { clientSecret: pi.client_secret, requiresAction: true });
       }
-      return jsonResponse(402, { error: 'payment_failed' });
+      return jsonResponse(402, { error: stripeErrorCode(null, pi) });
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
@@ -126,6 +141,11 @@ Deno.serve(async function (req) {
       paymentIntentId: paymentIntent.id,
     });
   } catch (err) {
+    const statusCode = err && err.statusCode ? Number(err.statusCode) : 500;
+    const code = stripeErrorCode(err, null);
+    if (statusCode >= 400 && statusCode < 500) {
+      return jsonResponse(statusCode, { error: code });
+    }
     const message = err && err.message ? err.message : String(err);
     return jsonResponse(500, { error: String(message) });
   }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { getStripe, getPublishableKey, stripeAppearance, friendlyStripeError, readFnErrorMessage } from '../lib/stripe.js';
+import { getStripe, getPublishableKey, stripeAppearance, friendlyStripeError, friendlyStripeClientError, readFnErrorMessage } from '../lib/stripe.js';
 import { sb } from '../lib/supabase.js';
 import { Spin } from './ui.jsx';
 import CardPreview from './CardPreview.jsx';
@@ -32,7 +32,7 @@ function CardFormInner({ brand, onSaved, onCancel }) {
         redirect: 'if_required',
       });
       if (res.error) {
-        setPayErr(res.error.message || 'Não foi possível salvar o cartão.');
+        setPayErr(friendlyStripeClientError(res.error));
         setSubmitting(false);
         return;
       }
@@ -50,7 +50,7 @@ function CardFormInner({ brand, onSaved, onCancel }) {
       }
       onSaved();
     } catch (err) {
-      setPayErr('Erro inesperado ao salvar o cartão. Tente de novo.');
+      setPayErr(friendlyStripeError(err && err.message ? err.message : 'payment_failed'));
       setSubmitting(false);
     }
   };
