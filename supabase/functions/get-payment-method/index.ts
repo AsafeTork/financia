@@ -4,6 +4,7 @@
 // customer, devolve { card: null }.
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { cacheGet, cacheSet, enforceRateLimit, getAdminClient } from '../_shared/security.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -62,11 +63,22 @@ Deno.serve(async function (req) {
     if (!user) {
       return jsonResponse(401, { error: 'unauthorized' });
     }
+    const admin = getAdminClient();
+    const allowed = await enforceRateLimit(admin, user.id, 'get_payment_method', 60, 30);
+    if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
+
+    const cachePayload = { user_id: user.id };
+    const cached = await cacheGet(admin, 'stripe:get-payment-method:' + user.id, cachePayload);
+    if (cached && Object.prototype.hasOwnProperty.call(cached, 'card')) {
+      return jsonResponse(200, cached);
+    }
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
     const customer = await findCustomer(stripe, user.email);
     if (!customer) {
-      return jsonResponse(200, { card: null });
+      const noCard = { card: null };
+      await cacheSet(admin, 'stripe:get-payment-method:' + user.id, cachePayload, noCard, 60, user.id);
+      return jsonResponse(200, noCard);
     }
 
     // 1) cartao padrao de fatura.
@@ -80,11 +92,15 @@ Deno.serve(async function (req) {
     }
 
     if (!pmId) {
-      return jsonResponse(200, { card: null });
+      const noCard = { card: null };
+      await cacheSet(admin, 'stripe:get-payment-method:' + user.id, cachePayload, noCard, 60, user.id);
+      return jsonResponse(200, noCard);
     }
 
     const pm = await stripe.paymentMethods.retrieve(pmId);
-    return jsonResponse(200, { card: cardFromPaymentMethod(pm), payment_method_id: pmId });
+    const response = { card: cardFromPaymentMethod(pm), payment_method_id: pmId };
+    await cacheSet(admin, 'stripe:get-payment-method:' + user.id, cachePayload, response, 60, user.id);
+    return jsonResponse(200, response);
   } catch (err) {
     const message = err && err.message ? err.message : String(err);
     return jsonResponse(500, { error: String(message) });

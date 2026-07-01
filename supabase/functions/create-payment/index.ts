@@ -4,6 +4,7 @@
 // DENTRO do app, sem redirecionar. Preco inline em BRL (centavos).
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { enforceRateLimit, getAdminClient, sanitizeKind } from '../_shared/security.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -59,11 +60,14 @@ Deno.serve(async function (req) {
 
     let body = {};
     try { body = await req.json(); } catch (parseErr) { body = {}; }
-    const kind = body && body.kind ? body.kind : null;
+    const kind = sanitizeKind(body && body.kind);
     const useSavedCard = !!(body && body.use_saved_card);
-    if (kind !== 'white_label') {
+    if (!kind) {
       return jsonResponse(400, { error: 'invalid_kind' });
     }
+    const admin = getAdminClient();
+    const allowed = await enforceRateLimit(admin, user.id, 'create_payment', 60, 6);
+    if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
     const customer = await findOrCreateCustomer(stripe, user.email, user.id);

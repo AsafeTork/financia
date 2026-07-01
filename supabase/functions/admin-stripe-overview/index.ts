@@ -3,6 +3,7 @@
 // e a estimativa de receita mensal (MRR) somando as assinaturas ativas de verdade.
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { cacheGet, cacheSet, enforceRateLimit, getAdminClient } from '../_shared/security.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -78,6 +79,15 @@ Deno.serve(async function (req) {
     if (!roleRes || !roleRes.data) {
       return jsonResponse(403, { error: 'not_authorized' });
     }
+    const secAdmin = getAdminClient();
+    const allowed = await enforceRateLimit(secAdmin, user.id, 'admin_stripe_overview', 60, 12);
+    if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
+
+    const cachePayload = { user_id: user.id, action: 'admin-stripe-overview' };
+    const cached = await cacheGet(secAdmin, 'stripe:admin-overview:' + user.id, cachePayload);
+    if (cached && Object.prototype.hasOwnProperty.call(cached, 'mrr_cents')) {
+      return jsonResponse(200, cached);
+    }
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
 
@@ -102,14 +112,16 @@ Deno.serve(async function (req) {
       truncated = !!subs.has_more;
     }
 
-    return jsonResponse(200, {
+    const response = {
       available_cents: availableCents,
       pending_cents: pendingCents,
       currency: 'brl',
       mrr_cents: mrrCents,
       active_count: activeCount,
       truncated: truncated,
-    });
+    };
+    await cacheSet(secAdmin, 'stripe:admin-overview:' + user.id, cachePayload, response, 30, user.id);
+    return jsonResponse(200, response);
   } catch (err) {
     const message = err && err.message ? err.message : String(err);
     return jsonResponse(500, { error: String(message) });

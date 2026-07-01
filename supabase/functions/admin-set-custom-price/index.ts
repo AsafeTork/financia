@@ -5,6 +5,7 @@
 //     (proration_behavior 'none' -> sem cobranca surpresa, vale no proximo ciclo).
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { asPositiveInt, enforceRateLimit, getAdminClient, sanitizeUuid } from '../_shared/security.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -103,13 +104,13 @@ Deno.serve(async function (req) {
 
     let body = {};
     try { body = await req.json(); } catch (parseErr) { body = {}; }
-    const targetUserId = body && body.target_user_id ? String(body.target_user_id) : '';
+    const targetUserId = sanitizeUuid(body && body.target_user_id);
     const rawCents = body && (body.cents === 0 || body.cents) ? body.cents : null;
-    const cents = (rawCents === null || rawCents === undefined) ? null : Math.round(Number(rawCents));
+    const cents = (rawCents === null || rawCents === undefined) ? null : asPositiveInt(rawCents, 0, 100000000);
     if (!targetUserId) {
       return jsonResponse(400, { error: 'missing_target' });
     }
-    if (cents !== null && (isNaN(cents) || cents < 0 || cents > 100000000)) {
+    if (rawCents !== null && rawCents !== undefined && cents === null) {
       return jsonResponse(400, { error: 'invalid_price' });
     }
 
@@ -121,13 +122,18 @@ Deno.serve(async function (req) {
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
+    const callerRes = await supabase.auth.getUser();
+    const caller = callerRes && callerRes.data ? callerRes.data.user : null;
+    if (!caller) return jsonResponse(401, { error: 'unauthorized' });
+    const secAdmin = getAdminClient();
+    const allowed = await enforceRateLimit(secAdmin, caller.id, 'admin_set_custom_price', 60, 20);
+    if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
     const rpcRes = await supabase.rpc('admin_set_custom_price', { a_target: targetUserId, b_cents: cents });
     if (rpcRes && rpcRes.error) {
       const msg = rpcRes.error.message || 'rpc_failed';
       const code = msg.indexOf('not authorized') !== -1 ? 403 : 400;
       return jsonResponse(code, { error: String(msg) });
     }
-
     // 2) Aplica na assinatura ativa, se existir.
     const admin = createClient(supabaseUrl, serviceKey);
     const userRes = await admin.auth.admin.getUserById(targetUserId);

@@ -3,7 +3,7 @@ import { sb } from '../lib/supabase.js';
 import { hexToRgb, luminance, deriveCores, lightenHex, fmt } from '../lib/utils.js';
 import { THEME_PRESETS, PRICING_PLANS, effectivePlan, waLinkTo } from '../lib/constants.js';
 import { setClientCustomPrice } from '../lib/db.js';
-import { gerarPaleta } from '../lib/ai.js';
+import { gerarPaleta } from '../lib/aiClient.js';
 
 function PreviewPaleta({ primary, secondary, accent }) {
   var lum = luminance(primary || '#002f59');

@@ -3,6 +3,7 @@
 // SEM trocar a sessao do admin (o bug de sb.auth.signUp no front deslogava o admin).
 // Verifica que o chamador e admin (user_roles.role === 'admin') antes de qualquer acao.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { enforceRateLimit, getAdminClient, sanitizeEmail, sanitizeHexColor, sanitizeText, sanitizeUrl } from '../_shared/security.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -60,9 +61,9 @@ Deno.serve(async function (req) {
     // 3) Valida entrada.
     let body = {};
     try { body = await req.json(); } catch (parseErr) { body = {}; }
-    const email = body && body.email ? String(body.email).trim() : '';
-    const password = body && body.password ? String(body.password) : '';
-    const companyName = body && body.company_name ? String(body.company_name) : '';
+    const email = sanitizeEmail(body && body.email);
+    const password = sanitizeText(body && body.password, 128);
+    const companyName = sanitizeText(body && body.company_name, 120);
     if (!email || !password) {
       return jsonResponse(400, { error: 'missing_credentials' });
     }
@@ -72,6 +73,9 @@ Deno.serve(async function (req) {
     if (!companyName) {
       return jsonResponse(400, { error: 'missing_company' });
     }
+    const secAdmin = getAdminClient();
+    const allowed = await enforceRateLimit(secAdmin, caller.id, 'admin_create_client', 60, 5);
+    if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
 
     // 4) Cria o usuario ja confirmado (nao envia email, nao troca a sessao do admin).
     const created = await admin.auth.admin.createUser({
@@ -93,12 +97,12 @@ Deno.serve(async function (req) {
     const profileRes = await admin.from('company_profiles').upsert({
       user_id: newUid,
       name: companyName,
-      color: body.primary_color || '#002f59',
-      color_secondary: body.secondary_color || null,
-      color_accent: body.accent_color || null,
-      theme: body.theme || 'light',
+      color: sanitizeHexColor(body && body.primary_color, '#002f59'),
+      color_secondary: sanitizeHexColor(body && body.secondary_color) || null,
+      color_accent: sanitizeHexColor(body && body.accent_color) || null,
+      theme: sanitizeText(body && body.theme, 10) === 'dark' ? 'dark' : 'light',
       logo: 'G',
-      logo_url: body.logo_url || null,
+      logo_url: sanitizeUrl(body && body.logo_url) || null,
     });
     if (profileRes.error) {
       // Usuario foi criado; reporta o erro de perfil mas devolve o uid para nao orfanar.

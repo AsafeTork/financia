@@ -3,7 +3,7 @@ import { Card } from '../components/ui.jsx';
 import { KpiCard, BarChartSVG, UsageBar } from '../components/UsageBar.jsx';
 import { fmt, fmtDate, today, prevDays, brandAlpha } from '../lib/utils.js';
 import { PLAN_LIMITS, effectivePlan } from '../lib/constants.js';
-import { askAI } from '../lib/ai.js';
+import { askAI } from '../lib/aiClient.js';
 
 export default function Dashboard({ tx, products, brand, onNav, planInfo, lossesCount, onUpgrade }) {
   var cm = today().slice(0, 7);
@@ -71,19 +71,18 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
     var nSales = mtx.filter(function(t) { return t.type === 'income'; }).length;
     var ticket = nSales > 0 ? ti / nSales : 0;
 
-    var resumo = 'Mes atual. Entradas: ' + fmt(ti) + '. Saidas: ' + fmt(to) + '. Lucro: ' + fmt(profitCurr) + '.';
-    if (profVar !== null) resumo += ' Variacao do lucro vs mes anterior: ' + profVar + '%.';
-    resumo += ' Vendas no mes: ' + nSales + '. Ticket medio: ' + fmt(ticket) + '.';
-    if (topCats.length > 0) {
-      resumo += ' Maiores despesas por categoria: ' + topCats.map(function(c) { return c[0] + ' (' + fmt(c[1]) + ')'; }).join(', ') + '.';
-    }
-    if (lowStock.length > 0) resumo += ' Produtos com estoque baixo: ' + lowStock.length + '.';
-    resumo += ' Total de produtos: ' + products.length + '. Lancamentos no mes: ' + mtx.length + '.';
-
-    var sys = 'Voce e um consultor financeiro para pequenos negocios no Brasil. Com base nos numeros reais informados, escreva no maximo 4 dicas curtas, praticas e ACIONAVEIS, em portugues do Brasil, sem jargao. '
-      + 'Cada dica deve sugerir uma acao concreta (o que fazer agora), priorizando o que tem maior impacto no lucro: cortar a maior categoria de despesa, melhorar margem, aumentar ticket medio ou reduzir perdas. '
-      + 'Nao repita os numeros crus; transforme-os em recomendacao. Use uma linha por dica comecando com "- ".';
-    var r = await askAI(resumo, sys, 450);
+    var top = topCats.map(function(c) { return c[0] + ':' + Math.round(c[1]); }).join('|');
+    var resumo = 'in=' + Math.round(ti)
+      + ';out=' + Math.round(to)
+      + ';profit=' + Math.round(profitCurr)
+      + ';profit_var=' + (profVar == null ? 'na' : String(profVar))
+      + ';sales=' + nSales
+      + ';ticket=' + Math.round(ticket)
+      + ';top_exp=' + (top || 'none')
+      + ';low_stock=' + lowStock.length
+      + ';products=' + products.length
+      + ';entries=' + mtx.length;
+    var r = await askAI(resumo, { mode: 'insights', maxTokens: 220 });
     setAiLoading(false);
     if (r.ok) setAiText(r.text); else setAiErr(r.error);
   };

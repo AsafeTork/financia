@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, Inp, Textarea, PageHead } from '../components/ui.jsx';
 import { TEMPLATES } from '../lib/constants.js';
 import { brandAlpha } from '../lib/utils.js';
-import { askAI } from '../lib/ai.js';
+import { askAI } from '../lib/aiClient.js';
 
 export default function EmailView({ brand, toast }) {
   const [to, setTo] = useState('');
@@ -16,8 +16,8 @@ export default function EmailView({ brand, toast }) {
   const writeWithAI = async function() {
     if (!aiPrompt.trim()) return;
     setAiLoading(true);
-    const sys = 'Voce escreve e-mails profissionais, cordiais e objetivos em portugues do Brasil para clientes de um pequeno negocio. Responda APENAS com o e-mail. A primeira linha deve ser exatamente "Assunto: <assunto>" e em seguida o corpo. Sem comentarios extras.';
-    const r = await askAI(aiPrompt, sys, 600);
+    const prompt = String(aiPrompt || '').trim().slice(0, 800);
+    const r = await askAI(prompt, { mode: 'email', maxTokens: 320 });
     setAiLoading(false);
     if (!r.ok) { toast(r.error, 'error'); return; }
     let txt = r.text;

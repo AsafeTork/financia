@@ -3,6 +3,7 @@
 // mantem o plano ate la e depois volta para Grátis via webhook). Idempotente.
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { enforceRateLimit, getAdminClient } from '../_shared/security.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -61,6 +62,9 @@ Deno.serve(async function (req) {
     if (!user) {
       return jsonResponse(401, { error: 'unauthorized' });
     }
+    const admin = getAdminClient();
+    const allowed = await enforceRateLimit(admin, user.id, 'cancel_subscription', 60, 4);
+    if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
     const customer = await findCustomer(stripe, user.email);

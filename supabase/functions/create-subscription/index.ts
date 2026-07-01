@@ -9,6 +9,7 @@
 // Precos via Price com lookup_key estavel (financia_<plan>_monthly).
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { enforceRateLimit, getAdminClient, sanitizePlanId } from '../_shared/security.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -140,11 +141,14 @@ Deno.serve(async function (req) {
 
     let body = {};
     try { body = await req.json(); } catch (parseErr) { body = {}; }
-    const planId = body && body.plan_id ? body.plan_id : null;
+    const planId = sanitizePlanId(body && body.plan_id);
     const useSavedCard = !!(body && body.use_saved_card);
-    if (planId !== 'pro' && planId !== 'premium') {
+    if (!planId) {
       return jsonResponse(400, { error: 'invalid_plan' });
     }
+    const admin = getAdminClient();
+    const allowed = await enforceRateLimit(admin, user.id, 'create_subscription', 60, 8);
+    if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
 
     // Preco customizado (desconto manual do admin) do proprio usuario, se houver.
     let customCents = 0;

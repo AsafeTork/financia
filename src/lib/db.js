@@ -227,6 +227,17 @@ export const clearClientData = async function(uid, tables) {
 export const triggerApkBuild = async function(clientName, logoUrl, primaryColor) {
   const tok = localStorage.getItem('nancia_gh_token') || '';
   if (!tok) return { ok: false, reason: 'no_token' };
+  var last = Number(localStorage.getItem('nancia_last_build_at') || '0');
+  if (Date.now() - last < 5 * 60 * 1000) return { ok: false, reason: 'rate_limited' };
+  var safeName = String(clientName || 'Financia').replace(/[^\w\s\-]/g, '').trim().slice(0, 60) || 'Financia';
+  var safeLogo = '';
+  try {
+    var parsed = new URL(String(logoUrl || '').trim());
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') safeLogo = parsed.toString().slice(0, 500);
+  } catch (e) {}
+  var safeColor = String(primaryColor || '#002f59').replace(/[^#0-9a-fA-F]/g, '');
+  if (!/^#?[0-9a-fA-F]{6}$/.test(safeColor)) safeColor = '#002f59';
+  if (safeColor.charAt(0) !== '#') safeColor = '#' + safeColor;
   try {
     const res = await fetch(
       'https://api.github.com/repos/AsafeTork/financia/actions/workflows/build.yml/dispatches',
@@ -234,13 +245,16 @@ export const triggerApkBuild = async function(clientName, logoUrl, primaryColor)
         method: 'POST',
         headers: { Authorization: 'token ' + tok, 'Content-Type': 'application/json' },
         body: JSON.stringify({ ref: 'main', inputs: {
-          client_name: clientName || 'Financia',
-          logo_url: logoUrl || '',
-          primary_color: (primaryColor || '#002f59').replace('#', ''),
+          client_name: safeName,
+          logo_url: safeLogo,
+          primary_color: safeColor.replace('#', ''),
         }}),
       }
     );
-    if (res.status === 204) return { ok: true };
+    if (res.status === 204) {
+      localStorage.setItem('nancia_last_build_at', String(Date.now()));
+      return { ok: true };
+    }
     return { ok: false, reason: 'api_error', status: res.status };
   } catch(e) {
     return { ok: false, reason: 'network_error' };

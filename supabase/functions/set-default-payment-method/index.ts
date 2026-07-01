@@ -4,6 +4,7 @@
 // pelo email do usuario autenticado — so altera as proprias assinaturas.
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { enforceRateLimit, getAdminClient, sanitizePaymentMethodId } from '../_shared/security.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -57,10 +58,13 @@ Deno.serve(async function (req) {
 
     let body = {};
     try { body = await req.json(); } catch (parseErr) { body = {}; }
-    const pmId = body && body.payment_method_id ? body.payment_method_id : null;
+    const pmId = sanitizePaymentMethodId(body && body.payment_method_id);
     if (!pmId) {
       return jsonResponse(400, { error: 'no_payment_method' });
     }
+    const admin = getAdminClient();
+    const allowed = await enforceRateLimit(admin, user.id, 'set_default_payment_method', 60, 10);
+    if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
     const customerId = await findCustomerId(stripe, user.email);

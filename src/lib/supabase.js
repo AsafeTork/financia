@@ -1,5 +1,30 @@
 import { createClient } from '@supabase/supabase-js';
 
+var AI_GUARD_KEY = '__financia_ai_guard_depth__';
+if (typeof globalThis !== 'undefined' && typeof globalThis[AI_GUARD_KEY] !== 'number') {
+  globalThis[AI_GUARD_KEY] = 0;
+}
+
+function aiGuardDepth() {
+  if (typeof globalThis === 'undefined') return 0;
+  var v = globalThis[AI_GUARD_KEY];
+  return typeof v === 'number' ? v : 0;
+}
+
+export function runWithAIGuard(fn) {
+  if (typeof fn !== 'function') return Promise.resolve(null);
+  if (typeof globalThis !== 'undefined') globalThis[AI_GUARD_KEY] = aiGuardDepth() + 1;
+  var done = function() {
+    if (typeof globalThis !== 'undefined') globalThis[AI_GUARD_KEY] = Math.max(0, aiGuardDepth() - 1);
+  };
+  try {
+    return Promise.resolve(fn()).finally(done);
+  } catch (e) {
+    done();
+    return Promise.reject(e);
+  }
+}
+
 function missingSupabaseError() {
   return new Error('Supabase nao configurado');
 }
@@ -89,3 +114,13 @@ var supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 var supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export var sb = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : createNoopSupabaseClient();
+
+if (sb && sb.functions && typeof sb.functions.invoke === 'function') {
+  var _origInvoke = sb.functions.invoke.bind(sb.functions);
+  sb.functions.invoke = function(name, opts) {
+    if (name === 'ai' && import.meta.env.DEV && aiGuardDepth() < 1) {
+      throw new Error('AI calls must go through src/lib/aiClient.js');
+    }
+    return _origInvoke(name, opts);
+  };
+}

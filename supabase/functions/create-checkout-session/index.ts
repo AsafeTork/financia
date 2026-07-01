@@ -3,6 +3,7 @@
 // Precos inline em BRL (centavos) — nao depende de Stripe Price ID.
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { enforceRateLimit, getAdminClient, sanitizeOrigin, sanitizePlanId } from '../_shared/security.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -55,13 +56,16 @@ Deno.serve(async function (req) {
     } catch (parseErr) {
       body = {};
     }
-    const planId = body && body.plan_id ? body.plan_id : null;
-    if (planId !== 'pro' && planId !== 'premium') {
+    const planId = sanitizePlanId(body && body.plan_id);
+    if (!planId) {
       return jsonResponse(400, { error: 'invalid_plan' });
     }
 
-    const originHeader = req.headers.get('origin');
-    const origin = originHeader ? originHeader : 'https://financia-gestao.onrender.com';
+    const admin = getAdminClient();
+    const allowed = await enforceRateLimit(admin, user.id, 'create_checkout_session', 60, 5);
+    if (!allowed) return jsonResponse(429, { error: 'rate_limited' });
+
+    const origin = sanitizeOrigin(req.headers.get('origin'), 'https://financia-gestao.onrender.com');
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2025-01-27.acacia' });
 
