@@ -236,7 +236,19 @@ export function useSession(p) {
     var finalSecondary = hasWhiteLabel ? (nb.color_secondary || null) : visual.color_secondary;
     var finalAccent = hasWhiteLabel ? (nb.color_accent || null) : visual.color_accent;
     var finalTheme = hasWhiteLabel ? (nb.theme || 'light') : visual.theme;
-    var row = {user_id:userId, name:nb.name, logo:nb.logo, color:finalColor, color_secondary:finalSecondary, color_accent:finalAccent, theme:finalTheme, logo_url:nb.logo_url||null, updated_at:now(), _synced:0, _updated_at:now()};
+    var row = Object.assign({}, existing || {}, {
+      user_id:userId,
+      name:nb.name,
+      logo:nb.logo,
+      color:finalColor,
+      color_secondary:finalSecondary,
+      color_accent:finalAccent,
+      theme:finalTheme,
+      logo_url:nb.logo_url||null,
+      updated_at:now(),
+      _synced:0,
+      _updated_at:now(),
+    });
     try { await ldb.profiles.put(row); }
     catch(e) { toast('Erro ao salvar configurações: ' + (e.message || 'tente novamente'), 'error'); return; }
     setBrand(Object.assign({}, nb, {

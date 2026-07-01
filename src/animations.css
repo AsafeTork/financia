@@ -352,6 +352,38 @@ button:active {
 /* Barras do mini-gráfico crescendo a partir da base */
 @keyframes growBar { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
 .lp-bar { transform-origin: bottom; animation: growBar 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.lp-bar-hover { transition: transform .18s ease, filter .18s ease; }
+.lp-bar-hover:hover { transform: scaleY(1.08); filter: saturate(1.15); }
+
+@keyframes metricLift {
+  from { transform: translateY(0); box-shadow: 0 2px 12px rgba(10,37,64,0.04); }
+  to { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(10,37,64,0.10); }
+}
+.lp-metric-card { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.lp-metric-card:hover { animation: metricLift .2s ease forwards; border-color: rgba(26,107,92,0.35) !important; }
+
+.lp-mini-bar { flex: 1; transition: transform .18s ease, opacity .18s ease; transform-origin: bottom; }
+.lp-metric-card:hover .lp-mini-bar { opacity: .7; }
+.lp-metric-card:hover .lp-mini-bar:hover { opacity: 1; transform: scaleY(1.12); }
+
+@keyframes fillPulse {
+  0% { filter: saturate(1); }
+  50% { filter: saturate(1.25); }
+  100% { filter: saturate(1); }
+}
+.lp-progress { animation: fillPulse 2.6s ease-in-out infinite; }
+
+@keyframes waveMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.lp-wave {
+  background-size: 220% 220%;
+  animation: waveMove 4.2s ease-in-out infinite;
+  transition: transform .2s ease;
+}
+.lp-wave:hover { transform: translateY(-2px) scale(1.01); }
 
 /* Orbes de luz que respiram/flutuam atrás do herói */
 @keyframes orbDrift {

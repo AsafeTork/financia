@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { flushSync } from 'react-dom';
 import { brandAlpha, deriveCores } from './lib/utils.js';
-import { INIT_BRAND, INIT_PLAN, atLimit, limitFor, planVisualDefaults } from './lib/constants.js';
+import { INIT_BRAND, INIT_PLAN, atLimit, limitFor, planVisualDefaults, WHITE_LABEL_VISUAL_DEFAULT } from './lib/constants.js';
 import { useTx } from './hooks/useTx.js';
 import { useProducts } from './hooks/useProducts.js';
 import { useLosses } from './hooks/useLosses.js';
@@ -65,10 +65,26 @@ export default function App() {
   const [themePref, setThemePref]       = useState(function() { try { return localStorage.getItem('financia_theme'); } catch (e) { return null; } });
   const toastId                         = useRef(0);
 
+  var sameHex = function(a, b) {
+    return String(a || '').toLowerCase() === String(b || '').toLowerCase();
+  };
   var hasWhiteLabel = !!(brand && brand.white_label);
   var visualPreset = hasWhiteLabel ? null : planVisualDefaults(planInfo);
+  var lockedPlanVisual = hasWhiteLabel ? planVisualDefaults(planInfo) : null;
+  var useWhiteLabelFallback = !!(hasWhiteLabel && lockedPlanVisual
+    && sameHex(brand.color, lockedPlanVisual.color)
+    && sameHex(brand.color_secondary, lockedPlanVisual.color_secondary)
+    && sameHex(brand.color_accent, lockedPlanVisual.color_accent)
+    && String(brand.theme || 'light') === String(lockedPlanVisual.theme || 'light'));
   var appBrand = hasWhiteLabel
-    ? brand
+    ? (useWhiteLabelFallback
+      ? Object.assign({}, brand, {
+          color: WHITE_LABEL_VISUAL_DEFAULT.color,
+          color_secondary: WHITE_LABEL_VISUAL_DEFAULT.color_secondary,
+          color_accent: WHITE_LABEL_VISUAL_DEFAULT.color_accent,
+          theme: WHITE_LABEL_VISUAL_DEFAULT.theme,
+        })
+      : brand)
     : Object.assign({}, brand, {
         color: visualPreset.color,
         color_secondary: visualPreset.color_secondary,

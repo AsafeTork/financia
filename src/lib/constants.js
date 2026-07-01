@@ -129,23 +129,32 @@ export const PRICING_PLANS = [
 // Sem pacote: usa identidade fixa por plano e não permite personalização manual.
 export const PLAN_VISUAL_DEFAULTS = {
   free: {
-    color: '#2f6f70',
-    color_secondary: '#d7ecec',
-    color_accent: '#4b9a9c',
+    color: '#6ec6c8',
+    color_secondary: '#e1f7f2',
+    color_accent: '#8cf2d1',
     theme: 'light',
   },
   pro: {
-    color: '#0f3d3e',
-    color_secondary: '#cfe4e5',
-    color_accent: '#2f7d7f',
+    color: '#1a6b5c',
+    color_secondary: '#d7efe9',
+    color_accent: '#6ec6c8',
     theme: 'light',
   },
   premium: {
-    color: '#082829',
-    color_secondary: '#bcd7d8',
-    color_accent: '#16595b',
+    color: '#002f59',
+    color_secondary: '#dbe8f3',
+    color_accent: '#1a6b5c',
     theme: 'dark',
   },
+};
+
+// Fallback visual do pacote de personalizacao: quando white-label estiver ativo
+// mas o cliente ainda nao definiu uma paleta propria, usamos uma base da marca.
+export const WHITE_LABEL_VISUAL_DEFAULT = {
+  color: '#1a6b5c',
+  color_secondary: '#d7efe9',
+  color_accent: '#8cf2d1',
+  theme: 'light',
 };
 
 export const planVisualDefaults = function(planInfo) {
