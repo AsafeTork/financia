@@ -146,7 +146,7 @@ export default function Landing({ onEnter }) {
                 </div>
                 <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: 'rgba(15,157,108,0.12)', color: ACCENT }}>+18%</span>
               </div>
-              <div className="flex items-end gap-1.5 h-24 mb-4">
+              <div className="flex items-end gap-1.5 h-24 mb-4 lp-main-chart">
                 {[40, 62, 48, 80, 55, 92, 70].map(function(h, i) {
                   return <div key={String(i) + '-' + h} className="flex-1 rounded-md lp-bar lp-bar-hover" style={{ height: h + '%', background: i === 5 ? ACCENT : 'rgba(0,47,89,0.14)', animationDelay: (300 + i * 90) + 'ms' }} />;
                 })}
@@ -180,30 +180,44 @@ export default function Landing({ onEnter }) {
         </div>
       </section>
 
-      {/* Painel visual com reacao no hover */}
+      {/* Painel visual variado e mais criativo */}
       <section className="max-w-6xl mx-auto px-5 pb-8">
         <div className="grid md:grid-cols-3 gap-4">
           <div className="lp-metric-card rounded-2xl p-5" style={{ background: '#fff', border: '1px solid rgba(10,37,64,0.08)' }}>
-            <p className="text-xs font-semibold" style={{ color: MUTED }}>Fluxo de caixa (7 dias)</p>
-            <div className="mt-3 flex items-end gap-1.5 h-16">
-              {[22, 35, 28, 47, 56, 42, 64].map(function(v, i) {
-                return <span key={'cash-' + i} className="lp-mini-bar rounded-md" style={{ height: v + '%', background: i > 4 ? ACCENT : SKY }} />;
+            <p className="text-xs font-semibold" style={{ color: MUTED }}>Pulso de receita</p>
+            <div className="mt-3 rounded-xl p-2" style={{ background: 'rgba(110,198,200,0.12)' }}>
+              <svg viewBox="0 0 220 64" className="w-full lp-line-chart">
+                <path d="M4 42 C22 34, 34 34, 52 38 C70 42, 80 24, 98 26 C116 28, 126 52, 144 46 C162 40, 176 20, 194 24 C206 27, 214 22, 216 18" fill="none" stroke={BRAND} strokeWidth="3" strokeLinecap="round" />
+                {[52, 98, 144, 194].map(function(px, idx) {
+                  var py = [38, 26, 46, 24][idx];
+                  return <circle key={'pt-' + idx} className="lp-line-point" cx={px} cy={py} r="4" fill={idx % 2 === 0 ? ACCENT : SKY} />;
+                })}
+              </svg>
+            </div>
+            <p className="text-xs mt-2" style={{ color: MUTED }}>Leitura de tendência com pontos de virada.</p>
+          </div>
+          <div className="lp-metric-card rounded-2xl p-5" style={{ background: '#fff', border: '1px solid rgba(10,37,64,0.08)' }}>
+            <p className="text-xs font-semibold" style={{ color: MUTED }}>Mix de despesas</p>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="lp-donut" style={{ background: 'conic-gradient(' + ACCENT + ' 0 42%, ' + SKY + ' 42% 74%, ' + MINT + ' 74% 100%)' }} />
+              <div className="flex-1 flex flex-col gap-1">
+                <span className="text-xs" style={{ color: MUTED }}>Operação <b style={{ color: INK }}>42%</b></span>
+                <span className="text-xs" style={{ color: MUTED }}>Insumos <b style={{ color: INK }}>32%</b></span>
+                <span className="text-xs" style={{ color: MUTED }}>Fixos <b style={{ color: INK }}>26%</b></span>
+              </div>
+            </div>
+            <p className="text-sm mt-2 font-semibold" style={{ color: INK }}>Distribuição visual instantânea</p>
+          </div>
+          <div className="lp-metric-card rounded-2xl p-5" style={{ background: '#fff', border: '1px solid rgba(10,37,64,0.08)' }}>
+            <p className="text-xs font-semibold" style={{ color: MUTED }}>Termômetro de saúde</p>
+            <div className="mt-3 flex items-end gap-2">
+              {[28, 46, 72].map(function(v, i) {
+                return <span key={'thermo-' + i} className="lp-thermo-col" style={{ height: v + 'px', background: i === 2 ? ACCENT : (i === 1 ? SKY : MINT) }} />;
               })}
+              <p className="font-display font-semibold tabular ml-1" style={{ color: INK, fontSize: '1.5rem' }}>82</p>
             </div>
-            <p className="text-xs mt-2" style={{ color: MUTED }}>Passe o mouse para destacar as barras.</p>
-          </div>
-          <div className="lp-metric-card rounded-2xl p-5" style={{ background: '#fff', border: '1px solid rgba(10,37,64,0.08)' }}>
-            <p className="text-xs font-semibold" style={{ color: MUTED }}>Metas de economia</p>
-            <div className="mt-3 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(0,47,89,0.12)' }}>
-              <div className="lp-progress h-full rounded-full" style={{ width: '68%', background: 'linear-gradient(90deg, ' + BRAND + ' 0%, ' + ACCENT + ' 100%)' }} />
-            </div>
-            <p className="text-sm mt-2 font-semibold" style={{ color: INK }}>68% da meta mensal</p>
-          </div>
-          <div className="lp-metric-card rounded-2xl p-5" style={{ background: '#fff', border: '1px solid rgba(10,37,64,0.08)' }}>
-            <p className="text-xs font-semibold" style={{ color: MUTED }}>Ticket médio</p>
-            <p className="font-display font-semibold mt-2 tabular" style={{ color: INK, fontSize: '1.8rem' }}>R$ 74,90</p>
-            <p className="text-xs mt-2" style={{ color: ACCENT }}>+12% em relação ao mês passado</p>
-            <div className="lp-wave mt-3" style={{ height: 26, borderRadius: 12, background: 'linear-gradient(180deg, ' + MINT + '73, ' + SKY + '2a)' }} />
+            <p className="text-xs mt-2" style={{ color: ACCENT }}>Índice financeiro do período</p>
+            <div className="lp-wave mt-3" style={{ height: 16, borderRadius: 10, background: 'linear-gradient(180deg, ' + MINT + '70, ' + SKY + '28)' }} />
           </div>
         </div>
       </section>

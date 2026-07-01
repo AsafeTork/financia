@@ -354,6 +354,8 @@ button:active {
 .lp-bar { transform-origin: bottom; animation: growBar 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .lp-bar-hover { transition: transform .18s ease, filter .18s ease; }
 .lp-bar-hover:hover { transform: scaleY(1.08); filter: saturate(1.15); }
+.lp-main-chart:hover .lp-bar-hover { opacity: .62; transform: scaleY(0.98); }
+.lp-main-chart .lp-bar-hover:hover { opacity: 1; transform: scaleY(1.14); filter: saturate(1.2); }
 
 @keyframes metricLift {
   from { transform: translateY(0); box-shadow: 0 2px 12px rgba(10,37,64,0.04); }
@@ -362,9 +364,33 @@ button:active {
 .lp-metric-card { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
 .lp-metric-card:hover { animation: metricLift .2s ease forwards; border-color: rgba(26,107,92,0.35) !important; }
 
-.lp-mini-bar { flex: 1; transition: transform .18s ease, opacity .18s ease; transform-origin: bottom; }
-.lp-metric-card:hover .lp-mini-bar { opacity: .7; }
-.lp-metric-card:hover .lp-mini-bar:hover { opacity: 1; transform: scaleY(1.12); }
+.lp-line-chart { overflow: visible; }
+.lp-line-point { transition: transform .18s ease, filter .18s ease; transform-origin: center; }
+.lp-metric-card:hover .lp-line-point { filter: saturate(1.15); }
+.lp-metric-card:hover .lp-line-point:hover { transform: scale(1.25); }
+
+.lp-donut {
+  width: 62px;
+  height: 62px;
+  border-radius: 9999px;
+  position: relative;
+  transition: transform .2s ease;
+}
+.lp-donut::after {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border-radius: 9999px;
+  background: #fff;
+}
+.lp-metric-card:hover .lp-donut { transform: rotate(8deg) scale(1.03); }
+
+.lp-thermo-col {
+  width: 12px;
+  border-radius: 999px;
+  transition: transform .2s ease, filter .2s ease;
+}
+.lp-metric-card:hover .lp-thermo-col { filter: saturate(1.15); transform: translateY(-1px); }
 
 @keyframes fillPulse {
   0% { filter: saturate(1); }
