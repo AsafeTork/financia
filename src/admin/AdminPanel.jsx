@@ -394,6 +394,7 @@ export default function AdminPanel({ toast, confirm, session }) {
               : (
               <div className="flex flex-col gap-2">
                 {visibleClients.map(function(c) {
+                  var wa = waLinkTo(c.phone, 'Olá! Aqui é da equipe Financia.');
                   return (
                     <div key={c.user_id} className="rounded-xl p-3 flex flex-col gap-2.5" style={{background:'var(--bg-card)', border:'1px solid var(--border)'}}>
                       <div className="flex items-center gap-3 min-w-0">
@@ -414,8 +415,8 @@ export default function AdminPanel({ toast, confirm, session }) {
                           </div>
                           <p className="text-xs text-gray-400 truncate">{c.user_id.slice(0, 8)}{c.updated_at ? ' · ativo ' + fmtDate(String(c.updated_at).slice(0, 10)) : ''}</p>
                         </div>
-                        {waLinkTo(c.phone, 'Olá! Aqui é da equipe Financia.') && (
-                          <a href={waLinkTo(c.phone, 'Olá! Aqui é da equipe Financia.')} target="_blank" rel="noreferrer" aria-label="Falar no WhatsApp"
+                        {wa && (
+                          <a href={wa} target="_blank" rel="noreferrer" aria-label="Falar no WhatsApp"
                             className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-white transition hover:opacity-90" style={{background:'#16a34a'}}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.477-.913z"/></svg>
                           </a>
