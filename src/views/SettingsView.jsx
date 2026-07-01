@@ -146,8 +146,8 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
   } else {
     subActions.push({ label:'Tema do plano (fixo)', desc:'Sem pacote de personalização: tema ' + (planVisual.theme === 'dark' ? 'escuro' : 'claro') + ' bloqueado para o plano ' + planMeta.name, icon:'M12 11c0 3.866-3.582 7-8 7 1.093 1.206 2.593 2 4.286 2 3.314 0 6-2.686 6-6 0-1.693-.794-3.193-2-4.286.171-.001.343-.001.514-.001 4.418 0 8-3.134 8-7 0-.714-.124-1.404-.357-2.054C18.73 2.536 16.504 4 13.95 4 12.828 4 11.767 3.716 10.84 3.214A7.022 7.022 0 0012 11z', act:function() {} });
   }
-  // Secao de forma de pagamento aparece em planos pagos ou se ja existe cartao salvo.
-  var showPayment = planId !== 'free' || !!savedCard;
+  // Seção sempre visível para evitar confusão: no plano grátis o cartão é opcional.
+  var showPayment = true;
 
   const allTabs = [{key:'account',label:'Conta'}, {key:'subscription',label:'Assinatura'}];
   if (hasWhiteLabel) allTabs.push({key:'appearance',label:'Aparência'});
@@ -260,6 +260,11 @@ export default function SettingsView({ brand, session, planInfo, onSave, onSaveP
           {showPayment && (
             <div className="flex flex-col gap-3 pt-1">
               <p className="text-xs font-semibold uppercase tracking-wide" style={{color:'var(--text-muted)'}}>Forma de pagamento</p>
+              {planId === 'free' && !savedCard && (
+                <p className="text-xs" style={{color:'var(--text-sub)'}}>
+                  No plano grátis, adicionar cartão é opcional. Você pode cadastrar agora ou ao assinar um plano.
+                </p>
+              )}
               {cardLoading ? (
                 <div className="skeleton" style={{height:56}}/>
               ) : savedCard ? (
