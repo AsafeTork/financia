@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { sb } from '../lib/supabase.js';
 import { hexToRgb, luminance, deriveCores, lightenHex, fmt } from '../lib/utils.js';
-import { THEME_PRESETS, PRICING_PLANS, effectivePlan, waLinkTo } from '../lib/constants.js';
-import { setClientCustomPrice } from '../lib/db.js';
+import { THEME_PRESETS, waLinkTo } from '../lib/constants.js';
+import { setClientCustomPrice, setClientWhiteLabel } from '../lib/db.js';
 import { gerarPaleta } from '../lib/aiClient.js';
 
 function PreviewPaleta({ primary, secondary, accent }) {
@@ -69,7 +69,6 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
   var [color, setColorRaw]           = useState(client.color || '#002f59');
   var [colorSecondary, setSecondary] = useState(client.color_secondary || '');
   var [colorAccent, setAccent]       = useState(client.color_accent || '');
-  var [theme, setTheme]              = useState(client.theme || 'light');
   var [name, setName]                = useState(client.name || '');
   var [plan, setPlan]                = useState(client.plan || 'free');
   var [whiteLabel, setWhiteLabel]    = useState(!!client.white_label);
@@ -85,7 +84,6 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
   var [priceSaving, setPriceSaving]  = useState(false);
   var fileRef = useRef();
 
-  var planMeta = PRICING_PLANS.filter(function(p) { return p.id === effectivePlan(client); })[0] || PRICING_PLANS[0];
   var clientWa = waLinkTo(client.phone, 'Olá! Aqui é da equipe Financia. Posso ajudar?');
 
   var applyCustomPrice = async function(planId, value) {
@@ -119,7 +117,6 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
     setColorRaw(res.palette.primary);
     setSecondary(res.palette.secondary || '');
     setAccent(res.palette.accent || '');
-    if (res.palette.theme) setTheme(res.palette.theme);
     setAiRationale(res.rationale || '');
     toast('Paleta gerada pela IA!');
   };
@@ -217,20 +214,19 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
         color: color,
         color_secondary: colorSecondary || null,
         color_accent: colorAccent || null,
-        theme: theme,
         logo_url: logoUrl || null,
       };
       var profileRes = await sb.from('company_profiles').update(updateData).eq('user_id', client.user_id);
       if (profileRes.error) { toast('Erro ao salvar perfil.', 'error'); return; }
       if (planChanged) {
         var planRes = await sb.rpc('set_client_plan', {a_target: client.user_id, b_plan: plan, c_actor: adminEmail || 'admin'});
-        if (planRes.error) { toast('Erro ao alterar plano: ' + planRes.error.message, 'error'); return; }
+        if (planRes && planRes.error) { toast('Erro ao alterar plano: ' + planRes.error.message, 'error'); return; }
       }
       if (whiteLabel !== !!client.white_label) {
-        var wlRes = await sb.rpc('set_white_label', { p_user: client.user_id, p_on: !!whiteLabel });
-        if (wlRes && wlRes.error) { toast('Erro ao atualizar pacote de personalização.', 'error'); return; }
+        var wlRes = await setClientWhiteLabel(client.user_id, !!whiteLabel);
+        if (!wlRes.ok) { toast('Erro ao atualizar cortesia do pacote.', 'error'); return; }
       }
-      toast(planChanged ? ('Plano alterado para ' + plan.toUpperCase()) : 'Atualizado!');
+      toast('Atualizado!');
       var updated = Object.assign({}, client, updateData);
       updated.white_label = !!whiteLabel;
       if (planChanged) {
@@ -423,26 +419,8 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             <PreviewPaleta primary={color} secondary={effectiveSecondary} accent={effectiveAccent}/>
           </div>
 
-          {/* Tema */}
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Tema</p>
-            <div className="flex gap-2">
-              <button onClick={function() { setTheme('light'); }}
-                className={'flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold border transition hover:opacity-90 ' + (theme === 'light' ? 'text-white' : 'text-gray-600 border-gray-200')}
-                style={theme === 'light' ? {background: color, borderColor: color} : {background:'var(--bg-card)'}}>
-                Claro
-              </button>
-              <button onClick={function() { setTheme('dark'); }}
-                className={'flex-1 py-2 min-h-[44px] rounded-xl text-sm font-semibold border transition hover:opacity-90 ' + (theme === 'dark' ? 'text-white' : 'text-gray-600 border-gray-200')}
-                style={theme === 'dark' ? {background:'#0f172a', borderColor:'#0f172a'} : {background:'var(--bg-card)'}}>
-                Escuro
-              </button>
-            </div>
-          </div>
-
           </React.Fragment>)}
 
-          {/* Plano */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Plano</label>
             <div className="flex gap-2">
@@ -457,13 +435,6 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
                 );
               })}
             </div>
-            {client.plan_activated_by && plan !== 'free' && (
-              <p className="text-xs" style={{color:'var(--text-muted)'}}>
-                {String(client.plan_activated_by).indexOf('@') !== -1
-                  ? 'Cortesia (ativado por ' + client.plan_activated_by + ') — não conta como receita.'
-                  : 'Pago via Stripe — conta como receita.'}
-              </p>
-            )}
           </div>
 
           <div className="flex flex-col gap-2 rounded-xl p-3" style={{border:'1px solid var(--border)', background:'var(--bg-subtle)'}}>
@@ -488,8 +459,8 @@ export default function ClientEditModal({ client, adminEmail, onSave, onClose, t
             </p>
             <div className="flex flex-col gap-2">
               {[
-                ['pro', 'Pro', planMeta.name === 'Pro' ? planMeta.price : 49.9, customProReais, setCustomProReais],
-                ['premium', 'Premium', planMeta.name === 'Premium' ? planMeta.price : 99.9, customPremiumReais, setCustomPremiumReais],
+                ['pro', 'Pro', 49.9, customProReais, setCustomProReais],
+                ['premium', 'Premium', 99.9, customPremiumReais, setCustomPremiumReais],
               ].map(function(row) {
                 var key = row[0];
                 var label = row[1];

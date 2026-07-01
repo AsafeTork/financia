@@ -209,6 +209,22 @@ export const setClientCustomPrice = async function(targetUserId, cents, planId) 
   } catch (_) { return { ok: false, error: 'rede' }; }
 };
 
+/* Ativa/desativa o pacote white-label como cortesia para um cliente (admin-only). */
+export const setClientWhiteLabel = async function(targetUserId, enabled) {
+  try {
+    const res = await sb.functions.invoke('admin-set-white-label', {
+      body: { target_user_id: targetUserId, enabled: !!enabled },
+    });
+    if (res && res.error) {
+      var detail = res.data && res.data.error ? res.data.error : 'erro';
+      return { ok: false, error: detail };
+    }
+    var d = res && res.data ? res.data : {};
+    if (d.error) return { ok: false, error: d.error };
+    return { ok: true };
+  } catch (_) { return { ok: false, error: 'rede' }; }
+};
+
 /* v2 — usa RPC SECURITY DEFINER que deleta auth.users tambem */
 export const deleteClient = async function(uid) {
   try {
