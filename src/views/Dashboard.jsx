@@ -42,6 +42,7 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
   }, [tx]);
 
   var plan     = effectivePlan(planInfo);
+  var canUseAI = plan !== 'free';
   var lowStock = products.filter(function(p) { return p.stock != null && p.stock <= 5; });
   // Uso por categoria (cada uma com seu proprio limite e cor — independentes).
   var usage = [
@@ -183,22 +184,37 @@ export default function Dashboard({ tx, products, brand, onNav, planInfo, losses
             </svg>
             <p className="text-sm font-semibold text-gray-800 truncate">Insights da IA</p>
           </div>
-          <button onClick={gerarInsights} disabled={aiLoading}
-            className="text-xs font-semibold px-3 py-2 rounded-lg text-white transition hover:opacity-90 disabled:opacity-50 flex-shrink-0"
-            style={{background: brand.color}}>
-            {aiLoading ? 'Analisando...' : (aiText ? 'Atualizar' : 'Gerar análise')}
-          </button>
+          {canUseAI && (
+            <button onClick={gerarInsights} disabled={aiLoading}
+              className="text-xs font-semibold px-3 py-2 rounded-lg text-white transition hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+              style={{background: brand.color}}>
+              {aiLoading ? 'Analisando...' : (aiText ? 'Atualizar' : 'Gerar análise')}
+            </button>
+          )}
         </div>
-        {aiErr && <p className="text-xs text-red-500">{aiErr}</p>}
-        {!aiText && !aiErr && !aiLoading && <p className="text-xs text-gray-400 leading-relaxed">Receba dicas práticas baseadas nos seus números do mês.</p>}
-        {aiLoading && (
-          <div className="flex flex-col gap-2 mt-1">
-            <div className="skeleton" style={{height:10, width:'100%'}}/>
-            <div className="skeleton" style={{height:10, width:'85%'}}/>
-            <div className="skeleton" style={{height:10, width:'70%'}}/>
+        {!canUseAI ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-gray-500 leading-relaxed">Disponível apenas para planos Pro e Premium.</p>
+            <button onClick={onUpgrade}
+              className="self-start text-xs font-semibold px-3 py-2 rounded-lg text-white transition hover:opacity-90 min-h-[44px]"
+              style={{background: brand.color}}>
+              Fazer upgrade
+            </button>
           </div>
+        ) : (
+          <React.Fragment>
+            {aiErr && <p className="text-xs text-red-500">{aiErr}</p>}
+            {!aiText && !aiErr && !aiLoading && <p className="text-xs text-gray-400 leading-relaxed">Receba dicas práticas baseadas nos seus números do mês.</p>}
+            {aiLoading && (
+              <div className="flex flex-col gap-2 mt-1">
+                <div className="skeleton" style={{height:10, width:'100%'}}/>
+                <div className="skeleton" style={{height:10, width:'85%'}}/>
+                <div className="skeleton" style={{height:10, width:'70%'}}/>
+              </div>
+            )}
+            {aiText && <div className="text-sm whitespace-pre-wrap leading-relaxed" style={{color:'var(--text-sub)'}}>{aiText}</div>}
+          </React.Fragment>
         )}
-        {aiText && <div className="text-sm whitespace-pre-wrap leading-relaxed" style={{color:'var(--text-sub)'}}>{aiText}</div>}
       </Card>
 
       {plan === 'free' && (
